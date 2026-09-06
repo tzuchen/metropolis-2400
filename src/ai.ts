@@ -10,22 +10,40 @@ export interface RobotActionResult {
   triggerAlert?: SecurityLevel;
 }
 
-const manhattanDistance = (a: Position, b: Position): number => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+const manhattanDistance = (a: Position, b: Position): number =>
+  Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 
 const isBelowAlert = (level: SecurityLevel): boolean => {
   if (level === SecurityLevel.CLEAR) return true;
-  if (typeof level === 'number' && typeof SecurityLevel.ALERT === 'number') return level < SecurityLevel.ALERT;
+  if (typeof level === 'number' && typeof SecurityLevel.ALERT === 'number') {
+    return level < SecurityLevel.ALERT;
+  }
   return false;
 };
 
 const isScoutDrone = (robot: Robot): boolean => {
   const r = robot as any;
-  return r.type === 'SCOUT_DRONE' || r.kind === 'SCOUT_DRONE' || r.model === 'SCOUT_DRONE';
+  const t = String(r.robotType || r.type || '').toUpperCase();
+  return t.includes('SCOUT') || t.includes('DRONE');
 };
 
-const isAlreadyChasing = (robot: Robot): boolean => {
-  const r = robot as any;
-  return r.state === 'chase' || r.mode === 'chase' || r.currentAction === 'chase' || r.action === 'chase';
+const isWalkableTile = (map: SectorMap, x: number, y: number): boolean => {
+  const m = map as any;
+  if (x < 0 || y < 0 || x >= (m.width || 40) || y >= (m.height || 30)) return false;
+
+  let tile: any = null;
+  if (typeof (mapModule as any).getTile === 'function') {
+    try {
+      tile = (mapModule as any).getTile(map, { x, y });
+    } catch {}
+  }
+  if (tile == null && Array.isArray(m.tiles) && m.tiles[y]) {
+    tile = m.tiles[y][x];
+  }
+  if (tile == null) return false;
+
+  const tStr = String(tile?.type ?? tile).toUpperCase();
+  return tStr === 'FLOOR' || tStr === '1' || tStr === 'DOOR_OPEN' || tStr === '4';
 };
 
 const hasLineOfSight = (map: SectorMap, from: Position, to: Position): boolean => {
@@ -40,231 +58,229 @@ const hasLineOfSight = (map: SectorMap, from: Position, to: Position): boolean =
       if (typeof result === 'boolean') return result;
     } catch {}
   }
-  const m = map as any;
-  if (typeof m.hasLineOfSight === 'function') {
-    try {
-      const result = m.hasLineOfSight(from, to);
-      if (typeof result === 'boolean') return result;
-    } catch {}
-    try {
-      const result = m.hasLineOfSight({ x: from.x, y: from.y }, { x: to.x, y: to.y });
-      if (typeof result === 'boolean') return result;
-    } catch {}
-  }
-  // Fallback: assume visible if both positions are within map bounds.
-  return isWithinBounds(map, from) && isWithinBounds(map, to);
-};
+  let x0 = from.x;
+  let y0 = from.y;
+  const x1 = to.x;
+  const y1 = to.y;
+  const dx = Math.abs(x1 - x0);
+  const dy = Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+  let err = dx - dy;
 
-const isWithinBounds = (map: SectorMap, p: Position): boolean => {
-  const m = map as any;
-  if (typeof m.width === 'number' && typeof m.height === 'number') {
-    return p.x >= 0 && p.y >= 0 && p.x < m.width && p.y < m.height;
-  }
-  if (Array.isArray(m.tiles)) {
-    if (Array.isArray(m.tiles[p.y])) return p.x >= 0 && p.x < m.tiles[p.y].length;
-    if (typeof m.width === 'number' && m.width > 0) {
-      const index = p.y * m.width + p.x;
-      return index >= 0 && index < m.tiles.length;
+  while (x0 !== x1 || y0 !== y1) {
+    const e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x0 += sx;
     }
+    if (e2 < dx) {
+      err += dx;
+      y0 += sy;
+    }
+    if (x0 === x1 && y0 === y1) break;
+    if (!isWalkableTile(map, x0, y0)) return false;
   }
   return true;
 };
 
-const isWalkable = (map: SectorMap, x: number, y: number): boolean => {
-  if (!isWithinBounds(map, { x, y })) return false;
-  const m = map as any;
-  const tryFn = (fn: any): boolean | null => {
-    try {
-      const a = fn(x, y);
-      if (typeof a === 'boolean') return a;
-    } catch {}
-    try {
-      const b = fn({ x, y });
-      if (typeof b === 'boolean') return b;
-    } catch {}
-    return null;
-  };
-  const candidates = [
-    (mapModule as any).isWalkable,
-    (mapModule as any).isPassable,
-    (mapModule as any).isTraversable,
-    (mapModule as any).canMove,
-    (mapModule as any).canMoveTo,
-    m.isWalkable,
-    m.isPassable,
-    m.isTraversable,
-    m.canMove,
-    m.canMoveTo,
+const findNextStep = (map: SectorMap, from: Position, target: Position): Position | null => {
+  if (from.x === target.x && from.y === target.y) return null;
+
+  if (manhattanDistance(from, target) === 1) {
+    if (isWalkableTile(map, target.x, target.y)) {
+      return target;
+    }
+  }
+
+  const queue: Array<{ pos: Position; firstStep: Position }> = [];
+  const visited = new Set<string>();
+  visited.add(from.x + ',' + from.y);
+
+  const dirs = [
+    { x: 0, y: -1 },
+    { x: 0, y: 1 },
+    { x: -1, y: 0 },
+    { x: 1, y: 0 },
   ];
-  for (const fn of candidates) {
-    if (typeof fn === 'function') {
-      const result = tryFn(fn);
-      if (result !== null) return result;
-    }
-  }
-  if (Array.isArray(m.tiles)) {
-    let tile: any = null;
-    if (Array.isArray(m.tiles[y])) {
-      tile = m.tiles[y][x];
-    } else if (typeof m.width === 'number' && m.width > 0) {
-      tile = m.tiles[y * m.width + x];
-    }
-    if (tile != null) {
-      if (typeof tile === 'string') {
-        return !['wall', 'blocked', 'obstacle', 'solid', 'barrier'].includes(tile.toLowerCase());
+
+  dirs.sort((a, b) => {
+    const da = manhattanDistance({ x: from.x + a.x, y: from.y + a.y }, target);
+    const db = manhattanDistance({x: from.x + b.x, y: from.y + b.y }, target);
+    return da - db;
+  });
+
+  for (const d of dirs) {
+    const nx = from.x + d.x;
+    const ny = from.y + d.y;
+    if (isWalkableTile(map, nx, ny)) {
+      if (nx === target.x && ny === target.y) {
+        return { x: nx, y: ny };
       }
-      if (typeof tile.isWalkable === 'boolean') return tile.isWalkable;
-      if (typeof tile.walkable === 'boolean') return tile.walkable;
-      if (typeof tile.passable === 'boolean') return tile.passable;
-      if (typeof tile.traversable === 'boolean') return tile.traversable;
-      if (typeof tile.blocked === 'boolean') return !tile.blocked;
-      if (typeof tile.solid === 'boolean') return !tile.solid;
-      if (typeof tile.type === 'string') {
-        return !['wall', 'blocked', 'obstacle', 'solid', 'barrier'].includes(tile.type.toLowerCase());
-      }
-      if (typeof tile.kind === 'string') {
-        return !['wall', 'blocked', 'obstacle', 'solid', 'barrier'].includes(tile.kind.toLowerCase());
-      }
-    }
-  }
-  return true;
-};
-
-const getAdjacentPositions = (x: number, y: number): Position[] => [
-  { x: x + 1, y },
-  { x: x - 1, y },
-  { x, y: y + 1 },
-  { x, y: y - 1 },
-];
-
-const findStepToward = (map: SectorMap, from: Position, target: Position): Position | null => {
-  const currentDistance = manhattanDistance(from, target);
-  if (currentDistance === 0) return null;
-
-  const dx = Math.sign(target.x - from.x);
-  const dy = Math.sign(target.y - from.y);
-  const preferred: Position[] = [];
-  if (dx !== 0) preferred.push({ x: from.x + dx, y: from.y });
-  if (dy !== 0) preferred.push({ x: from.x, y: from.y + dy });
-
-  for (const candidate of preferred) {
-    if (isWalkable(map, candidate.x, candidate.y)) {
-      return candidate;
+      visited.add(nx + ',' + ny);
+      queue.push({ pos: { x: nx, y: ny }, firstStep: { x: nx, y: ny } });
     }
   }
 
-  const adjacent = getAdjacentPositions(from.x, from.y)
-    .filter((p) => isWalkable(map, p.x, p.y))
-    .filter((p) => manhattanDistance(p, target) < currentDistance)
-    .sort((a, b) => manhattanDistance(a, target) - manhattanDistance(b, target));
+  let iterations = 0;
+  while (queue.length > 0 && iterations < 80) {
+    iterations++;
+    const current = queue.shift()!;
 
-  return adjacent[0] ?? null;
-};
+    for (const d of dirs) {
+      const nx = current.pos.x + d.x;
+      const ny = current.pos.y + d.y;
+      const key = nx + ',' + ny;
 
-const getPatrolTarget = (robot: Robot, path: Position[]): Position => {
-  if (!path || path.length === 0) {
-    return { x: robot.x, y: robot.y };
-  }
-
-  let index = -1;
-  const r = robot as any;
-  if (typeof r.patrolIndex === 'number' && Number.isInteger(r.patrolIndex) && r.patrolIndex >= 0 && r.patrolIndex < path.length) {
-    index = r.patrolIndex;
-  } else {
-    index = path.findIndex((p) => p.x === robot.x && p.y === robot.y);
-    if (index === -1) {
-      let bestDistance = Infinity;
-      path.forEach((p, i) => {
-        const d = manhattanDistance(robot, p);
-        if (d < bestDistance) {
-          bestDistance = d;
-          index = i;
+      if (!visited.has(key) && isWalkableTile(map, nx, ny)) {
+        if (nx === target.x && ny === target.y) {
+          return current.firstStep;
         }
-      });
+        visited.add(key);
+        queue.push({ pos: { x: nx, y: ny }, firstStep: current.firstStep });
+      }
     }
   }
 
-  if (index < 0 || index >= path.length) {
-    index = 0;
+  let bestStep: Position | null = null;
+  let minDistance = manhattanDistance(from, target);
+
+  for (const d of dirs) {
+    const nx = from.x + d.x;
+    const ny = from.y + d.y;
+    if (isWalkableTile(map, nx, ny)) {
+      const dist = manhattanDistance({ x: nx, y: ny }, target);
+      if (dist < minDistance) {
+        minDistance = dist;
+        bestStep = { x: ny, y: ny };
+      }
+    }
   }
 
-  if (path[index].x === robot.x && path[index].y === robot.y) {
-    index = (index + 1) % path.length;
-  }
-
-  return path[index];
+  return bestStep;
 };
 
-export function updateRobotAI(robot: Robot, player: Player, map: SectorMap, globalAlert: SecurityLevel): RobotActionResult {
+export function updateRobotAI(
+  robot: Robot,
+  player: Player,
+  map: SectorMap,
+  globalAlert: SecurityLevel
+): RobotActionResult {
   if (!robot.isAlive) {
-    return { action: 'idle', message: 'Robot is not alive.' };
+    return { action: 'idle', message: 'Robot is decommissioned.' };
   }
 
-  const robotPosition: Position = { x: robot.x, y: robot.y };
-  const playerPosition: Position = { x: player.x, y: player.y };
-  const distance = manhattanDistance(robotPosition, playerPosition);
-  const scanRange = typeof robot.scanRange === 'number' ? robot.scanRange : 0;
-  const canSeePlayer = distance <= scanRange && hasLineOfSight(map, robotPosition, playerPosition);
+  const robotPos: Position = { x: robot.x, y: robot.y };
+  const playerPos: Position = { x: player.x, y: player.y };
+  const distance = manhattanDistance(robotPos, playerPos);
+  const scanRange = Number(robot.scanRange) || 8;
 
-  const isCivilian =
+  const canSeePlayer = distance <= scanRange && hasLineOfSight(map, robotPos, playerPos);
+
+  const isCovertCivilian =
     player.isDisguised === true &&
     player.isWeaponDrawn === false &&
     globalAlert === SecurityLevel.CLEAR &&
-    !isAlreadyChasing(robot);
+    robot.aiState !== 'chase';
 
-  if (canSeePlayer && !isCivilian) {
-    if (isScoutDrone(robot) && isBelowAlert(globalAlert)) {
+  if (canSeePlayer && !isCovertCivilian) {
+    robot.targetPos = { x: player.x, y: player.y };
+    robot.aiState = 'chase';
+
+    if (isScoutDrone(robot) && isBelowAlert(globalAlert) && robot.alertCooldown <= 0) {
+      robot.alertCooldown = 10;
       return {
         action: 'alarm',
         triggerAlert: SecurityLevel.ALERT,
-        message: 'Scout drone detected a threat and raised an alert.',
+        message: 'Scout Drone detected intruder! Security network ALARM triggered!',
       };
     }
 
     if (distance <= 1) {
+      robot.aiState = 'attack';
       return {
         action: 'attack',
-        damage: robot.attackPower,
-        message: 'Robot attacked the player.',
+        damage: robot.attackPower || 15,
+        message: robot.name + ' engages operative at close range!',
       };
     }
 
-    const step = findStepToward(map, robotPosition, playerPosition);
-    if (step) {
-      robot.x = step.x;
-      robot.y = step.y;
+    const nextStep = findNextStep(map, robotPos, playerPos);
+    if (nextStep) {
+      robot.x = nextStep.x;
+      robot.y = nextStep.y;
       return {
         action: 'chase',
         newPos: { x: robot.x, y: robot.y },
-        message: 'Robot is chasing the player.',
+        message: robot.name + ' is pursuing target.',
       };
     }
 
     return {
       action: 'chase',
-      message: 'Robot cannot move toward the player.',
+      message: robot.name + ' path blocked during pursuit.',
     };
   }
 
-  const patrolPath = Array.isArray(robot.patrolPath) ? robot.patrolPath : [];
-  if (patrolPath.length === 0) {
-    return { action: 'idle', message: 'Robot has no patrol path.' };
+  if (robot.aiState === 'chase' && robot.targetPos) {
+    robot.aiState = 'investigate';
   }
 
-  const target = getPatrolTarget(robot, patrolPath);
-  const step = findStepToward(map, robotPosition, target);
-  if (step) {
-    robot.x = step.x;
-    robot.y = step.y;
-    return {
-      action: 'patrol',
-      newPos: { x: robot.x, y: robot.y },
-      message: 'Robot is patrolling.',
-    };
+  if (robot.aiState === 'investigate' && robot.targetPos) {
+    const distToTarget = manhattanDistance(robotPos, robot.targetPos);
+    if (distToTarget > 0) {
+      const step = findNextStep(map, robotPos, robot.targetPos);
+      if (step) {
+        robot.x = step.x;
+        robot.y = step.y;
+        return {
+          action: 'chase',
+          newPos: { x: robot.x, y: robot.y },
+          message: robot.name + ' investigating last known position.',
+        };
+      }
+    }
+
+    robot.targetPos = null;
+    robot.aiState = 'patrol';
   }
 
+  const path = Array.isArray(robot.patrolPath) ? robot.patrolPath : [];
+  if (path.length > 0) {
+    let pIndex = typeof robot.currentPatrolIndex === 'number' ? robot.currentPatrolIndex : 0;
+    if (pIndex < 0 || pIndex >= path.length) pIndex = 0;
+
+    let targetWaypoint = path[pIndex];
+
+    if (robot.x === targetWaypoint.x && robot.y === targetWaypoint.y) {
+      pIndex = (pIndex + 1) % path.length;
+      robot.currentPatrolIndex = pIndex;
+      (robot as any).patrolIndex = pIndex;
+      targetWaypoint = path[pIndex];
+    }
+
+    const step = findNextStep(map, robotPos, targetWaypoint);
+    if (step) {
+      robot.x = step.x;
+      robot.y = step.y;
+      robot.aiState = 'patrol';
+
+      if (robot.x === targetWaypoint.x && robot.y === targetWaypoint.y) {
+        robot.currentPatrolIndex = (pIndex + 1) % path.length;
+        (robot as any).patrolIndex = robot.currentPatrolIndex;
+      }
+
+      return {
+        action: 'patrol',
+        newPos: { x: robot.x, y: robot.y },
+        message: robot.name + ' on patrol route.',
+      };
+    }
+  }
+
+  robot.aiState = 'patrol';
   return {
     action: 'patrol',
-    message: 'Robot is waiting at patrol point.',
+    message: robot.name + ' standing watch.',
   };
 }
