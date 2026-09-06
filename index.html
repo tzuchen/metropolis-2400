@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>METROPOLIS 2400 - Tzorg Resistance</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div class="crt-container">
+    <div class="header-strip">
+      <div class="title-text">METROPOLIS 2400 // TZORG RESISTANCE PROTOCOL</div>
+      <div class="badge">TACTICAL SIMULATION</div>
+    </div>
+
+    <div class="screen-wrapper">
+      <canvas id="game-canvas" width="960" height="600"></canvas>
+      <div class="crt-scanlines"></div>
+      <div class="crt-flicker"></div>
+    </div>
+
+    <div class="control-panel">
+      <div class="key-group">
+        <span class="key">W A S D</span> / <span class="key">↑ ↓ ← →</span> <span>MOVE / ATTACK</span>
+      </div>
+      <div class="key-group">
+        <span class="key">F</span> <span>DRAW / HOLSTER WEAPON</span>
+      </div>
+      <div class="key-group">
+        <span class="key">C</span> <span>HOLO-DISGUISE</span>
+      </div>
+      <div class="key-group">
+        <span class="key">E</span> <span>CYCLE AIRLOCK / DOOR</span>
+      </div>
+      <div class="key-group">
+        <span class="key">T</span> <span>HACK COMPUTER TERMINAL</span>
+      </div>
+      <div class="key-group">
+        <span class="key">SPACE</span> <span>WAIT TURN</span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
