@@ -119,3 +119,17 @@ export interface SectorMap {
   terminals: Record<string, TerminalData>;
   playerStart: Position;
 }
+
+export interface NPC extends Entity {
+  role: string;
+  avatarColor?: string;
+  dialogue: string[];
+  currentDialogueIndex?: number;
+  questReward?: { type: 'HEAL' | 'ENERGY' | 'CREDITS'; amount: number; message: string };
+  rewardClaimed?: boolean;
+}
+
+export interface DialogueSession {
+  npc: NPC;
+  textIndex: number;
+}

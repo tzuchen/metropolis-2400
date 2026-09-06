@@ -700,3 +700,107 @@ export function drawRobotSprite(
 
   ctx.restore();
 }
+
+// 居民／反抗軍 NPC 角色繪製 (Resident / Rebel NPC Sprite)
+export function drawNPCSprite(
+  ctx: CanvasRenderingContext2D,
+  npc: any,
+  x: number,
+  y: number,
+  size: number,
+  visible: boolean = true,
+  time: number = 0
+): void {
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const role = String(npc?.role || npc?.name || '').toUpperCase();
+  const themeColor = String(npc?.avatarColor || (role.includes('MEDIC') ? '#00e5ff' : role.includes('LEADER') || role.includes('KIRA') ? '#ff6d00' : '#ffea00'));
+
+  ctx.save();
+  if (!visible) {
+    ctx.globalAlpha = 0.4;
+  }
+
+  // 1. 地面柔和陰影
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.beginPath();
+  ctx.arc(cx, cy + size * 0.35, size * 0.28, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2. 雙腳與皮靴
+  ctx.fillStyle = '#0f141a';
+  ctx.fillRect(cx - size * 0.18, cy + size * 0.22, size * 0.12, size * 0.16);
+  ctx.fillRect(cx + size * 0.06, cy + size * 0.22, size * 0.12, size * 0.16);
+
+  // 3. 身體與上衣風衣
+  if (role.includes('MEDIC') || role.includes('VANCE')) {
+    // 醫官白藍戰術大褂
+    ctx.fillStyle = '#1c2e35';
+    ctx.fillRect(cx - size * 0.2, cy - size * 0.12, size * 0.4, size * 0.38);
+    // 醫護十字標記
+    ctx.fillStyle = '#00f0ff';
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 4;
+    ctx.fillRect(cx - 1.5, cy - size * 0.05, 3, 9);
+    ctx.fillRect(cx - 4.5, cy - size * 0.05 + 3, 9, 3);
+    ctx.shadowBlur = 0;
+  } else if (role.includes('LEADER') || role.includes('KIRA')) {
+    // 反抗軍指揮官橘紅軍裝
+    ctx.fillStyle = '#2d1e18';
+    ctx.fillRect(cx - size * 0.2, cy - size * 0.12, size * 0.4, size * 0.38);
+    // 亮橘色反抗軍肩帶
+    ctx.fillStyle = '#ff6d00';
+    ctx.shadowColor = '#ff6d00';
+    ctx.shadowBlur = 4;
+    ctx.fillRect(cx - size * 0.18, cy - size * 0.1, size * 0.36, 4);
+    ctx.fillRect(cx + size * 0.08, cy - size * 0.06, 4, size * 0.25);
+    ctx.shadowBlur = 0;
+  } else {
+    // 街頭情報商深色風衣
+    ctx.fillStyle = '#222328';
+    ctx.fillRect(cx - size * 0.2, cy - size * 0.12, size * 0.4, size * 0.38);
+    ctx.fillStyle = '#443b2c';
+    ctx.fillRect(cx - size * 0.14, cy - size * 0.06, size * 0.28, size * 0.2);
+  }
+
+  // 4. 頭部與髮型
+  ctx.fillStyle = '#1e1612';
+  ctx.beginPath();
+  ctx.arc(cx, cy - size * 0.24, size * 0.18, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 面部五官膚色
+  ctx.fillStyle = '#dca27d';
+  ctx.beginPath();
+  ctx.arc(cx, cy - size * 0.22, size * 0.12, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 5. 賽博光學目鏡或眼部特徵
+  ctx.fillStyle = themeColor;
+  ctx.shadowColor = themeColor;
+  ctx.shadowBlur = 5;
+  ctx.fillRect(cx - size * 0.08, cy - size * 0.24, size * 0.16, 3);
+  ctx.shadowBlur = 0;
+
+  // 6. 頭頂浮動交談提示 (TALK [T] Prompt)
+  const bob = Math.sin(time * 0.005) * 2;
+  const tagY = cy - size * 0.45 + bob;
+
+  ctx.fillStyle = 'rgba(5, 15, 20, 0.85)';
+  ctx.fillRect(cx - 24, tagY - 8, 48, 14);
+
+  ctx.strokeStyle = themeColor;
+  ctx.shadowColor = themeColor;
+  ctx.shadowBlur = 4;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(cx - 24, tagY - 8, 48, 14);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 8px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('TALK [T]', cx, tagY - 1);
+  ctx.shadowBlur = 0;
+
+  ctx.restore();
+}

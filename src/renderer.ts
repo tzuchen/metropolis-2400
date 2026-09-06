@@ -1,7 +1,7 @@
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage } from './types';
+import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, NPC, DialogueSession } from './types';
 import type { TerminalSession } from './terminal';
 import * as MapModule from './map';
-import { drawTileSprite, drawPlayerSprite, drawRobotSprite } from './sprites';
+import { drawTileSprite, drawPlayerSprite, drawRobotSprite, drawNPCSprite } from './sprites';
 
 export type Position = { x: number; y: number };
 
@@ -44,7 +44,9 @@ export class GameRenderer {
     messages: GameMessage[],
     activeTerminal: TerminalSession | null,
     laserBeams?: Array<{ from: Position; to: Position; color: string }>,
-    floatingTexts?: Array<{ x: number; y: number; text: string; color: string }>
+    floatingTexts?: Array<{ x: number; y: number; text: string; color: string }>,
+    npcs?: NPC[],
+    activeDialogue?: DialogueSession | null
   ): void {
     const width = Number(this.canvas.width) || 800;
     const height = Number(this.canvas.height) || 600;
@@ -99,7 +101,27 @@ export class GameRenderer {
     // 3. 繪製街景霓虹看板層 (Cyberpunk Neon Signboard Layer)
     this.drawStreetSigns(camX, camY, visible, ctx, now);
 
-    // 4. 先繪製已被摧毀的機器人殘骸
+    // 4. 繪製反抗軍居民與 NPC 角色
+    if (Array.isArray(npcs)) {
+      npcs.forEach((npc) => {
+        if (!npc || npc.isAlive === false) return;
+        const nx = Number(npc.x);
+        const ny = Number(npc.y);
+        const key = this.key(nx, ny);
+        if (!visible.has(key) && !explored.has(key)) return;
+        drawNPCSprite(
+          ctx,
+          npc,
+          nx * this.tileSize - camX,
+          ny * this.tileSize - camY,
+          this.tileSize,
+          visible.has(key),
+          now
+        );
+      });
+    }
+
+    // 5. 繪製已被摧毀的機器人殘骸
     if (Array.isArray(robots)) {
       robots.forEach((robot) => {
         if (!robot || robot.isAlive !== false) return;
@@ -112,7 +134,7 @@ export class GameRenderer {
       });
     }
 
-    // 5. 繪製活著的巡邏與警戒機器人
+    // 6. 繪製活著的巡邏與警戒機器人
     if (Array.isArray(robots)) {
       robots.forEach((robot) => {
         if (!robot || robot.isAlive === false) return;
@@ -125,10 +147,10 @@ export class GameRenderer {
       });
     }
 
-    // 6. 繪製主角 (帶有風衣、目鏡、武器與護盾)
+    // 7. 繪製主角 (帶有風衣、目鏡、武器與護盾)
     this.drawPlayer(player, camX, camY, ctx, now);
 
-    // 7. 繪製雷射彈道光束
+    // 8. 繪製雷射彈道光束
     if (Array.isArray(laserBeams)) {
       laserBeams.forEach((beam) => {
         if (!beam || !beam.from || !beam.to) return;
@@ -143,7 +165,7 @@ export class GameRenderer {
       });
     }
 
-    // 8. 繪製戰鬥浮動文字 (Floating Combat Text)
+    // 9. 繪製戰鬥浮動文字 (Floating Combat Text)
     if (Array.isArray(floatingTexts)) {
       floatingTexts.forEach((ft) => {
         if (!ft) return;
@@ -161,21 +183,26 @@ export class GameRenderer {
       });
     }
 
-    // 9. 畫面周圍氛圍暗角 (Vignette & Scanline Overlay)
+    // 10. 畫面周圍氛圍暗角 (Vignette & Scanline Overlay)
     this.drawScreenAtmosphere(width, height, ctx);
 
-    // 10. 戰術小雷達 (Sector Mini Radar)
-    this.drawMiniRadar(width, map, player, robots, visible, ctx, now);
+    // 11. 戰術小雷達 (Sector Mini Radar，包含居民綠點)
+    this.drawMiniRadar(width, map, player, robots, npcs, visible, ctx, now);
 
-    // 11. 賽博風格抬頭顯示 HUD (Tactical HUD)
+    // 12. 賽博風格抬頭顯示 HUD (Tactical HUD)
     this.drawHud(width, height, player, securityLevel, messages, ctx);
 
-    // 12. 活躍終端機畫面 (CRT Terminal Session)
+    // 13. 活躍終端機畫面 (CRT Terminal Session)
     if (activeTerminal) {
       this.drawTerminal(activeTerminal, width, height, ctx, now);
     }
 
-    // 13. 死亡／勝利畫面橫幅 (Game Over / Victory Banner)
+    // 14. 居民對話框 (Resident Dialogue Box)
+    if (activeDialogue) {
+      this.drawDialogueBox(activeDialogue, width, height, ctx, now);
+    }
+
+    // 15. 死亡／勝利畫面橫幅 (Game Over / Victory Banner)
     if (!player.isAlive) {
       this.drawGameOverOverlay(width, height, ctx, now);
     } else if ((player as any).victory) {
@@ -195,7 +222,7 @@ export class GameRenderer {
         void err;
       }
     }
-    return `${x},${y}`;
+    return x + ',' + y;
   }
 
   parseKey(key: string): Position | null {
@@ -249,7 +276,6 @@ export class GameRenderer {
     ctx.save?.();
     let tile = this.getTile(m, x, y);
 
-    // 終端機座標比對 (確保安全屋/檢點/伺服室終端機正確以 TERMINAL 材質渲染)
     if (m?.terminals) {
       const termList = Array.isArray(m.terminals) ? m.terminals : Object.values(m.terminals);
       const isTerminal = termList.some(
@@ -264,12 +290,11 @@ export class GameRenderer {
     ctx.restore?.();
   }
 
-  // 街景霓虹標誌層
   drawStreetSigns(camX: number, camY: number, visible: Set<string>, ctx: any, now: number): void {
     for (const sign of SECTOR_STREET_SIGNS) {
       const sx = sign.x * this.tileSize - camX;
       const sy = sign.y * this.tileSize - camY;
-      const key = `${sign.x},${sign.y}`;
+      const key = sign.x + ',' + sign.y;
 
       if (!visible.has(key)) continue;
 
@@ -302,12 +327,12 @@ export class GameRenderer {
     }
   }
 
-  // 戰術小雷達 (Sector Mini Radar)
   drawMiniRadar(
     width: number,
     map: SectorMap,
     player: Player,
     robots: Robot[],
+    npcs: NPC[] | undefined,
     visible: Set<string>,
     ctx: any,
     now: number
@@ -318,7 +343,6 @@ export class GameRenderer {
     const rx = width - radarW - 12;
     const ry = 46;
 
-    // 半透明深色底框
     ctx.fillStyle = 'rgba(5, 12, 18, 0.85)';
     ctx.fillRect?.(rx, ry, radarW, radarH);
 
@@ -337,6 +361,17 @@ export class GameRenderer {
     const ox = rx + 4;
     const oy = ry + 12;
 
+    // 居民反抗軍綠點
+    if (Array.isArray(npcs)) {
+      npcs.forEach((n) => {
+        if (!n || !n.isAlive) return;
+        const key = this.key(n.x, n.y);
+        if (!visible.has(key)) return;
+        ctx.fillStyle = '#00ffaa';
+        ctx.fillRect?.(ox + n.x * scaleX - 1, oy + n.y * scaleY - 1, 2, 2);
+      });
+    }
+
     // 機器人紅點
     if (Array.isArray(robots)) {
       robots.forEach((r) => {
@@ -350,7 +385,7 @@ export class GameRenderer {
 
     // 玩家青色閃爍點
     const pPulse = 0.5 + 0.5 * Math.sin(now * 0.01);
-    ctx.fillStyle = `rgba(0, 240, 255, ${pPulse})`;
+    ctx.fillStyle = 'rgba(0, 240, 255, ' + pPulse + ')';
     ctx.fillRect?.(ox + player.x * scaleX - 1.5, oy + player.y * scaleY - 1.5, 3, 3);
 
     ctx.restore?.();
@@ -459,7 +494,6 @@ export class GameRenderer {
   ): void {
     ctx.save?.();
 
-    // 頂部賽博半透明 HUD 欄位
     ctx.fillStyle = 'rgba(7, 13, 20, 0.88)';
     ctx.fillRect?.(0, 0, width, 36);
 
@@ -475,36 +509,31 @@ export class GameRenderer {
     const py = Number(p?.y) || 0;
     const sec = String(securityLevel ?? 'CLEAR').toUpperCase();
 
-    // 左側：座標與警戒狀態
     ctx.fillStyle = '#00e5ff';
-    ctx.fillText?.(`SECTOR 01 [POS ${px},${py}]`, 12, 18);
+    ctx.fillText?.('SECTOR 01 [POS ' + px + ',' + py + ']', 12, 18);
 
-    // 警戒等級標籤
     let secColor = '#00ff66';
     if (sec === 'SUSPICIOUS') secColor = '#ffea00';
     if (sec === 'ALERT') secColor = '#ff7700';
     if (sec === 'LOCKDOWN') secColor = '#ff1744';
 
     ctx.fillStyle = secColor;
-    ctx.fillText?.(`SEC: ${sec}`, 175, 18);
+    ctx.fillText?.('SEC: ' + sec, 175, 18);
 
-    // 中間：生命值 (HP) 與能量 (EN) 狀態條
     const hp = Math.max(0, p?.hp ?? 100);
     const maxHp = p?.maxHp ?? 100;
     ctx.fillStyle = '#ff2a4b';
-    ctx.fillText?.(`HP ${hp}/${maxHp}`, 280, 18);
+    ctx.fillText?.('HP ' + hp + '/' + maxHp, 280, 18);
 
     const energy = Math.max(0, p?.energy ?? 100);
     const maxEnergy = p?.maxEnergy ?? 100;
     ctx.fillStyle = '#00f0ff';
-    ctx.fillText?.(`EN ${energy}/${maxEnergy}`, 380, 18);
+    ctx.fillText?.('EN ' + energy + '/' + maxEnergy, 380, 18);
 
-    // 信用點數 (Credits)
     const credits = p?.credits ?? 0;
     ctx.fillStyle = '#ffb700';
-    ctx.fillText?.(`CR: ${credits}`, 480, 18);
+    ctx.fillText?.('CR: ' + credits, 480, 18);
 
-    // 裝備狀態：武器／偽裝
     const weaponStatus = p?.isWeaponDrawn ? 'WEAPON: ARMED' : 'WEAPON: HOLSTER';
     ctx.fillStyle = p?.isWeaponDrawn ? '#ff3855' : '#8899a6';
     ctx.fillText?.(weaponStatus, 570, 18);
@@ -514,7 +543,6 @@ export class GameRenderer {
       ctx.fillText?.('[DISGUISED]', 700, 18);
     }
 
-    // 底部遊戲訊息懸浮提示
     if (Array.isArray(messages)) {
       const recent = messages.slice(-3);
       ctx.textAlign = 'right';
@@ -568,7 +596,7 @@ export class GameRenderer {
     ctx.font = 'bold 14px monospace';
     ctx.textBaseline = 'top';
     const title = String(t?.title ?? t?.name ?? 'METROPOLIS // SECURE TERMINAL').toUpperCase();
-    ctx.fillText?.(`[ ${title} ]`, x + 16, y + 16);
+    ctx.fillText?.('[ ' + title + ' ]', x + 16, y + 16);
 
     ctx.fillStyle = '#00aa44';
     ctx.font = '11px monospace';
@@ -599,9 +627,89 @@ export class GameRenderer {
     const cursor = Math.sin(now * 0.01) > 0 ? '█' : '';
     ctx.fillStyle = '#00ffff';
     ctx.font = 'bold 13px monospace';
-    ctx.fillText?.(`> ${input}${cursor}`, x + 16, y + boxH - 28);
+    ctx.fillText?.('> ' + input + cursor, x + 16, y + boxH - 28);
 
     ctx.shadowBlur = 0;
+    ctx.restore?.();
+  }
+
+  // 居民對話框 (Resident Dialogue Box)
+  drawDialogueBox(
+    dialogue: DialogueSession,
+    width: number,
+    height: number,
+    ctx: any,
+    now: number
+  ): void {
+    const npc = dialogue.npc;
+    const textIndex = dialogue.textIndex || 0;
+    const dialogueList = Array.isArray(npc.dialogue) ? npc.dialogue : ['...'];
+    const currentText = dialogueList[textIndex] || '...';
+    const isLastLine = textIndex >= dialogueList.length - 1;
+
+    ctx.save?.();
+
+    const boxW = Math.min(width - 40, 720);
+    const boxH = 140;
+    const x = (width - boxW) / 2;
+    const y = height - boxH - 28;
+
+    // 半透明深色底框
+    ctx.fillStyle = 'rgba(4, 10, 16, 0.95)';
+    ctx.fillRect?.(x, y, boxW, boxH);
+
+    const themeColor = npc.avatarColor || '#00e5ff';
+    ctx.strokeStyle = themeColor;
+    ctx.shadowColor = themeColor;
+    ctx.shadowBlur = 8;
+    ctx.lineWidth = 2;
+    ctx.strokeRect?.(x + 1, y + 1, boxW - 2, boxH - 2);
+
+    // 說話者標題
+    ctx.fillStyle = themeColor;
+    ctx.font = 'bold 13px monospace';
+    ctx.textBaseline = 'top';
+    const title = '[ ' + npc.name.toUpperCase() + ' // ' + npc.role.toUpperCase() + ' ]';
+    ctx.fillText?.(title, x + 18, y + 14);
+
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath?.();
+    ctx.moveTo?.(x + 18, y + 34);
+    ctx.lineTo?.(x + boxW - 18, y + 34);
+    ctx.stroke?.();
+
+    // 對話內容 (折行渲染)
+    ctx.fillStyle = '#e8f8ff';
+    ctx.font = '13px monospace';
+    ctx.shadowBlur = 0;
+
+    const words = currentText.split(' ');
+    let line = '';
+    let lineY = y + 46;
+    const maxLineW = boxW - 40;
+
+    for (let i = 0; i < words.length; i++) {
+      const testLine = line + words[i] + ' ';
+      const metrics = ctx.measureText ? ctx.measureText(testLine) : { width: testLine.length * 8 };
+      if (metrics.width > maxLineW && i > 0) {
+        ctx.fillText?.(line, x + 20, lineY);
+        line = words[i] + ' ';
+        lineY += 18;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText?.(line, x + 20, lineY);
+
+    // 底部按鍵提示
+    const promptText = isLastLine ? '[ SPACE / ENTER ] CLOSE DIALOGUE    [ ESC ] LEAVE' : '[ SPACE / ENTER ] NEXT (▼)    [ ESC ] LEAVE';
+    const pulse = 0.7 + 0.3 * Math.sin(now * 0.008);
+    ctx.fillStyle = 'rgba(0, 255, 170, ' + pulse + ')';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText?.(promptText, x + boxW - 20, y + boxH - 16);
+
     ctx.restore?.();
   }
 
@@ -611,7 +719,7 @@ export class GameRenderer {
     ctx.fillRect?.(0, 0, width, height);
 
     const pulse = 0.8 + 0.2 * Math.sin(now * 0.005);
-    ctx.fillStyle = `rgba(255, 30, 50, ${pulse})`;
+    ctx.fillStyle = 'rgba(255, 30, 50, ' + pulse + ')';
     ctx.shadowColor = '#ff1e32';
     ctx.shadowBlur = 12;
     ctx.font = 'bold 24px monospace';
@@ -633,7 +741,7 @@ export class GameRenderer {
     ctx.fillRect?.(0, 0, width, height);
 
     const pulse = 0.8 + 0.2 * Math.sin(now * 0.005);
-    ctx.fillStyle = `rgba(0, 255, 136, ${pulse})`;
+    ctx.fillStyle = 'rgba(0, 255, 136, ' + pulse + ')';
     ctx.shadowColor = '#00ff88';
     ctx.shadowBlur = 15;
     ctx.font = 'bold 22px monospace';

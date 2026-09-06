@@ -1,4 +1,4 @@
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType } from './types';
+import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession } from './types';
 import { buildSector1Map, calculateFOV, isWalkable, toggleDoor, disableForcefield, getTile } from './map';
 import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise } from './entities';
 import { updateRobotAI } from './ai';
@@ -12,11 +12,13 @@ export class GameEngine {
   map: SectorMap;
   player: Player;
   robots: Robot[];
+  npcs: NPC[];
   securityLevel: SecurityLevel;
   messages: GameMessage[];
   visibleTiles: Set<string>;
   exploredTiles: Set<string>;
   activeTerminal: TerminalSession | null;
+  activeDialogue: DialogueSession | null;
   laserBeams: Array<{ from: Position; to: Position; color: string }>;
   floatingTexts: Array<{ x: number; y: number; text: string; color: string }>;
   terminalInputBuffer: string = '';
@@ -28,14 +30,17 @@ export class GameEngine {
     this.map = buildSector1Map();
     this.player = createPlayer(this.map.playerStart);
     this.robots = this.createSectorRobots();
+    this.npcs = this.createSectorNPCs();
     this.securityLevel = 'CLEAR' as SecurityLevel;
     this.messages = [];
     this.floatingTexts = [];
     this.pushMessage('SYSTEM: Resistance neural-link online.', 'info');
     this.pushMessage('MISSION: Infiltrate Tzorg facility & deactivate checkpoint forcefield.', 'warning');
+    this.pushMessage('INTEL: Speak with Kira and residents in the safehouse [T].', 'info');
     this.visibleTiles = new Set<string>();
     this.exploredTiles = new Set<string>();
     this.activeTerminal = null;
+    this.activeDialogue = null;
     this.laserBeams = [];
     this.terminalInputBuffer = '';
     this.victory = false;
@@ -50,6 +55,94 @@ export class GameEngine {
       createRobot('SHOCK_ENFORCER' as RobotType, { x: 25, y: 6 }, [{ x: 25, y: 6 }, { x: 27, y: 6 }]),
       createRobot('HUNTER_KILLER' as RobotType, { x: 32, y: 18 }, [{ x: 32, y: 18 }, { x: 32, y: 24 }]),
       createRobot('SERVICE_BOT' as RobotType, { x: 8, y: 10 }, [{ x: 8, y: 10 }, { x: 8, y: 14 }]),
+    ];
+  }
+
+  private createSectorNPCs(): NPC[] {
+    return [
+      {
+        id: 'npc-kira',
+        name: 'Kira',
+        role: 'Spark Cell Commander',
+        avatarColor: '#ff6d00',
+        x: 4,
+        y: 6,
+        hp: 100,
+        maxHp: 100,
+        isAlive: true,
+        dialogue: [
+          'Operative! The Tzorg network has locked down Checkpoint 01 with a high-energy plasma barrier.',
+          'We confirmed the forcefield is tied to terminal CHECKPOINT_FF inside the outpost. Infiltrate and override it.',
+          'Use your Holo-Disguise [C] to slip past patrol drones, and keep that blaster holstered until needed.',
+          'Here, take these auxiliary power cells (+40 EN). The Spark is counting on you!',
+        ],
+        questReward: {
+          type: 'ENERGY',
+          amount: 40,
+          message: 'Kira granted +40 Energy Cells!',
+        },
+        rewardClaimed: false,
+      },
+      {
+        id: 'npc-vance',
+        name: 'Doc Vance',
+        role: 'Cyber-Medic',
+        avatarColor: '#00e5ff',
+        x: 7,
+        y: 4,
+        hp: 80,
+        maxHp: 80,
+        isAlive: true,
+        dialogue: [
+          'Good to see you breathing, operative. Let me patch your dermal plating and vital systems.',
+          'Take this dose of restorative nanites (+35 HP).',
+          'Watch out for the Shock Enforcers. Their electro-stuns bypass body armor completely!',
+        ],
+        questReward: {
+          type: 'HEAL',
+          amount: 35,
+          message: 'Doc Vance restored +35 HP with nanites!',
+        },
+        rewardClaimed: false,
+      },
+      {
+        id: 'npc-jax',
+        name: 'Jax',
+        role: 'Alley Informant',
+        avatarColor: '#ffea00',
+        x: 16,
+        y: 6,
+        hp: 70,
+        maxHp: 70,
+        isAlive: true,
+        dialogue: [
+          'Psst... keep your head down! The patrol drones have been buzzing this alley all morning.',
+          'If you trip a security alert, you can clear it from any terminal by typing CLEAR_ALARM.',
+          'I salvaged some credit chips from an old enforcer patrol. Take 60 Credits (+60 CR)!',
+        ],
+        questReward: {
+          type: 'CREDITS',
+          amount: 60,
+          message: 'Jax handed you +60 Credits!',
+        },
+        rewardClaimed: false,
+      },
+      {
+        id: 'npc-ghost',
+        name: 'Ghost',
+        role: 'Resistance Infiltrator',
+        avatarColor: '#9d4edd',
+        x: 31,
+        y: 23,
+        hp: 90,
+        maxHp: 90,
+        isAlive: true,
+        dialogue: [
+          'You bypassed the checkpoint forcefield! Outstanding infiltration, operative.',
+          'The Tzorg central server vault is directly ahead. Access the terminal inside to complete our sector victory!',
+        ],
+        rewardClaimed: false,
+      },
     ];
   }
 
@@ -86,7 +179,9 @@ export class GameEngine {
       this.messages,
       this.activeTerminal,
       this.laserBeams,
-      this.floatingTexts
+      this.floatingTexts,
+      this.npcs,
+      this.activeDialogue
     );
   }
 
@@ -100,6 +195,53 @@ export class GameEngine {
     }
 
     if (!this.player.isAlive) {
+      return;
+    }
+
+    // 居民對話模式 (Dialogue Session)
+    if (this.activeDialogue) {
+      if (key === 'Escape' || key === 'Esc') {
+        this.activeDialogue = null;
+        soundFX.terminal();
+        this.render();
+        return;
+      }
+
+      if (key === ' ' || key === 'Enter' || key === 'Space') {
+        const npc = this.activeDialogue.npc;
+        const list = npc.dialogue || [];
+        const nextIndex = this.activeDialogue.textIndex + 1;
+
+        // 檢查是否有尚未領取的任務獎勵
+        if (npc.questReward && !npc.rewardClaimed && nextIndex >= list.length - 1) {
+          npc.rewardClaimed = true;
+          const r = npc.questReward;
+          if (r.type === 'HEAL') {
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + r.amount);
+            this.pushFloatingText(npc.x, npc.y, '+' + r.amount + ' HP', '#00ff88');
+          } else if (r.type === 'ENERGY') {
+            this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + r.amount);
+            this.pushFloatingText(npc.x, npc.y, '+' + r.amount + ' EN', '#00f0ff');
+          } else if (r.type === 'CREDITS') {
+            this.player.credits += r.amount;
+            this.pushFloatingText(npc.x, npc.y, '+' + r.amount + ' CR', '#ffea00');
+          }
+          soundFX.pickup();
+          this.pushMessage(r.message, 'success');
+        }
+
+        if (nextIndex < list.length) {
+          this.activeDialogue.textIndex = nextIndex;
+          soundFX.terminal();
+        } else {
+          this.activeDialogue = null;
+          soundFX.pickup();
+        }
+
+        this.render();
+        return;
+      }
+
       return;
     }
 
@@ -220,7 +362,21 @@ export class GameEngine {
       this.render();
       return;
     } else if (key === 't' || key === 'T') {
+      // 優先檢查是否與相鄰居民交談
       const dirs: [number, number][] = [[0, 0], [0, 1], [0, -1], [1, 0], [-1, 0]];
+      for (const [ox, oy] of dirs) {
+        const tx = this.player.x + ox;
+        const ty = this.player.y + oy;
+        const npc = this.npcs.find((n) => n.isAlive && n.x === tx && n.y === ty);
+        if (npc) {
+          soundFX.terminal();
+          this.activeDialogue = { npc, textIndex: 0 };
+          this.render();
+          return;
+        }
+      }
+
+      // 若無居民，檢查是否有終端機
       for (const [ox, oy] of dirs) {
         const tx = this.player.x + ox;
         const ty = this.player.y + oy;
@@ -235,7 +391,8 @@ export class GameEngine {
           return;
         }
       }
-      this.pushMessage('No terminal console in range.', 'warning');
+
+      this.pushMessage('Nothing to interact with nearby.', 'warning');
       this.render();
       return;
     } else if (key === ' ' || key === '.') {
@@ -244,6 +401,24 @@ export class GameEngine {
     }
 
     if (dx !== 0 || dy !== 0) {
+      const nx = this.player.x + dx;
+      const ny = this.player.y + dy;
+
+      // 檢查是否走向居民進行交談 (當收槍時直接觸發交談)
+      const targetNPC = this.npcs.find((n) => n.isAlive && n.x === nx && n.y === ny);
+      if (targetNPC) {
+        if (!this.player.isWeaponDrawn) {
+          soundFX.terminal();
+          this.activeDialogue = { npc: targetNPC, textIndex: 0 };
+          this.render();
+          return;
+        } else {
+          this.pushMessage('Holster weapon [F] to speak with ' + targetNPC.name + '.', 'warning');
+          this.render();
+          return;
+        }
+      }
+
       // 檢查是否拔槍射擊 (遠程或近戰雷射射擊)
       if (this.player.isWeaponDrawn) {
         let hitRobot: Robot | null = null;
@@ -300,10 +475,7 @@ export class GameEngine {
       }
 
       // 一般行走移動
-      const nx = this.player.x + dx;
-      const ny = this.player.y + dy;
       const adjacentRobot = this.robots.find((r) => r.isAlive && r.x === nx && r.y === ny);
-
       if (adjacentRobot) {
         soundFX.hit();
         this.pushMessage('Path blocked by security robot! Press F to draw weapon.', 'warning');
@@ -388,11 +560,13 @@ export class GameEngine {
     this.map = buildSector1Map();
     this.player = createPlayer(this.map.playerStart);
     this.robots = this.createSectorRobots();
+    this.npcs = this.createSectorNPCs();
     this.securityLevel = 'CLEAR' as SecurityLevel;
     this.messages = [];
     this.floatingTexts = [];
     this.pushMessage('SYSTEM: Protocol restarted. Resistance operative deployed.', 'info');
     this.activeTerminal = null;
+    this.activeDialogue = null;
     this.laserBeams = [];
     this.terminalInputBuffer = '';
     this.victory = false;
