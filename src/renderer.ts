@@ -8,7 +8,7 @@ export type Position = { x: number; y: number };
 export class GameRenderer {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
-  tileSize: number = 24;
+  tileSize: number = 48;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
