@@ -84,6 +84,7 @@ export interface Player extends Entity {
     batteries: number;
     empGrenades: number;
   };
+  augments?: Record<string, boolean>;
 }
 
 export type RobotAIState = 'idle' | 'patrol' | 'investigate' | 'chase' | 'attack';
@@ -166,4 +167,31 @@ export interface StoryLog {
   timestamp: string;
   content: string[];
   read: boolean;
+}
+
+export interface CyberwareAugment {
+  id: string;
+  name: string;
+  cost: number;
+  description: string;
+  installed: boolean;
+}
+
+export interface FloatingText {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  color: string;
+  alpha: number;
+  dy: number;
+}
+
+export interface Hazard {
+  id: string;
+  x: number;
+  y: number;
+  type: 'PLASMA_CANISTER' | 'STEAM_VENT';
+  hp: number;
+  exploded: boolean;
 }

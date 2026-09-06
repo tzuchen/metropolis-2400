@@ -360,6 +360,203 @@ export class SoundFX {
       osc.stop(start + 0.32);
     });
   }
+
+  // 11. 暴擊音效 (Critical Hit)
+  crit(): void {
+    const ctx = this.ensureContext();
+    const master = this.masterGain;
+    if (!ctx || !master) return;
+    const now = ctx.currentTime;
+    const duration = 0.16;
+
+    const osc = ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(3200, now);
+    osc.frequency.exponentialRampToValueAtTime(90, now + duration);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(8000, now);
+    filter.frequency.exponentialRampToValueAtTime(500, now + duration);
+    filter.Q.value = 4;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.42, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(master);
+    osc.start(now);
+    osc.stop(now + duration + 0.02);
+
+    const impact = this.createNoiseSource(ctx);
+    const impactFilter = ctx.createBiquadFilter();
+    impactFilter.type = 'lowpass';
+    impactFilter.frequency.setValueAtTime(900, now);
+    impactFilter.frequency.exponentialRampToValueAtTime(60, now + 0.12);
+
+    const impactGain = ctx.createGain();
+    impactGain.gain.setValueAtTime(0.35, now);
+    impactGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+    impact.connect(impactFilter);
+    impactFilter.connect(impactGain);
+    impactGain.connect(master);
+    impact.start(now);
+    impact.stop(now + 0.14);
+  }
+
+  // 12. 電磁脈衝與電弧滋滋聲 (EMP / Arc)
+  emp(): void {
+    const ctx = this.ensureContext();
+    const master = this.masterGain;
+    if (!ctx || !master) return;
+    const now = ctx.currentTime;
+    const duration = 0.42;
+
+    const pulse = ctx.createOscillator();
+    pulse.type = 'sine';
+    pulse.frequency.setValueAtTime(55, now);
+    pulse.frequency.exponentialRampToValueAtTime(28, now + duration);
+
+    const pulseGain = ctx.createGain();
+    pulseGain.gain.setValueAtTime(0.0001, now);
+    pulseGain.gain.exponentialRampToValueAtTime(0.38, now + 0.02);
+    pulseGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    pulse.connect(pulseGain);
+    pulseGain.connect(master);
+    pulse.start(now);
+    pulse.stop(now + duration + 0.05);
+
+    const arc = ctx.createOscillator();
+    arc.type = 'sawtooth';
+    arc.frequency.setValueAtTime(180, now);
+    arc.frequency.exponentialRampToValueAtTime(2400, now + 0.08);
+    arc.frequency.exponentialRampToValueAtTime(120, now + duration);
+
+    const arcFilter = ctx.createBiquadFilter();
+    arcFilter.type = 'bandpass';
+    arcFilter.frequency.setValueAtTime(1200, now);
+    arcFilter.frequency.exponentialRampToValueAtTime(4000, now + 0.12);
+    arcFilter.frequency.exponentialRampToValueAtTime(800, now + duration);
+    arcFilter.Q.value = 6;
+
+    const arcGain = ctx.createGain();
+    arcGain.gain.setValueAtTime(0.0001, now);
+    arcGain.gain.exponentialRampToValueAtTime(0.22, now + 0.03);
+    arcGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    arc.connect(arcFilter);
+    arcFilter.connect(arcGain);
+    arcGain.connect(master);
+    arc.start(now);
+    arc.stop(now + duration + 0.05);
+
+    const crackle = this.createNoiseSource(ctx);
+    const crackleFilter = ctx.createBiquadFilter();
+    crackleFilter.type = 'highpass';
+    crackleFilter.frequency.setValueAtTime(2500, now);
+
+    const crackleGain = ctx.createGain();
+    crackleGain.gain.setValueAtTime(0.0001, now);
+
+    const cracklePoints = 12;
+    for (let i = 0; i < cracklePoints; i++) {
+      const t = now + (i / cracklePoints) * duration;
+      const amp = 0.05 + Math.random() * 0.18;
+      crackleGain.gain.setValueAtTime(amp, t);
+      crackleGain.gain.exponentialRampToValueAtTime(0.0001, t + (duration / cracklePoints) * 0.6);
+    }
+
+    crackle.connect(crackleFilter);
+    crackleFilter.connect(crackleGain);
+    crackleGain.connect(master);
+    crackle.start(now);
+    crackle.stop(now + duration + 0.05);
+  }
+
+  // 13. 義體升級/安裝成功合成器爬音 (Upgrade)
+  upgrade(): void {
+    const ctx = this.ensureContext();
+    const master = this.masterGain;
+    if (!ctx || !master) return;
+    const now = ctx.currentTime;
+    const duration = 0.55;
+
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(1440, now + duration);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(400, now);
+    filter.frequency.exponentialRampToValueAtTime(6000, now + duration);
+    filter.Q.value = 2;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.28, now + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(master);
+    osc.start(now);
+    osc.stop(now + duration + 0.05);
+
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51];
+    notes.forEach((freq, i) => {
+      const start = now + i * 0.07;
+      const note = ctx.createOscillator();
+      note.type = 'triangle';
+      note.frequency.setValueAtTime(freq, start);
+
+      const noteGain = ctx.createGain();
+      noteGain.gain.setValueAtTime(0.12, start);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.12);
+
+      note.connect(noteGain);
+      noteGain.connect(master);
+      note.start(start);
+      note.stop(start + 0.14);
+    });
+  }
+
+  // 14. 反射神經閃避輕快滑音 (Evade)
+  evade(): void {
+    const ctx = this.ensureContext();
+    const master = this.masterGain;
+    if (!ctx || !master) return;
+    const now = ctx.currentTime;
+    const duration = 0.14;
+
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(700, now);
+    osc.frequency.exponentialRampToValueAtTime(2600, now + duration * 0.55);
+    osc.frequency.exponentialRampToValueAtTime(1200, now + duration);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(4000, now);
+    filter.frequency.exponentialRampToValueAtTime(8000, now + duration * 0.5);
+    filter.frequency.exponentialRampToValueAtTime(2500, now + duration);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(master);
+    osc.start(now);
+    osc.stop(now + duration + 0.02);
+  }
 }
 
 export const soundFX = new SoundFX();

@@ -6,6 +6,7 @@ import type {
   ItemType,
   Position,
   SecurityLevel,
+  CyberwareAugment,
 } from './types';
 
 const LASER_PISTOL_ID = 'laser-pistol';
@@ -16,6 +17,38 @@ const HACKER_ID = 'hacker-id';
 const WEAPON_TYPE = 'weapon' as unknown as ItemType;
 const SHIELD_TYPE = 'shield' as unknown as ItemType;
 const GADGET_TYPE = 'gadget' as unknown as ItemType;
+
+const DERMAL_ARMOR_ID = 'DERMAL_ARMOR';
+const OPTIC_HUD_ID = 'OPTIC_HUD';
+const REFLEX_BOOSTER_ID = 'REFLEX_BOOSTER';
+const POWER_CORE_ID = 'POWER_CORE';
+
+export const AVAILABLE_AUGMENTS: CyberwareAugment[] = [
+  {
+    id: DERMAL_ARMOR_ID,
+    name: 'Dermal Armor',
+    description: 'Subdermal plating that reduces incoming damage.',
+    cost: 100,
+  },
+  {
+    id: OPTIC_HUD_ID,
+    name: 'Optic HUD',
+    description: 'Retinal display that overlays tactical information.',
+    cost: 120,
+  },
+  {
+    id: REFLEX_BOOSTER_ID,
+    name: 'Reflex Booster',
+    description: 'Neural stimulator that improves reaction speed.',
+    cost: 150,
+  },
+  {
+    id: POWER_CORE_ID,
+    name: 'Power Core',
+    description: 'Auxiliary energy core that increases maximum energy.',
+    cost: 100,
+  },
+] as unknown as CyberwareAugment[];
 
 function clonePosition(pos: Position): Position {
   return { ...pos } as Position;
@@ -101,8 +134,14 @@ export function createPlayer(startPos: Position): Player {
     isAlive: true,
     energy: 100,
     maxEnergy: 100,
-    credits: 0,
+    credits: 50,
     clearanceLevel: lowSecurity(),
+    augments: {
+      DERMAL_ARMOR: false,
+      OPTIC_HUD: false,
+      REFLEX_BOOSTER: false,
+      POWER_CORE: false,
+    },
     inventory: [laserPistol, personalShield, holoDisguise, hackerId],
     equippedWeapon: laserPistol,
     equippedShield: personalShield,
@@ -181,5 +220,48 @@ export function consumeEnergy(player: Player, amount: number): boolean {
   }
 
   player.energy -= amount;
+  return true;
+}
+
+export function installAugment(player: Player, augmentId: string): boolean {
+  const p = player as unknown as {
+    credits: number;
+    maxEnergy: number;
+    augments?: Record<string, boolean>;
+  };
+
+  const augment = AVAILABLE_AUGMENTS.find(
+    (entry) => (entry as unknown as { id?: string }).id === augmentId
+  ) as unknown as { id: string; cost: number } | undefined;
+
+  if (!augment || !Number.isFinite(augment.cost) || augment.cost < 0) {
+    return false;
+  }
+
+  if (p.augments?.[augmentId]) {
+    return false;
+  }
+
+  if (!Number.isFinite(p.credits) || p.credits < augment.cost) {
+    return false;
+  }
+
+  p.credits -= augment.cost;
+
+  if (!p.augments) {
+    p.augments = {
+      DERMAL_ARMOR: false,
+      OPTIC_HUD: false,
+      REFLEX_BOOSTER: false,
+      POWER_CORE: false,
+    };
+  }
+
+  p.augments[augmentId] = true;
+
+  if (augmentId === POWER_CORE_ID) {
+    p.maxEnergy = 150;
+  }
+
   return true;
 }

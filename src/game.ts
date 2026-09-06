@@ -1,6 +1,6 @@
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog } from './types';
+import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard } from './types';
 import { buildSector1Map, calculateFOV, isWalkable, toggleDoor, disableForcefield, getTile } from './map';
-import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise } from './entities';
+import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise, installAugment } from './entities';
 import { updateRobotAI } from './ai';
 import { TerminalSession } from './terminal';
 import { GameRenderer } from './renderer';
@@ -28,6 +28,8 @@ export class GameEngine {
   activeDialogue: DialogueSession | null;
   laserBeams: Array<{ from: Position; to: Position; color: string }>;
   floatingTexts: Array<{ x: number; y: number; text: string; color: string }>;
+  hazards: Hazard[] = [];
+  isAugmentShopOpen: boolean = false;
   terminalInputBuffer: string = '';
   victory: boolean = false;
 
@@ -41,6 +43,8 @@ export class GameEngine {
     this.storyLogs = this.createSectorStoryLogs();
     this.groundItems = this.createSectorItems();
     this.missionObjectives = this.createSectorObjectives();
+    this.hazards = this.createSectorHazards();
+    this.isAugmentShopOpen = false;
     this.isInventoryOpen = false;
     this.isMissionLogOpen = false;
     this.isStoryArchiveOpen = false;
@@ -337,6 +341,15 @@ export class GameEngine {
     ];
   }
 
+  private createSectorHazards(): Hazard[] {
+    return [
+      { id: 'hazard-plasma-1', x: 19, y: 8, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
+      { id: 'hazard-plasma-2', x: 26, y: 7, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
+      { id: 'hazard-plasma-3', x: 33, y: 19, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
+      { id: 'hazard-plasma-4', x: 14, y: 12, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
+    ];
+  }
+
   private pushMessage(text: string, type: GameMessage['type']): void {
     this.messages.push({ text, type });
     if (this.messages.length > 50) {
@@ -379,7 +392,9 @@ export class GameEngine {
       this.missionObjectives,
       this.activeStoryLog,
       this.isStoryArchiveOpen,
-      this.storyLogs
+      this.storyLogs,
+      this.hazards,
+      this.isAugmentShopOpen
     );
   }
 
@@ -415,6 +430,21 @@ export class GameEngine {
         this.render();
         return;
       }
+      return;
+    }
+
+    // 義體商店模式 (Augment Shop Modal Mode)
+    if (this.isAugmentShopOpen) {
+      if (key === 'Escape' || key === 'Esc' || key === 'u' || key === 'U') {
+        this.isAugmentShopOpen = false;
+        soundFX.terminal();
+        this.render();
+        return;
+      }
+      if (key === '1') { this.buyAugment('DERMAL_ARMOR'); return; }
+      if (key === '2') { this.buyAugment('OPTIC_HUD'); return; }
+      if (key === '3') { this.buyAugment('REFLEX_BOOSTER'); return; }
+      if (key === '4') { this.buyAugment('POWER_CORE'); return; }
       return;
     }
 
@@ -675,6 +705,11 @@ export class GameEngine {
       soundFX.terminal();
       this.render();
       return;
+    } else if (key === 'u' || key === 'U') {
+      this.isAugmentShopOpen = true;
+      soundFX.terminal();
+      this.render();
+      return;
     } else if (key === '1') {
       this.useMedkit();
       return;
@@ -715,6 +750,7 @@ export class GameEngine {
       // 檢查是否拔槍射擊 (遠程或近戰雷射射擊)
       if (this.player.isWeaponDrawn) {
         let hitRobot: Robot | null = null;
+        let hitCanister: Hazard | null = null;
         for (let range = 1; range <= 5; range++) {
           const tx = this.player.x + dx * range;
           const ty = this.player.y + dy * range;
@@ -725,6 +761,12 @@ export class GameEngine {
           const found = this.robots.find((r) => r.isAlive && r.x === tx && r.y === ty);
           if (found) {
             hitRobot = found;
+            break;
+          }
+
+          const foundCanister = this.hazards.find((h) => !h.exploded && h.x === tx && h.y === ty);
+          if (foundCanister) {
+            hitCanister = foundCanister;
             break;
           }
         }
@@ -822,6 +864,12 @@ export class GameEngine {
             this.pushMessage('Silent takedown executed! Acoustic suppression maintained.', 'info');
           }
 
+          this.tick();
+          return;
+        }
+
+        if (hitCanister) {
+          this.detonateCanister(hitCanister);
           this.tick();
           return;
         }
@@ -977,6 +1025,56 @@ export class GameEngine {
     } else {
       this.pushMessage('No EMP Disruptor Grenades in inventory!', 'warning');
       this.render();
+    }
+  }
+
+  private buyAugment(augmentId: string): void {
+    const success = installAugment(this.player, augmentId);
+    if (success) {
+      soundFX.upgrade();
+      this.pushFloatingText(this.player.x, this.player.y, 'AUGMENT ONLINE!', '#00ff88');
+      this.pushMessage('NEURAL AUGMENTATION COMPLETE: [' + augmentId + '] installed!', 'success');
+    } else {
+      soundFX.hit();
+      if (this.player.augments?.[augmentId]) {
+        this.pushMessage('Augment [' + augmentId + '] is already active.', 'warning');
+      } else {
+        this.pushMessage('INSUFFICIENT CREDITS! Eliminate Tzorg patrols to scavenge credits.', 'danger');
+      }
+    }
+    this.render();
+  }
+
+  private detonateCanister(canister: Hazard): void {
+    canister.exploded = true;
+    canister.hp = 0;
+    soundFX.explosion();
+    this.pushFloatingText(canister.x, canister.y, 'PLASMA DETONATION!', '#ff6d00');
+
+    for (const r of this.robots) {
+      if (!r.isAlive) continue;
+      const dist = Math.abs(r.x - canister.x) + Math.abs(r.y - canister.y);
+      if (dist <= 2) {
+        r.hp -= 70;
+        this.pushFloatingText(r.x, r.y, '-70', '#ff6d00');
+        if (r.hp <= 0) {
+          r.isAlive = false;
+          soundFX.explosion();
+          this.pushMessage(r.name + ' destroyed by plasma explosion!', 'success');
+        }
+      }
+    }
+
+    const playerDist = Math.abs(this.player.x - canister.x) + Math.abs(this.player.y - canister.y);
+    if (playerDist <= 2) {
+      this.player.hp = Math.max(0, this.player.hp - 20);
+      this.pushFloatingText(this.player.x, this.player.y, '-20', '#ff1744');
+      this.pushMessage('Plasma explosion! -20 HP from blast damage.', 'danger');
+      if (this.player.hp <= 0) {
+        this.player.isAlive = false;
+        soundFX.powerDown();
+        this.pushMessage('MISSION FAILED: Operative killed by plasma explosion.', 'danger');
+      }
     }
   }
 

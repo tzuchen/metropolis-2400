@@ -88,6 +88,14 @@ Your objective:
 - High-contrast retro CRT aesthetics with pixelated neon signboards, wall panels, and dynamic ambient lighting.
 - Pure procedural Web Audio API synthesizer generating real-time laser beams, airlock cycles, terminal key beeps, alarms, and explosions without external audio assets.
 
+### 9. 🧬 Cyberware Augmentations & Environmental Hazards (`[U]`)
+- **Jax's Black Market Cyber-Clinic (`[U]`)**: Spend salvaged credits to surgically install neural modifications:
+  - **Sub-Dermal Armor Plating**: Reinforced kinetic weave reducing incoming robot damage by 4.
+  - **Cybernetic Optic HUD**: Tactical retinal overlay projecting real-time enemy health bars and alert indicators over robotic chassis.
+  - **Reflex Booster**: Neural synaptic accelerator granting 25% chance to completely evade incoming attacks (`REFLEX EVADE!`).
+  - **Overclocked Power Core**: Expands maximum operative energy capacity from 100 to 150 EN.
+- **Explosive Plasma Canisters (`PLASMA_CANISTER`)**: Volatile pressurized gas containers placed at strategic choke points. Shooting them with a laser blaster or catching them in EMP detonations unleashes a 70 AoE plasma explosion across a 2-tile radius, obliterating patrol squads!
+
 ---
 
 ## 🎮 Controls & Keybindings (操作指南)
@@ -101,6 +109,7 @@ Your objective:
 | **`2`** | **Quick Recharge** | Consume 1 Plasma Energy Cell (+50 Energy) |
 | **`3`** | **Detonate EMP** | Throw EMP Disruptor (stuns all robots in radius 4 for 4 turns) |
 | **`I`** | **Inventory** | Open Resistance Cyberdeck & Tactical Inventory modal |
+| **`U`** | **Cyber-Clinic** | Jack into Jax's Black Market Augmentation Clinic to buy upgrades |
 | **`M`** | **Mission Intel** | Toggle Mission Objectives & Directives log |
 | **`L`** | **Lore Archives** | Open Decrypted Data Slates & Story Archive reader |
 | **`T`** | **Interact / Hack** | Speak with adjacent friendly NPCs or jack into security terminals |
@@ -133,6 +142,7 @@ metropolis-2400/
 │   ├── verify-game.ts    # Engine loop & turn validation
 │   ├── verify-ai.ts      # Robot vision, alerts & pathfinding tests
 │   ├── verify-depth.ts   # Inventory, EMP shockwave & ambush crit tests
+│   ├── verify-augments.ts# Cyberware clinic & canister hazard tests
 │   ├── verify-story.ts   # Data slate decryption & dynamic dialogue tests
 │   ├── verify-renderer.ts# Canvas drawing calls & UI verification
 │   └── verify-sprites.ts # Sprite rendering integrity tests
@@ -174,11 +184,8 @@ npm run preview
 
 ### Run Test Suite
 ```bash
-# Run all automated verification scripts
-npx tsx scripts/verify-game.ts
-npx tsx scripts/verify-ai.ts
-npx tsx scripts/verify-depth.ts
-npx tsx scripts/verify-story.ts
+# Run all automated verification scripts & typechecks
+npm test
 ```
 
 ---

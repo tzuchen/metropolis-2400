@@ -952,3 +952,141 @@ export function drawItemSprite(
   ctx.shadowBlur = 0;
   ctx.restore();
 }
+
+// 高科技電漿防爆氣閥鋼瓶 (Plasma Canister Hazard)
+export function drawHazardSprite(
+  ctx: CanvasRenderingContext2D,
+  hazard: any,
+  x: number,
+  y: number,
+  size: number,
+  time: number = 0
+): void {
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  ctx.save();
+
+  // 地面柔和陰影
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.beginPath();
+  ctx.arc(cx, cy + size * 0.34, size * 0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 鋼瓶底座
+  ctx.fillStyle = '#1a222c';
+  ctx.fillRect(cx - size * 0.28, cy + size * 0.22, size * 0.56, size * 0.12);
+  ctx.fillStyle = '#2d3a48';
+  ctx.fillRect(cx - size * 0.24, cy + size * 0.24, size * 0.48, 2);
+  ctx.fillStyle = '#0d1218';
+  ctx.fillRect(cx - size * 0.28, cy + size * 0.32, size * 0.56, 2);
+
+  // 側邊閥門管線
+  ctx.fillStyle = '#3a4a5b';
+  ctx.fillRect(cx + size * 0.18, cy + size * 0.05, size * 0.12, size * 0.18);
+  ctx.fillStyle = '#5a738e';
+  ctx.fillRect(cx + size * 0.2, cy + size * 0.08, size * 0.08, 2);
+  ctx.fillRect(cx + size * 0.2, cy + size * 0.16, size * 0.08, 2);
+
+  // 鋼瓶瓶身
+  const bodyW = size * 0.44;
+  const bodyH = size * 0.56;
+  const bodyX = cx - bodyW / 2;
+  const bodyY = cy - bodyH / 2 + size * 0.02;
+  const r = size * 0.12;
+
+  ctx.fillStyle = '#243140';
+  ctx.beginPath();
+  ctx.moveTo(bodyX + r, bodyY);
+  ctx.lineTo(bodyX + bodyW - r, bodyY);
+  ctx.arcTo(bodyX + bodyW, bodyY, bodyX + bodyW, bodyY + r, r);
+  ctx.lineTo(bodyX + bodyW, bodyY + bodyH - r);
+  ctx.arcTo(bodyX + bodyW, bodyY + bodyH, bodyX + bodyW - r, bodyY + bodyH, r);
+  ctx.lineTo(bodyX + r, bodyY + bodyH);
+  ctx.arcTo(bodyX, bodyY + bodyH, bodyX, bodyY + bodyH - r, r);
+  ctx.lineTo(bodyX, bodyY + r);
+  ctx.arcTo(bodyX, bodyY, bodyX + r, bodyY, r);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#3d5268';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // 瓶身警示斜紋 (Hazard stripes)
+  ctx.save();
+  ctx.clip();
+  const stripeW = 6;
+  for (let s = -bodyH; s < bodyW + bodyH; s += stripeW * 2) {
+    ctx.fillStyle = '#ffaa00';
+    ctx.beginPath();
+    ctx.moveTo(bodyX + s, bodyY);
+    ctx.lineTo(bodyX + s + stripeW, bodyY);
+    ctx.lineTo(bodyX + s + stripeW - bodyH, bodyY + bodyH);
+    ctx.lineTo(bodyX + s - bodyH, bodyY + bodyH);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#111820';
+    ctx.beginPath();
+    ctx.moveTo(bodyX + s + stripeW, bodyY);
+    ctx.lineTo(bodyX + s + stripeW * 2, bodyY);
+    ctx.lineTo(bodyX + s + stripeW * 2 - bodyH, bodyY + bodyH);
+    ctx.lineTo(bodyX + s + stripeW - bodyH, bodyY + bodyH);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // 中央脈動電漿微光核心
+  const pulse = 0.55 + 0.45 * Math.sin(time * 0.008 + (hazard?.x || 0) * 0.1);
+  const coreR = size * 0.12 + pulse * size * 0.04;
+
+  ctx.fillStyle = `rgba(0, 240, 255, ${0.25 + pulse * 0.35})`;
+  ctx.shadowColor = '#00f0ff';
+  ctx.shadowBlur = 10 * pulse;
+  ctx.beginPath();
+  ctx.arc(cx, cy + size * 0.02, coreR, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = `rgba(255, 255, 255, ${0.4 + pulse * 0.5})`;
+  ctx.beginPath();
+  ctx.arc(cx, cy + size * 0.02, coreR * 0.45, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 電漿微電弧
+  ctx.strokeStyle = `rgba(0, 240, 255, ${0.5 + pulse * 0.4})`;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  const arcOffset = Math.sin(time * 0.02) * size * 0.05;
+  ctx.moveTo(cx - coreR, cy + size * 0.02 + arcOffset);
+  ctx.lineTo(cx - coreR * 0.4, cy + size * 0.02 - arcOffset);
+  ctx.lineTo(cx + coreR * 0.4, cy + size * 0.02 + arcOffset);
+  ctx.lineTo(cx + coreR, cy + size * 0.02 - arcOffset);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // 頂部減壓閥
+  const valveY = bodyY - size * 0.1;
+  ctx.fillStyle = '#3a4a5b';
+  ctx.fillRect(cx - size * 0.08, valveY, size * 0.16, size * 0.12);
+  ctx.fillStyle = '#5a738e';
+  ctx.fillRect(cx - size * 0.05, valveY - size * 0.04, size * 0.1, size * 0.06);
+  ctx.fillStyle = '#ffaa00';
+  ctx.fillRect(cx - size * 0.02, valveY + size * 0.02, size * 0.04, size * 0.04);
+
+  // 高壓警告標示
+  ctx.fillStyle = `rgba(255, 30, 50, ${0.55 + 0.45 * Math.sin(time * 0.012)})`;
+  ctx.shadowColor = '#ff1e32';
+  ctx.shadowBlur = 6;
+  ctx.font = `bold ${Math.max(8, Math.round(size * 0.16))}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('!', cx, valveY - size * 0.08);
+  ctx.shadowBlur = 0;
+
+  // 瓶身金屬高光
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.fillRect(bodyX + 3, bodyY + 4, 3, bodyH - 8);
+
+  ctx.restore();
+}
