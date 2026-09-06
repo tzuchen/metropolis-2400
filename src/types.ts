@@ -66,6 +66,9 @@ export interface Item {
   energyCost: number;
   equipped: boolean;
   clearanceRequired: SecurityLevel;
+  weaponId?: string;
+  isSuppressed?: boolean;
+  range?: number;
 }
 
 export interface Player extends Entity {
@@ -74,6 +77,7 @@ export interface Player extends Entity {
   credits: number;
   clearanceLevel: SecurityLevel;
   inventory: Item[];
+  weapons?: Item[];
   equippedWeapon: Item | null;
   equippedShield: Item | null;
   equippedGadget: Item | null;

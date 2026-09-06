@@ -96,6 +96,12 @@ Your objective:
   - **Overclocked Power Core**: Expands maximum operative energy capacity from 100 to 150 EN.
 - **Explosive Plasma Canisters (`PLASMA_CANISTER`)**: Volatile pressurized gas containers placed at strategic choke points. Shooting them with a laser blaster or catching them in EMP detonations unleashes a 70 AoE plasma explosion across a 2-tile radius, obliterating patrol squads!
 
+### 10. 🔫 Multi-Weapon Tactical Arsenal (`[Q]`)
+- **Quick-Cycle Weaponry (`[Q]`)**: Instant tactical weapon switching on the fly:
+  - **Laser Blaster Mk-II**: Standard issue coherent pulse blaster (35 DMG, 5 EN, Range 6, unsuppressed).
+  - **Silenced Dart Gun**: Pneumatic stealth needle thrower (25 DMG, 3 EN, Range 5). Completely **SUPPRESSED**—eliminates enemies with zero acoustic soundwave and prevents alert cascades!
+  - **Scatter Plasma Shotgun**: Heavy close-quarter breach scattergun (65 DMG, 9 EN, Range 3). Devastating close-range burst damage to punch through armored Hunter-Killers.
+
 ---
 
 ## 🎮 Controls & Keybindings (操作指南)
@@ -104,6 +110,7 @@ Your objective:
 | :--- | :--- | :--- |
 | **`W` `A` `S` `D`** / **`↑` `↓` `←` `→`** | **Move / Aim** | Walk across tiles; aim blaster toward robots when armed |
 | **`F`** | **Draw / Holster** | Toggle weapon state. Holstered allows talking to NPCs; armed enables firing & ambush crits |
+| **`Q`** | **Swap Weapon** | Cycle through tactical arsenal: Laser Blaster ➔ Silenced Dart Gun ➔ Scatter Shotgun |
 | **`C`** | **Holo-Disguise** | Activate civilian optical disguise (consumes 1 Energy/turn) |
 | **`1`** | **Quick Heal** | Consume 1 Nanite Stimpack (+40 HP) |
 | **`2`** | **Quick Recharge** | Consume 1 Plasma Energy Cell (+50 Energy) |
@@ -143,6 +150,7 @@ metropolis-2400/
 │   ├── verify-ai.ts      # Robot vision, alerts & pathfinding tests
 │   ├── verify-depth.ts   # Inventory, EMP shockwave & ambush crit tests
 │   ├── verify-augments.ts# Cyberware clinic & canister hazard tests
+│   ├── verify-weapons.ts # Multi-weapon cycling & suppressed acoustics tests
 │   ├── verify-story.ts   # Data slate decryption & dynamic dialogue tests
 │   ├── verify-renderer.ts# Canvas drawing calls & UI verification
 │   └── verify-sprites.ts # Sprite rendering integrity tests

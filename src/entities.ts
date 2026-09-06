@@ -124,6 +124,36 @@ export function createPlayer(startPos: Position): Player {
     }
   );
 
+  const dartGun = createItem(
+    'silenced-dart-gun',
+    'Silenced Dart Gun',
+    WEAPON_TYPE,
+    {
+      power: 25,
+      energyCost: 3,
+      equipped: false,
+      description: 'Pneumatic needle thrower. Zero acoustic signature.',
+    }
+  );
+  (dartGun as any).weaponId = 'DART_GUN';
+  (dartGun as any).range = 5;
+  (dartGun as any).isSuppressed = true;
+
+  const scatterShotgun = createItem(
+    'scatter-shotgun',
+    'Scatter Plasma Shotgun',
+    WEAPON_TYPE,
+    {
+      power: 65,
+      energyCost: 9,
+      equipped: false,
+      description: 'Wide-angle plasma burst. Devastating close-range scatter.',
+    }
+  );
+  (scatterShotgun as any).weaponId = 'SCATTER_SHOTGUN';
+  (scatterShotgun as any).range = 3;
+  (scatterShotgun as any).isSuppressed = false;
+
   return {
     id: 'player',
     name: 'Player',
@@ -143,6 +173,7 @@ export function createPlayer(startPos: Position): Player {
       POWER_CORE: false,
     },
     inventory: [laserPistol, personalShield, holoDisguise, hackerId],
+    weapons: [laserPistol, dartGun, scatterShotgun],
     equippedWeapon: laserPistol,
     equippedShield: personalShield,
     equippedGadget: holoDisguise,
@@ -193,6 +224,26 @@ export function createRobot(type: RobotType, startPos: Position, patrolPath?: Po
 export function toggleWeaponDraw(player: Player): boolean {
   player.isWeaponDrawn = !player.isWeaponDrawn;
   return player.isWeaponDrawn;
+}
+
+export function cycleWeapon(player: Player): Item {
+  const p = player as unknown as { weapons?: Item[]; equippedWeapon?: Item };
+  const weapons = p.weapons ?? [];
+
+  if (weapons.length === 0) {
+    return p.equippedWeapon as Item;
+  }
+
+  const current = p.equippedWeapon;
+  const currentIndex = weapons.findIndex(
+    (weapon) => weapon === current || (current !== undefined && weapon.id === current.id)
+  );
+
+  const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % weapons.length;
+  const nextWeapon = weapons[nextIndex];
+
+  p.equippedWeapon = nextWeapon;
+  return nextWeapon;
 }
 
 export function toggleDisguise(player: Player): boolean {

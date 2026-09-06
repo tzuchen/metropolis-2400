@@ -1,6 +1,6 @@
 import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard } from './types';
 import { buildSector1Map, calculateFOV, isWalkable, toggleDoor, disableForcefield, getTile } from './map';
-import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise, installAugment } from './entities';
+import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise, installAugment, cycleWeapon } from './entities';
 import { updateRobotAI } from './ai';
 import { TerminalSession } from './terminal';
 import { GameRenderer } from './renderer';
@@ -630,6 +630,14 @@ export class GameEngine {
       );
       this.render();
       return;
+    } else if (key === 'q' || key === 'Q') {
+      const weapon = cycleWeapon(this.player);
+      soundFX.terminal();
+      const isSup = (weapon as any).isSuppressed;
+      this.pushFloatingText(this.player.x, this.player.y, weapon.name, isSup ? '#00ff88' : '#00f0ff');
+      this.pushMessage('ARMAMENT SWITCH: Equipped [' + weapon.name + '] (' + weapon.power + ' DMG, ' + weapon.energyCost + ' EN' + (isSup ? ' | SUPPRESSED' : '') + ').', 'info');
+      this.render();
+      return;
     } else if (key === 'c' || key === 'C') {
       const ok = toggleDisguise(this.player);
       if (ok) {
@@ -751,7 +759,8 @@ export class GameEngine {
       if (this.player.isWeaponDrawn) {
         let hitRobot: Robot | null = null;
         let hitCanister: Hazard | null = null;
-        for (let range = 1; range <= 5; range++) {
+        const maxRange = (this.player.equippedWeapon as any)?.range ?? 5;
+        for (let range = 1; range <= maxRange; range++) {
           const tx = this.player.x + dx * range;
           const ty = this.player.y + dy * range;
           const tTile = getTile(this.map, { x: tx, y: ty });
@@ -772,7 +781,9 @@ export class GameEngine {
         }
 
         if (hitRobot) {
-          if (this.player.energy < 5) {
+          const weapon = this.player.equippedWeapon;
+          const energyCost = weapon?.energyCost ?? 5;
+          if (this.player.energy < energyCost) {
             soundFX.hit();
             this.pushMessage('Energy depleted! Blaster power cells exhausted.', 'danger');
             this.render();
@@ -785,11 +796,18 @@ export class GameEngine {
             hitRobot.aiState === 'patrol' ||
             (hitRobot.stunnedTurns ?? 0) > 0;
 
-          const baseDamage = 35;
-          const damage = isBackstab ? 105 : baseDamage;
+          const baseDamage = weapon?.power ?? 35;
+          const damage = isBackstab ? Math.round(baseDamage * 3) : baseDamage;
 
-          this.player.energy -= 5;
-          soundFX.laser();
+          this.player.energy -= energyCost;
+          const weaponId = (weapon as any)?.weaponId;
+          if (weaponId === 'DART_GUN') {
+            soundFX.dart();
+          } else if (weaponId === 'SCATTER_SHOTGUN') {
+            soundFX.shotgun();
+          } else {
+            soundFX.laser();
+          }
           hitRobot.hp -= damage;
           this.laserBeams.push({
             from: { x: this.player.x, y: this.player.y },
@@ -847,7 +865,10 @@ export class GameEngine {
           }
 
           // 槍響聲學偵測與警戒連鎖 (Gunfire Acoustics)
-          if (!isBackstab) {
+          const isSuppressed = (weapon as any)?.isSuppressed === true;
+          if (isSuppressed) {
+            this.pushMessage('Suppressed shot fired! No acoustic signature detected.', 'info');
+          } else if (!isBackstab) {
             this.securityLevel = 'ALERT' as SecurityLevel;
             soundFX.alarm();
 

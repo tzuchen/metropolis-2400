@@ -557,6 +557,126 @@ export class SoundFX {
     osc.start(now);
     osc.stop(now + duration + 0.02);
   }
+
+  // 15. 靜音麻醉飛針槍發射音效 (Pneumatic Silenced Needle Shot)
+  dart(): void {
+    const ctx = this.ensureContext();
+    const master = this.masterGain;
+    if (!ctx || !master) return;
+    const now = ctx.currentTime;
+    const duration = 0.09;
+
+    const noise = this.createNoiseSource(ctx);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(3200, now);
+    filter.frequency.exponentialRampToValueAtTime(6500, now + duration * 0.4);
+    filter.frequency.exponentialRampToValueAtTime(2400, now + duration);
+    filter.Q.value = 1.2;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(master);
+    noise.start(now);
+    noise.stop(now + duration + 0.02);
+
+    const needle = ctx.createOscillator();
+    needle.type = 'sine';
+    needle.frequency.setValueAtTime(2600, now);
+    needle.frequency.exponentialRampToValueAtTime(5200, now + 0.035);
+    needle.frequency.exponentialRampToValueAtTime(1800, now + duration);
+
+    const needleFilter = ctx.createBiquadFilter();
+    needleFilter.type = 'bandpass';
+    needleFilter.frequency.setValueAtTime(3600, now);
+    needleFilter.frequency.exponentialRampToValueAtTime(5200, now + 0.04);
+    needleFilter.frequency.exponentialRampToValueAtTime(2200, now + duration);
+    needleFilter.Q.value = 8;
+
+    const needleGain = ctx.createGain();
+    needleGain.gain.setValueAtTime(0.0001, now);
+    needleGain.gain.exponentialRampToValueAtTime(0.12, now + 0.012);
+    needleGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    needle.connect(needleFilter);
+    needleFilter.connect(needleGain);
+    needleGain.connect(master);
+    needle.start(now);
+    needle.stop(now + duration + 0.02);
+  }
+
+  // 16. 電漿散彈槍重型轟鳴音效 (Scatter Plasma Blast)
+  shotgun(): void {
+    const ctx = this.ensureContext();
+    const master = this.masterGain;
+    if (!ctx || !master) return;
+    const now = ctx.currentTime;
+    const duration = 0.5;
+
+    const noise = this.createNoiseSource(ctx);
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.setValueAtTime(4200, now);
+    noiseFilter.frequency.exponentialRampToValueAtTime(120, now + duration);
+    noiseFilter.Q.value = 0.8;
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.0001, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.42, now + 0.012);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(master);
+    noise.start(now);
+    noise.stop(now + duration + 0.05);
+
+    const scatterFrequencies = [180, 220, 260];
+    scatterFrequencies.forEach((freq, i) => {
+      const start = now + i * 0.018;
+      const osc = ctx.createOscillator();
+      osc.type = i === 0 ? 'sawtooth' : 'square';
+      osc.frequency.setValueAtTime(freq, start);
+      osc.frequency.exponentialRampToValueAtTime(45 + i * 12, start + duration);
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(5200, start);
+      filter.frequency.exponentialRampToValueAtTime(220, start + duration);
+      filter.Q.value = 2.5;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.22, start + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(master);
+      osc.start(start);
+      osc.stop(start + duration + 0.05);
+    });
+
+    const sub = ctx.createOscillator();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(90, now);
+    sub.frequency.exponentialRampToValueAtTime(28, now + duration);
+
+    const subGain = ctx.createGain();
+    subGain.gain.setValueAtTime(0.0001, now);
+    subGain.gain.exponentialRampToValueAtTime(0.38, now + 0.015);
+    subGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    sub.connect(subGain);
+    subGain.connect(master);
+    sub.start(now);
+    sub.stop(now + duration + 0.05);
+  }
 }
 
 export const soundFX = new SoundFX();
