@@ -79,9 +79,14 @@ export interface Player extends Entity {
   equippedGadget: Item | null;
   isDisguised: boolean;
   isWeaponDrawn: boolean;
+  consumables?: {
+    medkits: number;
+    batteries: number;
+    empGrenades: number;
+  };
 }
 
-export type RobotAIState = 'patrol' | 'investigate' | 'chase' | 'attack';
+export type RobotAIState = 'idle' | 'patrol' | 'investigate' | 'chase' | 'attack';
 
 export interface Robot extends Entity {
   robotType: RobotType;
@@ -92,6 +97,7 @@ export interface Robot extends Entity {
   alertCooldown: number;
   attackPower: number;
   scanRange: number;
+  stunnedTurns?: number;
 }
 
 export interface TerminalData {
@@ -132,4 +138,22 @@ export interface NPC extends Entity {
 export interface DialogueSession {
   npc: NPC;
   textIndex: number;
+}
+
+export interface GroundItem {
+  id: string;
+  name: string;
+  itemType: 'MEDKIT' | 'BATTERY' | 'EMP_GRENADE' | 'KEYCARD' | 'CREDIT_CHIP';
+  x: number;
+  y: number;
+  description: string;
+  amount?: number;
+  iconColor: string;
+}
+
+export interface MissionObjective {
+  id: string;
+  title: string;
+  description: string;
+  completed: boolean;
 }

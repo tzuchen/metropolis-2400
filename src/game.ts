@@ -1,4 +1,4 @@
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession } from './types';
+import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective } from './types';
 import { buildSector1Map, calculateFOV, isWalkable, toggleDoor, disableForcefield, getTile } from './map';
 import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise } from './entities';
 import { updateRobotAI } from './ai';
@@ -13,6 +13,10 @@ export class GameEngine {
   player: Player;
   robots: Robot[];
   npcs: NPC[];
+  groundItems: GroundItem[];
+  missionObjectives: MissionObjective[];
+  isInventoryOpen: boolean = false;
+  isMissionLogOpen: boolean = false;
   securityLevel: SecurityLevel;
   messages: GameMessage[];
   visibleTiles: Set<string>;
@@ -31,12 +35,16 @@ export class GameEngine {
     this.player = createPlayer(this.map.playerStart);
     this.robots = this.createSectorRobots();
     this.npcs = this.createSectorNPCs();
+    this.groundItems = this.createSectorItems();
+    this.missionObjectives = this.createSectorObjectives();
+    this.isInventoryOpen = false;
+    this.isMissionLogOpen = false;
     this.securityLevel = 'CLEAR' as SecurityLevel;
     this.messages = [];
     this.floatingTexts = [];
     this.pushMessage('SYSTEM: Resistance neural-link online.', 'info');
     this.pushMessage('MISSION: Infiltrate Tzorg facility & deactivate checkpoint forcefield.', 'warning');
-    this.pushMessage('INTEL: Speak with Kira and residents in the safehouse [T].', 'info');
+    this.pushMessage('INTEL: Speak with Kira [T], check tactical missions [M] & inventory [I].', 'info');
     this.visibleTiles = new Set<string>();
     this.exploredTiles = new Set<string>();
     this.activeTerminal = null;
@@ -146,6 +154,90 @@ export class GameEngine {
     ];
   }
 
+  private createSectorItems(): GroundItem[] {
+    return [
+      {
+        id: 'item-med-1',
+        name: 'Nanite Medkit',
+        itemType: 'MEDKIT',
+        x: 8,
+        y: 7,
+        description: 'Military-grade nanite injector. Restores +40 HP.',
+        amount: 1,
+        iconColor: '#00ff88',
+      },
+      {
+        id: 'item-bat-1',
+        name: 'Plasma Battery',
+        itemType: 'BATTERY',
+        x: 18,
+        y: 3,
+        description: 'Super-capacitance plasma power cell. Restores +50 EN.',
+        amount: 1,
+        iconColor: '#00f0ff',
+      },
+      {
+        id: 'item-emp-1',
+        name: 'EMP Disruptor',
+        itemType: 'EMP_GRENADE',
+        x: 23,
+        y: 10,
+        description: 'Electro-magnetic disruptor grenade. Stuns all robots in radius 4 for 4 turns.',
+        amount: 1,
+        iconColor: '#c77dff',
+      },
+      {
+        id: 'item-med-2',
+        name: 'Nanite Medkit',
+        itemType: 'MEDKIT',
+        x: 28,
+        y: 4,
+        description: 'Emergency trauma pack left behind by Tzorg patrol.',
+        amount: 1,
+        iconColor: '#00ff88',
+      },
+      {
+        id: 'item-key-1',
+        name: 'Security Pass',
+        itemType: 'KEYCARD',
+        x: 15,
+        y: 11,
+        description: 'Decrypted security clearance token for Tzorg terminal override.',
+        amount: 1,
+        iconColor: '#ffea00',
+      },
+    ];
+  }
+
+  private createSectorObjectives(): MissionObjective[] {
+    return [
+      {
+        id: 'obj-safehouse',
+        title: 'Safehouse Recon & Gear',
+        description: 'Converse with Commander Kira and Doc Vance in Sector 1 Safehouse.',
+        completed: false,
+      },
+      {
+        id: 'obj-scavenge',
+        title: 'Tactical Stockpile',
+        description: 'Scavenge field supplies (Nanite Medkit, Battery, or EMP Grenade).',
+        completed: false,
+      },
+      {
+        id: 'obj-forcefield',
+        title: 'Deactivate Checkpoint 01',
+        description: 'Access terminal CHECKPOINT_FF to lower the high-energy plasma barrier.',
+        completed: false,
+      },
+      {
+        id: 'obj-vault',
+        title: 'Infiltrate Central Data Core',
+        description: 'Bypass Hunter-Killer defense grid and reach Sector 1 Extraction Nexus.',
+        completed: false,
+      },
+    ];
+  }
+
   private pushMessage(text: string, type: GameMessage['type']): void {
     this.messages.push({ text, type });
     if (this.messages.length > 50) {
@@ -181,7 +273,11 @@ export class GameEngine {
       this.laserBeams,
       this.floatingTexts,
       this.npcs,
-      this.activeDialogue
+      this.activeDialogue,
+      this.groundItems,
+      this.isInventoryOpen,
+      this.isMissionLogOpen,
+      this.missionObjectives
     );
   }
 
@@ -195,6 +291,40 @@ export class GameEngine {
     }
 
     if (!this.player.isAlive) {
+      return;
+    }
+
+    // 背包與裝備視窗模式 (Inventory Modal Mode)
+    if (this.isInventoryOpen) {
+      if (key === 'Escape' || key === 'Esc' || key === 'i' || key === 'I') {
+        this.isInventoryOpen = false;
+        soundFX.terminal();
+        this.render();
+        return;
+      }
+      if (key === '1') {
+        this.useMedkit();
+        return;
+      }
+      if (key === '2') {
+        this.useBattery();
+        return;
+      }
+      if (key === '3') {
+        this.useEMPGrenade();
+        return;
+      }
+      return;
+    }
+
+    // 任務日誌情報視窗模式 (Mission Log Modal Mode)
+    if (this.isMissionLogOpen) {
+      if (key === 'Escape' || key === 'Esc' || key === 'm' || key === 'M') {
+        this.isMissionLogOpen = false;
+        soundFX.terminal();
+        this.render();
+        return;
+      }
       return;
     }
 
@@ -228,6 +358,12 @@ export class GameEngine {
           }
           soundFX.pickup();
           this.pushMessage(r.message, 'success');
+
+          const safehouseObj = this.missionObjectives.find((o) => o.id === 'obj-safehouse');
+          if (safehouseObj && !safehouseObj.completed) {
+            safehouseObj.completed = true;
+            this.pushMessage('MISSION UPDATE: Safehouse Recon objective complete!', 'success');
+          }
         }
 
         if (nextIndex < list.length) {
@@ -269,6 +405,11 @@ export class GameEngine {
           soundFX.victory();
           this.pushMessage('Checkpoint forcefield disabled. Resistance objective accomplished!', 'success');
           this.pushFloatingText(this.player.x, this.player.y, 'VICTORY!', '#00ff88');
+
+          const ffObj = this.missionObjectives.find((o) => o.id === 'obj-forcefield');
+          if (ffObj) ffObj.completed = true;
+          const vaultObj = this.missionObjectives.find((o) => o.id === 'obj-vault');
+          if (vaultObj) vaultObj.completed = true;
         }
 
         if (result?.clearedAlert) {
@@ -395,6 +536,29 @@ export class GameEngine {
       this.pushMessage('Nothing to interact with nearby.', 'warning');
       this.render();
       return;
+    } else if (key === 'i' || key === 'I') {
+      this.isInventoryOpen = true;
+      soundFX.terminal();
+      this.render();
+      return;
+    } else if (key === 'm' || key === 'M') {
+      this.isMissionLogOpen = true;
+      soundFX.terminal();
+      this.render();
+      return;
+    } else if (key === '1') {
+      this.useMedkit();
+      return;
+    } else if (key === '2') {
+      this.useBattery();
+      return;
+    } else if (key === '3') {
+      this.useEMPGrenade();
+      return;
+    } else if (key === 'g' || key === 'G') {
+      this.checkItemPickup();
+      this.render();
+      return;
     } else if (key === ' ' || key === '.') {
       this.tick();
       return;
@@ -444,31 +608,91 @@ export class GameEngine {
             return;
           }
 
+          // 戰術背刺與奇襲判定 (Ambush / Silent Backstab)
+          const isBackstab =
+            this.player.isDisguised ||
+            hitRobot.aiState === 'patrol' ||
+            (hitRobot.stunnedTurns ?? 0) > 0;
+
+          const baseDamage = 35;
+          const damage = isBackstab ? 105 : baseDamage;
+
           this.player.energy -= 5;
           soundFX.laser();
-          const damage = 35;
           hitRobot.hp -= damage;
           this.laserBeams.push({
             from: { x: this.player.x, y: this.player.y },
             to: { x: hitRobot.x, y: hitRobot.y },
-            color: '#00f0ff',
+            color: isBackstab ? '#ffea00' : '#00f0ff',
           });
-          this.pushFloatingText(hitRobot.x, hitRobot.y, '-' + damage, '#ff3855');
-          this.pushMessage('Fired laser at ' + hitRobot.name + ' for ' + damage + ' dmg!', 'danger');
+
+          if (isBackstab) {
+            this.pushFloatingText(hitRobot.x, hitRobot.y, `CRIT ${damage}!`, '#ffea00');
+            this.pushMessage(
+              `AMBUSH CRITICAL OVERRIDE: Dealt ${damage} damage to ${hitRobot.name}!`,
+              'success'
+            );
+          } else {
+            this.pushFloatingText(hitRobot.x, hitRobot.y, '-' + damage, '#ff3855');
+            this.pushMessage('Fired laser at ' + hitRobot.name + ' for ' + damage + ' dmg!', 'danger');
+          }
 
           if (hitRobot.hp <= 0) {
             hitRobot.isAlive = false;
             soundFX.explosion();
             this.player.credits += 50;
             this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + 20);
+
+            // 隨機掉落殘骸補給物資 (Loot Drop from robot)
+            const dropRoll = Math.random();
+            if (dropRoll < 0.4) {
+              this.groundItems.push({
+                id: `drop-${Date.now()}`,
+                name: 'Plasma Battery',
+                itemType: 'BATTERY',
+                x: hitRobot.x,
+                y: hitRobot.y,
+                description: 'Salvaged power capacitor from destroyed chassis.',
+                amount: 1,
+                iconColor: '#00f0ff',
+              });
+            } else if (dropRoll < 0.7) {
+              this.groundItems.push({
+                id: `drop-${Date.now()}`,
+                name: 'Credit Chip',
+                itemType: 'CREDIT_CHIP',
+                x: hitRobot.x,
+                y: hitRobot.y,
+                description: 'Tzorg encoded currency token.',
+                amount: 45,
+                iconColor: '#ffea00',
+              });
+            }
+
             this.pushFloatingText(hitRobot.x, hitRobot.y, '+50 CR', '#ffaa00');
-            this.pushMessage(hitRobot.name + ' destroyed! Salvaged 50 CR & 20 EN.', 'success');
+            this.pushMessage(hitRobot.name + ' destroyed! Salvaged scrap data & energy.', 'success');
           } else {
             soundFX.hit();
           }
 
-          this.securityLevel = 'ALERT' as SecurityLevel;
-          soundFX.alarm();
+          // 槍響聲學偵測與警戒連鎖 (Gunfire Acoustics)
+          if (!isBackstab) {
+            this.securityLevel = 'ALERT' as SecurityLevel;
+            soundFX.alarm();
+
+            // 槍響震波：通知半徑 8 格內未發現主角的巡邏機器人前來調查
+            for (const r of this.robots) {
+              if (!r.isAlive || r === hitRobot) continue;
+              const d = Math.abs(r.x - this.player.x) + Math.abs(r.y - this.player.y);
+              if (d <= 8 && r.aiState === 'patrol') {
+                r.aiState = 'investigate';
+                r.targetPos = { x: this.player.x, y: this.player.y };
+              }
+            }
+          } else {
+            this.pushMessage('Silent takedown executed! Acoustic suppression maintained.', 'info');
+          }
+
           this.tick();
           return;
         }
@@ -488,6 +712,9 @@ export class GameEngine {
         this.player.x = nx;
         this.player.y = ny;
         soundFX.step();
+
+        // 自動拾取地面物資 (Auto-loot ground items)
+        this.checkItemPickup();
 
         // 偽裝能量消耗
         if (this.player.isDisguised) {
@@ -556,11 +783,118 @@ export class GameEngine {
     this.laserBeams = [];
   }
 
+  private useMedkit(): void {
+    if ((this.player.consumables?.medkits ?? 0) > 0) {
+      if (this.player.hp >= this.player.maxHp) {
+        this.pushMessage('HP is already at maximum capacity.', 'warning');
+        this.render();
+        return;
+      }
+      this.player.consumables!.medkits -= 1;
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + 40);
+      soundFX.pickup();
+      this.pushFloatingText(this.player.x, this.player.y, '+40 HP', '#00ff88');
+      this.pushMessage('Injected Nanite Stimpack (+40 HP). Vital signs stabilized.', 'success');
+      this.tick();
+    } else {
+      this.pushMessage('No Nanite Stimpacks in inventory! Scavenge Sector 1 for medkits.', 'warning');
+      this.render();
+    }
+  }
+
+  private useBattery(): void {
+    if ((this.player.consumables?.batteries ?? 0) > 0) {
+      if (this.player.energy >= this.player.maxEnergy) {
+        this.pushMessage('Energy capacitors are already fully charged.', 'warning');
+        this.render();
+        return;
+      }
+      this.player.consumables!.batteries -= 1;
+      this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + 50);
+      soundFX.pickup();
+      this.pushFloatingText(this.player.x, this.player.y, '+50 EN', '#00f0ff');
+      this.pushMessage('Connected Plasma Battery (+50 EN). Cyberware powered.', 'success');
+      this.tick();
+    } else {
+      this.pushMessage('No Plasma Batteries remaining!', 'warning');
+      this.render();
+    }
+  }
+
+  private useEMPGrenade(): void {
+    if ((this.player.consumables?.empGrenades ?? 0) > 0) {
+      this.player.consumables!.empGrenades -= 1;
+      soundFX.explosion();
+      const blastRadius = 4;
+      let stunnedCount = 0;
+
+      for (const r of this.robots) {
+        if (!r.isAlive) continue;
+        const dist = Math.abs(r.x - this.player.x) + Math.abs(r.y - this.player.y);
+        if (dist <= blastRadius) {
+          r.stunnedTurns = 4;
+          r.aiState = 'idle';
+          this.pushFloatingText(r.x, r.y, '⚡STUNNED (4T)⚡', '#00f0ff');
+          stunnedCount++;
+        }
+      }
+
+      this.pushFloatingText(this.player.x, this.player.y, 'EMP BLAST!', '#c77dff');
+      this.pushMessage(
+        `EMP Disruptor detonated! ${stunnedCount} robot(s) short-circuited for 4 turns!`,
+        'success'
+      );
+      this.tick();
+    } else {
+      this.pushMessage('No EMP Disruptor Grenades in inventory!', 'warning');
+      this.render();
+    }
+  }
+
+  private checkItemPickup(): void {
+    const itemIndex = this.groundItems.findIndex((it) => it.x === this.player.x && it.y === this.player.y);
+    if (itemIndex !== -1) {
+      const item = this.groundItems.splice(itemIndex, 1)[0];
+      if (item.itemType === 'MEDKIT') {
+        this.player.consumables!.medkits = (this.player.consumables?.medkits ?? 0) + (item.amount || 1);
+        this.pushFloatingText(this.player.x, this.player.y, '+1 MEDKIT', '#00ff88');
+        this.pushMessage(`Salvaged [${item.name}]. Press [1] to quick-heal.`, 'success');
+      } else if (item.itemType === 'BATTERY') {
+        this.player.consumables!.batteries = (this.player.consumables?.batteries ?? 0) + (item.amount || 1);
+        this.pushFloatingText(this.player.x, this.player.y, '+1 BATTERY', '#00f0ff');
+        this.pushMessage(`Salvaged [${item.name}]. Press [2] to recharge.`, 'success');
+      } else if (item.itemType === 'EMP_GRENADE') {
+        this.player.consumables!.empGrenades = (this.player.consumables?.empGrenades ?? 0) + (item.amount || 1);
+        this.pushFloatingText(this.player.x, this.player.y, '+1 EMP GRENADE', '#c77dff');
+        this.pushMessage(`Acquired [${item.name}]. Press [3] to detonate EMP shockwave!`, 'success');
+      } else if (item.itemType === 'CREDIT_CHIP') {
+        const cr = item.amount || 45;
+        this.player.credits += cr;
+        this.pushFloatingText(this.player.x, this.player.y, `+${cr} CR`, '#ffea00');
+        this.pushMessage(`Retrieved encrypted credit chip (+${cr} CR).`, 'success');
+      } else if (item.itemType === 'KEYCARD') {
+        this.pushFloatingText(this.player.x, this.player.y, 'PASSCODE ACQUIRED', '#ffea00');
+        this.pushMessage(`Acquired [${item.name}]: Tzorg security clearance elevated.`, 'success');
+      }
+      soundFX.pickup();
+
+      const scavengeObj = this.missionObjectives.find((o) => o.id === 'obj-scavenge');
+      if (scavengeObj && !scavengeObj.completed) {
+        scavengeObj.completed = true;
+        this.pushMessage('MISSION UPDATE: Tactical Stockpile objective complete!', 'success');
+      }
+    }
+  }
+
   restartGame(): void {
     this.map = buildSector1Map();
     this.player = createPlayer(this.map.playerStart);
     this.robots = this.createSectorRobots();
     this.npcs = this.createSectorNPCs();
+    this.groundItems = this.createSectorItems();
+    this.missionObjectives = this.createSectorObjectives();
+    this.isInventoryOpen = false;
+    this.isMissionLogOpen = false;
     this.securityLevel = 'CLEAR' as SecurityLevel;
     this.messages = [];
     this.floatingTexts = [];

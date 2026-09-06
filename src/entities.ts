@@ -109,6 +109,11 @@ export function createPlayer(startPos: Position): Player {
     equippedGadget: holoDisguise,
     isDisguised: false,
     isWeaponDrawn: false,
+    consumables: {
+      medkits: 1,
+      batteries: 1,
+      empGrenades: 1,
+    },
   } as unknown as Player;
 }
 
@@ -142,6 +147,7 @@ export function createRobot(type: RobotType, startPos: Position, patrolPath?: Po
     alertCooldown: 0,
     attackPower: stats.attackPower,
     scanRange: stats.scanRange,
+    stunnedTurns: 0,
   } as unknown as Robot;
 }
 

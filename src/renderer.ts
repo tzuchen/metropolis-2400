@@ -1,7 +1,7 @@
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, NPC, DialogueSession } from './types';
+import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, NPC, DialogueSession, GroundItem, MissionObjective } from './types';
 import type { TerminalSession } from './terminal';
 import * as MapModule from './map';
-import { drawTileSprite, drawPlayerSprite, drawRobotSprite, drawNPCSprite } from './sprites';
+import { drawTileSprite, drawPlayerSprite, drawRobotSprite, drawNPCSprite, drawItemSprite } from './sprites';
 
 export type Position = { x: number; y: number };
 
@@ -46,7 +46,11 @@ export class GameRenderer {
     laserBeams?: Array<{ from: Position; to: Position; color: string }>,
     floatingTexts?: Array<{ x: number; y: number; text: string; color: string }>,
     npcs?: NPC[],
-    activeDialogue?: DialogueSession | null
+    activeDialogue?: DialogueSession | null,
+    groundItems?: GroundItem[],
+    isInventoryOpen?: boolean,
+    isMissionLogOpen?: boolean,
+    missionObjectives?: MissionObjective[]
   ): void {
     const width = Number(this.canvas.width) || 800;
     const height = Number(this.canvas.height) || 600;
@@ -121,6 +125,26 @@ export class GameRenderer {
       });
     }
 
+    // 4.5 繪製戰術物資與地面裝備道具 (Ground Items)
+    if (Array.isArray(groundItems)) {
+      groundItems.forEach((item) => {
+        if (!item) return;
+        const ix = Number(item.x);
+        const iy = Number(item.y);
+        const key = this.key(ix, iy);
+        if (!visible.has(key) && !explored.has(key)) return;
+        drawItemSprite(
+          ctx,
+          item,
+          ix * this.tileSize - camX,
+          iy * this.tileSize - camY,
+          this.tileSize,
+          visible.has(key),
+          now
+        );
+      });
+    }
+
     // 5. 繪製已被摧毀的機器人殘骸
     if (Array.isArray(robots)) {
       robots.forEach((robot) => {
@@ -186,8 +210,8 @@ export class GameRenderer {
     // 10. 畫面周圍氛圍暗角 (Vignette & Scanline Overlay)
     this.drawScreenAtmosphere(width, height, ctx);
 
-    // 11. 戰術小雷達 (Sector Mini Radar，包含居民綠點)
-    this.drawMiniRadar(width, map, player, robots, npcs, visible, ctx, now);
+    // 11. 戰術小雷達 (Sector Mini Radar，包含道具黃點、居民綠點、機器人)
+    this.drawMiniRadar(width, map, player, robots, npcs, groundItems, visible, ctx, now);
 
     // 12. 賽博風格抬頭顯示 HUD (Tactical HUD)
     this.drawHud(width, height, player, securityLevel, messages, ctx);
@@ -200,6 +224,16 @@ export class GameRenderer {
     // 14. 居民對話框 (Resident Dialogue Box)
     if (activeDialogue) {
       this.drawDialogueBox(activeDialogue, width, height, ctx, now);
+    }
+
+    // 14.5 背包與戰術裝備視窗 (Tactical Inventory Modal)
+    if (isInventoryOpen) {
+      this.drawInventoryModal(player, width, height, ctx, now);
+    }
+
+    // 14.6 任務目標情報日誌 (Mission Log Modal)
+    if (isMissionLogOpen) {
+      this.drawMissionLogModal(missionObjectives ?? [], width, height, ctx, now);
     }
 
     // 15. 死亡／勝利畫面橫幅 (Game Over / Victory Banner)
@@ -333,6 +367,7 @@ export class GameRenderer {
     player: Player,
     robots: Robot[],
     npcs: NPC[] | undefined,
+    groundItems: GroundItem[] | undefined,
     visible: Set<string>,
     ctx: any,
     now: number
@@ -361,6 +396,17 @@ export class GameRenderer {
     const ox = rx + 4;
     const oy = ry + 12;
 
+    // 地面物資黃點
+    if (Array.isArray(groundItems)) {
+      groundItems.forEach((it) => {
+        if (!it) return;
+        const key = this.key(it.x, it.y);
+        if (!visible.has(key)) return;
+        ctx.fillStyle = '#ffaa00';
+        ctx.fillRect?.(ox + it.x * scaleX - 1, oy + it.y * scaleY - 1, 2, 2);
+      });
+    }
+
     // 居民反抗軍綠點
     if (Array.isArray(npcs)) {
       npcs.forEach((n) => {
@@ -372,13 +418,14 @@ export class GameRenderer {
       });
     }
 
-    // 機器人紅點
+    // 機器人紅點 (若被 EMP 癱瘓則顯示青色)
     if (Array.isArray(robots)) {
       robots.forEach((r) => {
         if (!r || !r.isAlive) return;
         const key = this.key(r.x, r.y);
         if (!visible.has(key)) return;
-        ctx.fillStyle = '#ff1744';
+        const isStunned = (r.stunnedTurns ?? 0) > 0;
+        ctx.fillStyle = isStunned ? '#00f0ff' : '#ff1744';
         ctx.fillRect?.(ox + r.x * scaleX - 1, oy + r.y * scaleY - 1, 2, 2);
       });
     }
@@ -565,6 +612,30 @@ export class GameRenderer {
       ctx.textAlign = 'left';
     }
 
+    // 快捷補給品底欄 (Tactical Consumables HUD Strip)
+    const medCount = p?.consumables?.medkits ?? 0;
+    const batCount = p?.consumables?.batteries ?? 0;
+    const empCount = p?.consumables?.empGrenades ?? 0;
+
+    ctx.fillStyle = 'rgba(7, 13, 20, 0.85)';
+    ctx.fillRect?.(0, height - 26, 400, 26);
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect?.(0, height - 26, 400, 1);
+
+    ctx.font = 'bold 11px monospace';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#00ff88';
+    ctx.fillText?.(`[1] MED: ${medCount}`, 10, height - 13);
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillText?.(`[2] BAT: ${batCount}`, 95, height - 13);
+    ctx.fillStyle = '#c77dff';
+    ctx.fillText?.(`[3] EMP: ${empCount}`, 180, height - 13);
+    ctx.fillStyle = '#ffaa00';
+    ctx.fillText?.('[I] INV', 265, height - 13);
+    ctx.fillStyle = '#00ffaa';
+    ctx.fillText?.('[M] MISSIONS', 320, height - 13);
+
     ctx.restore?.();
   }
 
@@ -710,6 +781,197 @@ export class GameRenderer {
     ctx.textAlign = 'right';
     ctx.fillText?.(promptText, x + boxW - 20, y + boxH - 16);
 
+    ctx.restore?.();
+  }
+
+  // 戰術裝備與背包情報視窗 (Tactical Inventory Modal)
+  drawInventoryModal(
+    player: Player,
+    width: number,
+    height: number,
+    ctx: any,
+    now: number
+  ): void {
+    ctx.save?.();
+    const boxW = Math.min(width - 40, 720);
+    const boxH = Math.min(height - 60, 440);
+    const x = (width - boxW) / 2;
+    const y = (height - boxH) / 2;
+
+    ctx.fillStyle = 'rgba(3, 8, 14, 0.96)';
+    ctx.fillRect?.(x, y, boxW, boxH);
+
+    ctx.strokeStyle = '#ffaa00';
+    ctx.shadowColor = '#ffaa00';
+    ctx.shadowBlur = 10;
+    ctx.lineWidth = 2;
+    ctx.strokeRect?.(x + 1, y + 1, boxW - 2, boxH - 2);
+
+    ctx.fillStyle = '#ffaa00';
+    ctx.font = 'bold 14px monospace';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    ctx.fillText?.('// RESISTANCE TACTICAL INVENTORY & CYBERDECK //', x + 20, y + 16);
+
+    ctx.fillStyle = '#8899a6';
+    ctx.font = '11px monospace';
+    ctx.fillText?.('HOTKEYS: [1] USE MEDKIT  |  [2] USE BATTERY  |  [3] THROW EMP  |  [I / ESC] CLOSE', x + 20, y + 36);
+
+    ctx.strokeStyle = 'rgba(255, 170, 0, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath?.();
+    ctx.moveTo?.(x + 20, y + 54);
+    ctx.lineTo?.(x + boxW - 20, y + 54);
+    ctx.stroke?.();
+
+    const colW = (boxW - 60) / 2;
+
+    // 左欄：已配備戰術裝備
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText?.('► EQUIPPED CYBERWARE & WEAPONS', x + 20, y + 68);
+
+    const gear = [
+      { name: 'Laser Blaster Mk-II', stat: 'ATK: 35 DMG (5 EN)', desc: 'High-density coherent pulse rifle. Silent backstabs deal 3x dmg.' },
+      { name: 'Nanite Mesh Shield', stat: 'DEF: 50% ABSORB (4 EN)', desc: 'Kinetic & energy deflection barrier activated upon impact.' },
+      { name: 'Holo-Disguise Matrix', stat: 'STEALTH: 1 EN/turn', desc: 'Projects civilian signature. Deactivates if weapon drawn.' },
+      { name: 'Neural Cyberdeck v2.4', stat: 'HACK: CLEARANCE LV-2', desc: 'Direct-link terminal hacking apparatus for security hubs.' },
+    ];
+
+    gear.forEach((g, i) => {
+      const gy = y + 92 + i * 54;
+      ctx.fillStyle = 'rgba(15, 25, 35, 0.8)';
+      ctx.fillRect?.(x + 20, gy, colW, 46);
+      ctx.strokeStyle = '#005577';
+      ctx.strokeRect?.(x + 20, gy, colW, 46);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText?.(g.name, x + 28, gy + 8);
+
+      ctx.fillStyle = '#00f0ff';
+      ctx.font = '10px monospace';
+      ctx.fillText?.(g.stat, x + 28, gy + 22);
+
+      ctx.fillStyle = '#7a8e99';
+      ctx.font = '9px monospace';
+      ctx.fillText?.(g.desc, x + 28, gy + 34);
+    });
+
+    // 右欄：野戰補給品與消耗性戰術物品
+    const rx = x + 30 + colW;
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText?.('► FIELD CONSUMABLES & TACTICAL ITEMS', rx, y + 68);
+
+    const p = player as any;
+    const medkits = p?.consumables?.medkits ?? 0;
+    const batteries = p?.consumables?.batteries ?? 0;
+    const emps = p?.consumables?.empGrenades ?? 0;
+
+    const items = [
+      { key: '[1]', name: 'Nanite Stimpack', count: medkits, color: '#00ff88', effect: '+40 HP immediate cellular repair' },
+      { key: '[2]', name: 'Plasma Energy Cell', count: batteries, color: '#00e5ff', effect: '+50 Energy capacitors reload' },
+      { key: '[3]', name: 'EMP Disruptor Grenade', count: emps, color: '#c77dff', effect: 'Stuns all robots in radius 4 for 4 turns' },
+      { key: '[CR]', name: 'Tzorg Credits', count: p?.credits ?? 0, color: '#ffea00', effect: 'Black market currency for informants' },
+    ];
+
+    items.forEach((it, i) => {
+      const iy = y + 92 + i * 54;
+      ctx.fillStyle = 'rgba(15, 30, 22, 0.8)';
+      ctx.fillRect?.(rx, iy, colW, 46);
+      ctx.strokeStyle = it.color;
+      ctx.strokeRect?.(rx, iy, colW, 46);
+
+      ctx.fillStyle = it.color;
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText?.(`${it.key} ${it.name} (x${it.count})`, rx + 10, iy + 8);
+
+      ctx.fillStyle = '#a0b4b8';
+      ctx.font = '10px monospace';
+      ctx.fillText?.(it.effect, rx + 10, iy + 26);
+    });
+
+    // 底部提示
+    ctx.fillStyle = '#ffaa00';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText?.('PRESS [ 1 ], [ 2 ], [ 3 ] TO QUICK-USE  |  PRESS [ I ] OR [ ESC ] TO RESUME TACTICAL VIEW', x + boxW / 2, y + boxH - 18);
+
+    ctx.shadowBlur = 0;
+    ctx.restore?.();
+  }
+
+  // 任務目標情報日誌 (Mission Log Modal)
+  drawMissionLogModal(
+    objectives: MissionObjective[],
+    width: number,
+    height: number,
+    ctx: any,
+    now: number
+  ): void {
+    ctx.save?.();
+    const boxW = Math.min(width - 40, 680);
+    const boxH = Math.min(height - 60, 420);
+    const x = (width - boxW) / 2;
+    const y = (height - boxH) / 2;
+
+    ctx.fillStyle = 'rgba(4, 12, 20, 0.96)';
+    ctx.fillRect?.(x, y, boxW, boxH);
+
+    ctx.strokeStyle = '#00e5ff';
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 10;
+    ctx.lineWidth = 2;
+    ctx.strokeRect?.(x + 1, y + 1, boxW - 2, boxH - 2);
+
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 14px monospace';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    ctx.fillText?.('// RESISTANCE MISSION INTEL & DIRECTIVES //', x + 20, y + 16);
+
+    ctx.fillStyle = '#6a8e99';
+    ctx.font = '11px monospace';
+    ctx.fillText?.('SECTOR 1 INFILTRATION PROTOCOL // STATUS: ACTIVE', x + 20, y + 36);
+
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath?.();
+    ctx.moveTo?.(x + 20, y + 54);
+    ctx.lineTo?.(x + boxW - 20, y + 54);
+    ctx.stroke?.();
+
+    objectives.forEach((obj, i) => {
+      const oy = y + 70 + i * 62;
+      const isDone = obj.completed;
+
+      ctx.fillStyle = isDone ? 'rgba(0, 40, 25, 0.6)' : 'rgba(15, 25, 35, 0.7)';
+      ctx.fillRect?.(x + 20, oy, boxW - 40, 52);
+
+      ctx.strokeStyle = isDone ? '#00ff88' : '#005577';
+      ctx.strokeRect?.(x + 20, oy, boxW - 40, 52);
+
+      // Checkbox
+      ctx.fillStyle = isDone ? '#00ff88' : '#ff3855';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText?.(isDone ? '[✓] COMPLETE' : '[ ] ACTIVE', x + 30, oy + 10);
+
+      ctx.fillStyle = isDone ? '#ffffff' : '#d0e5f2';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText?.(obj.title, x + 150, oy + 10);
+
+      ctx.fillStyle = '#8aa0aa';
+      ctx.font = '10px monospace';
+      ctx.fillText?.(obj.description, x + 30, oy + 30);
+    });
+
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText?.('PRESS [ M ] OR [ ESC ] TO CLOSE MISSION INTEL', x + boxW / 2, y + boxH - 18);
+
+    ctx.shadowBlur = 0;
     ctx.restore?.();
   }
 

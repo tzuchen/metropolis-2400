@@ -698,6 +698,31 @@ export function drawRobotSprite(
   ctx.fillStyle = hpRatio > 0.5 ? '#00ff66' : hpRatio > 0.25 ? '#ffcc00' : '#ff2233';
   ctx.fillRect(barX, barY, barW * hpRatio, barH);
 
+  // EMP Stun 電磁麻痺特效
+  if ((robot.stunnedTurns ?? 0) > 0) {
+    ctx.strokeStyle = '#00f0ff';
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 6;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const angle = (time * 0.01 + i * (Math.PI / 2)) % (Math.PI * 2);
+      const rad = size * 0.32;
+      const ex = cx + Math.cos(angle) * rad;
+      const ey = cy + Math.sin(angle) * rad;
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(ex, ey);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // STUNNED 標籤
+    ctx.fillStyle = '#00f0ff';
+    ctx.font = 'bold 8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚡STUNNED⚡', cx, barY - 6);
+  }
+
   ctx.restore();
 }
 
@@ -802,5 +827,108 @@ export function drawNPCSprite(
   ctx.fillText('TALK [T]', cx, tagY - 1);
   ctx.shadowBlur = 0;
 
+  ctx.restore();
+}
+
+// 戰術地面道具繪製 (Ground Item Sprite)
+export function drawItemSprite(
+  ctx: CanvasRenderingContext2D,
+  item: any,
+  x: number,
+  y: number,
+  size: number,
+  visible: boolean = true,
+  time: number = 0
+): void {
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const type = String(item?.itemType || '').toUpperCase();
+  const color = item?.iconColor || '#00ff88';
+
+  ctx.save();
+  if (!visible) {
+    ctx.globalAlpha = 0.5;
+  }
+
+  // 1. 地面發光光暈
+  const pulse = 0.6 + 0.4 * Math.sin(time * 0.006 + (item.x || 0));
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+  ctx.beginPath();
+  ctx.arc(cx, cy + size * 0.28, size * 0.22, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 8 * pulse;
+
+  if (type === 'MEDKIT') {
+    // 奈米醫療包：軍規綠色外箱 + 白/綠十字
+    ctx.fillStyle = '#0e2e1a';
+    ctx.fillRect(cx - size * 0.22, cy - size * 0.16, size * 0.44, size * 0.34);
+    ctx.strokeStyle = '#00ff66';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(cx - size * 0.22, cy - size * 0.16, size * 0.44, size * 0.34);
+
+    ctx.fillStyle = '#00ff66';
+    ctx.fillRect(cx - 2, cy - size * 0.1, 4, size * 0.22);
+    ctx.fillRect(cx - size * 0.11, cy - 2, size * 0.22, 4);
+  } else if (type === 'BATTERY') {
+    // 能量電芯：青色高能圓柱電池
+    ctx.fillStyle = '#082530';
+    ctx.fillRect(cx - size * 0.16, cy - size * 0.2, size * 0.32, size * 0.4);
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(cx - size * 0.16, cy - size * 0.2, size * 0.32, size * 0.4);
+
+    // 電芯能量格
+    ctx.fillStyle = '#00f0ff';
+    ctx.fillRect(cx - size * 0.1, cy - size * 0.12, size * 0.2, 3);
+    ctx.fillRect(cx - size * 0.1, cy - 1, size * 0.2, 3);
+    ctx.fillRect(cx - size * 0.1, cy + size * 0.1, size * 0.2, 3);
+  } else if (type === 'EMP_GRENADE') {
+    // EMP 電磁脈衝手榴彈：紫藍色核心與環狀發光電弧
+    ctx.fillStyle = '#22083a';
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#c77dff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.strokeStyle = '#7b2cbf';
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.25, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = '#e0aaff';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // 晶片／金鑰通行卡
+    ctx.fillStyle = '#282005';
+    ctx.fillRect(cx - size * 0.2, cy - size * 0.14, size * 0.4, size * 0.28);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(cx - size * 0.2, cy - size * 0.14, size * 0.4, size * 0.28);
+
+    ctx.fillStyle = color;
+    ctx.fillRect(cx - size * 0.12, cy - size * 0.06, size * 0.12, size * 0.12);
+  }
+
+  // 浮動微光物品標籤
+  const bob = Math.sin(time * 0.005 + (item.x || 0)) * 2;
+  ctx.fillStyle = 'rgba(5, 10, 15, 0.75)';
+  ctx.fillRect(cx - 20, cy - size * 0.38 + bob, 40, 12);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 0.8;
+  ctx.strokeRect(cx - 20, cy - size * 0.38 + bob, 40, 12);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 8px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(item.name || 'ITEM', cx, cy - size * 0.38 + bob + 6);
+
+  ctx.shadowBlur = 0;
   ctx.restore();
 }

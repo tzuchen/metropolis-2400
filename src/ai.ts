@@ -152,7 +152,7 @@ const findNextStep = (map: SectorMap, from: Position, target: Position): Positio
       const dist = manhattanDistance({ x: nx, y: ny }, target);
       if (dist < minDistance) {
         minDistance = dist;
-        bestStep = { x: ny, y: ny };
+        bestStep = { x: nx, y: ny };
       }
     }
   }
@@ -168,6 +168,15 @@ export function updateRobotAI(
 ): RobotActionResult {
   if (!robot.isAlive) {
     return { action: 'idle', message: 'Robot is decommissioned.' };
+  }
+
+  // EMP Stun check
+  if ((robot.stunnedTurns ?? 0) > 0) {
+    robot.stunnedTurns! -= 1;
+    return {
+      action: 'idle',
+      message: `${robot.name} EMP circuits overloaded! (${robot.stunnedTurns} turns left)`,
+    };
   }
 
   const robotPos: Position = { x: robot.x, y: robot.y };
