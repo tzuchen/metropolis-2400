@@ -43,7 +43,8 @@ export class GameRenderer {
     securityLevel: SecurityLevel,
     messages: GameMessage[],
     activeTerminal: TerminalSession | null,
-    laserBeams?: Array<{ from: Position; to: Position; color: string }>
+    laserBeams?: Array<{ from: Position; to: Position; color: string }>,
+    floatingTexts?: Array<{ x: number; y: number; text: string; color: string }>
   ): void {
     const width = Number(this.canvas.width) || 800;
     const height = Number(this.canvas.height) || 600;
@@ -98,7 +99,20 @@ export class GameRenderer {
     // 3. 繪製街景霓虹看板層 (Cyberpunk Neon Signboard Layer)
     this.drawStreetSigns(camX, camY, visible, ctx, now);
 
-    // 4. 繪製巡邏與警戒機器人
+    // 4. 先繪製已被摧毀的機器人殘骸
+    if (Array.isArray(robots)) {
+      robots.forEach((robot) => {
+        if (!robot || robot.isAlive !== false) return;
+        const rx = Number(robot.x);
+        const ry = Number(robot.y);
+        if (Number.isNaN(rx) || Number.isNaN(ry)) return;
+        const key = this.key(rx, ry);
+        if (!visible.has(key) && !explored.has(key)) return;
+        this.drawRobot(robot, rx, ry, camX, camY, ctx, now);
+      });
+    }
+
+    // 5. 繪製活著的巡邏與警戒機器人
     if (Array.isArray(robots)) {
       robots.forEach((robot) => {
         if (!robot || robot.isAlive === false) return;
@@ -111,10 +125,10 @@ export class GameRenderer {
       });
     }
 
-    // 5. 繪製主角 (帶有風衣、目鏡、武器與護盾)
+    // 6. 繪製主角 (帶有風衣、目鏡、武器與護盾)
     this.drawPlayer(player, camX, camY, ctx, now);
 
-    // 6. 繪製雷射彈道光束
+    // 7. 繪製雷射彈道光束
     if (Array.isArray(laserBeams)) {
       laserBeams.forEach((beam) => {
         if (!beam || !beam.from || !beam.to) return;
@@ -129,15 +143,43 @@ export class GameRenderer {
       });
     }
 
-    // 7. 畫面周圍氛圍暗角 (Vignette & Scanline Overlay)
+    // 8. 繪製戰鬥浮動文字 (Floating Combat Text)
+    if (Array.isArray(floatingTexts)) {
+      floatingTexts.forEach((ft) => {
+        if (!ft) return;
+        const fx = ft.x * this.tileSize - camX + this.tileSize / 2;
+        const fy = ft.y * this.tileSize - camY - 12;
+        ctx.save?.();
+        ctx.font = 'bold 13px monospace';
+        ctx.fillStyle = ft.color || '#ffea00';
+        ctx.shadowColor = ft.color || '#ffea00';
+        ctx.shadowBlur = 6;
+        ctx.textAlign = 'center';
+        ctx.fillText?.(ft.text, fx, fy);
+        ctx.shadowBlur = 0;
+        ctx.restore?.();
+      });
+    }
+
+    // 9. 畫面周圍氛圍暗角 (Vignette & Scanline Overlay)
     this.drawScreenAtmosphere(width, height, ctx);
 
-    // 8. 賽博風格抬頭顯示 HUD (Tactical HUD)
+    // 10. 戰術小雷達 (Sector Mini Radar)
+    this.drawMiniRadar(width, map, player, robots, visible, ctx, now);
+
+    // 11. 賽博風格抬頭顯示 HUD (Tactical HUD)
     this.drawHud(width, height, player, securityLevel, messages, ctx);
 
-    // 9. 活躍終端機畫面 (CRT Terminal Session)
+    // 12. 活躍終端機畫面 (CRT Terminal Session)
     if (activeTerminal) {
       this.drawTerminal(activeTerminal, width, height, ctx, now);
+    }
+
+    // 13. 死亡／勝利畫面橫幅 (Game Over / Victory Banner)
+    if (!player.isAlive) {
+      this.drawGameOverOverlay(width, height, ctx, now);
+    } else if ((player as any).victory) {
+      this.drawVictoryOverlay(width, height, ctx, now);
     }
 
     ctx.restore?.();
@@ -229,14 +271,12 @@ export class GameRenderer {
       const sy = sign.y * this.tileSize - camY;
       const key = `${sign.x},${sign.y}`;
 
-      // 只有在視野或附近可見時才發光渲染
       if (!visible.has(key)) continue;
 
       ctx.save?.();
       const pulse = 0.8 + 0.2 * Math.sin(now * 0.005 + sign.x);
       ctx.globalAlpha = pulse;
 
-      // 霓虹看板背景條
       const signW = this.tileSize * 1.6;
       const signH = 16;
       const bx = sx + (this.tileSize - signW) / 2;
@@ -260,6 +300,60 @@ export class GameRenderer {
       ctx.shadowBlur = 0;
       ctx.restore?.();
     }
+  }
+
+  // 戰術小雷達 (Sector Mini Radar)
+  drawMiniRadar(
+    width: number,
+    map: SectorMap,
+    player: Player,
+    robots: Robot[],
+    visible: Set<string>,
+    ctx: any,
+    now: number
+  ): void {
+    ctx.save?.();
+    const radarW = 100;
+    const radarH = 75;
+    const rx = width - radarW - 12;
+    const ry = 46;
+
+    // 半透明深色底框
+    ctx.fillStyle = 'rgba(5, 12, 18, 0.85)';
+    ctx.fillRect?.(rx, ry, radarW, radarH);
+
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect?.(rx + 0.5, ry + 0.5, radarW - 1, radarH - 1);
+
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 8px monospace';
+    ctx.fillText?.('RADAR // SEC-01', rx + 4, ry + 9);
+
+    const mw = Number((map as any).width) || 40;
+    const mh = Number((map as any).height) || 30;
+    const scaleX = (radarW - 8) / mw;
+    const scaleY = (radarH - 16) / mh;
+    const ox = rx + 4;
+    const oy = ry + 12;
+
+    // 機器人紅點
+    if (Array.isArray(robots)) {
+      robots.forEach((r) => {
+        if (!r || !r.isAlive) return;
+        const key = this.key(r.x, r.y);
+        if (!visible.has(key)) return;
+        ctx.fillStyle = '#ff1744';
+        ctx.fillRect?.(ox + r.x * scaleX - 1, oy + r.y * scaleY - 1, 2, 2);
+      });
+    }
+
+    // 玩家青色閃爍點
+    const pPulse = 0.5 + 0.5 * Math.sin(now * 0.01);
+    ctx.fillStyle = `rgba(0, 240, 255, ${pPulse})`;
+    ctx.fillRect?.(ox + player.x * scaleX - 1.5, oy + player.y * scaleY - 1.5, 3, 3);
+
+    ctx.restore?.();
   }
 
   getTile(map: any, x: number, y: number): any {
@@ -343,7 +437,6 @@ export class GameRenderer {
 
   drawScreenAtmosphere(width: number, height: number, ctx: any): void {
     ctx.save?.();
-    // 頂部與底部輕微暗角
     const grad = ctx.createLinearGradient?.(0, 0, 0, height);
     if (grad) {
       grad.addColorStop(0, 'rgba(0, 5, 10, 0.4)');
@@ -393,27 +486,32 @@ export class GameRenderer {
     if (sec === 'LOCKDOWN') secColor = '#ff1744';
 
     ctx.fillStyle = secColor;
-    ctx.fillText?.(`SEC: ${sec}`, 180, 18);
+    ctx.fillText?.(`SEC: ${sec}`, 175, 18);
 
     // 中間：生命值 (HP) 與能量 (EN) 狀態條
     const hp = Math.max(0, p?.hp ?? 100);
     const maxHp = p?.maxHp ?? 100;
     ctx.fillStyle = '#ff2a4b';
-    ctx.fillText?.(`HP ${hp}/${maxHp}`, 290, 18);
+    ctx.fillText?.(`HP ${hp}/${maxHp}`, 280, 18);
 
     const energy = Math.max(0, p?.energy ?? 100);
     const maxEnergy = p?.maxEnergy ?? 100;
     ctx.fillStyle = '#00f0ff';
-    ctx.fillText?.(`EN ${energy}/${maxEnergy}`, 400, 18);
+    ctx.fillText?.(`EN ${energy}/${maxEnergy}`, 380, 18);
+
+    // 信用點數 (Credits)
+    const credits = p?.credits ?? 0;
+    ctx.fillStyle = '#ffb700';
+    ctx.fillText?.(`CR: ${credits}`, 480, 18);
 
     // 裝備狀態：武器／偽裝
-    const weaponStatus = p?.isWeaponDrawn ? 'WEAPON: READY' : 'WEAPON: HOLSTER';
+    const weaponStatus = p?.isWeaponDrawn ? 'WEAPON: ARMED' : 'WEAPON: HOLSTER';
     ctx.fillStyle = p?.isWeaponDrawn ? '#ff3855' : '#8899a6';
-    ctx.fillText?.(weaponStatus, 510, 18);
+    ctx.fillText?.(weaponStatus, 570, 18);
 
     if (p?.isDisguised) {
       ctx.fillStyle = '#b432ff';
-      ctx.fillText?.('[HOLO-DISGUISED]', 650, 18);
+      ctx.fillText?.('[DISGUISED]', 700, 18);
     }
 
     // 底部遊戲訊息懸浮提示
@@ -457,18 +555,15 @@ export class GameRenderer {
     const x = (width - boxW) / 2;
     const y = (height - boxH) / 2;
 
-    // 黑色 CRT 機殼與半透明螢幕
     ctx.fillStyle = 'rgba(2, 10, 6, 0.95)';
     ctx.fillRect?.(x, y, boxW, boxH);
 
-    // CRT 綠色螢光框
     ctx.strokeStyle = '#00ff66';
     ctx.shadowColor = '#00ff66';
     ctx.shadowBlur = 10;
     ctx.lineWidth = 2;
     ctx.strokeRect?.(x + 1, y + 1, boxW - 2, boxH - 2);
 
-    // 標題列
     ctx.fillStyle = '#00ff66';
     ctx.font = 'bold 14px monospace';
     ctx.textBaseline = 'top';
@@ -486,7 +581,6 @@ export class GameRenderer {
     ctx.lineTo?.(x + boxW - 16, y + 54);
     ctx.stroke?.();
 
-    // 終端機歷史文字
     const lines: string[] = [];
     const history = t?.history ?? t?.lines ?? t?.log ?? [];
     if (Array.isArray(history)) {
@@ -501,7 +595,6 @@ export class GameRenderer {
       ctx.fillText?.(line, x + 16, y + 64 + index * 18);
     });
 
-    // 輸入提示符與閃爍游標
     const input = String(t?.input ?? t?.buffer ?? t?.value ?? '');
     const cursor = Math.sin(now * 0.01) > 0 ? '█' : '';
     ctx.fillStyle = '#00ffff';
@@ -509,6 +602,54 @@ export class GameRenderer {
     ctx.fillText?.(`> ${input}${cursor}`, x + 16, y + boxH - 28);
 
     ctx.shadowBlur = 0;
+    ctx.restore?.();
+  }
+
+  drawGameOverOverlay(width: number, height: number, ctx: any, now: number): void {
+    ctx.save?.();
+    ctx.fillStyle = 'rgba(15, 0, 5, 0.85)';
+    ctx.fillRect?.(0, 0, width, height);
+
+    const pulse = 0.8 + 0.2 * Math.sin(now * 0.005);
+    ctx.fillStyle = `rgba(255, 30, 50, ${pulse})`;
+    ctx.shadowColor = '#ff1e32';
+    ctx.shadowBlur = 12;
+    ctx.font = 'bold 24px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText?.('// OPERATIVE ELIMINATED //', width / 2, height / 2 - 20);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 0;
+    ctx.font = '13px monospace';
+    ctx.fillText?.('PRESS [ R ] TO RE-INITIALIZE RESISTANCE PROTOCOL', width / 2, height / 2 + 20);
+
+    ctx.restore?.();
+  }
+
+  drawVictoryOverlay(width: number, height: number, ctx: any, now: number): void {
+    ctx.save?.();
+    ctx.fillStyle = 'rgba(0, 20, 15, 0.85)';
+    ctx.fillRect?.(0, 0, width, height);
+
+    const pulse = 0.8 + 0.2 * Math.sin(now * 0.005);
+    ctx.fillStyle = `rgba(0, 255, 136, ${pulse})`;
+    ctx.shadowColor = '#00ff88';
+    ctx.shadowBlur = 15;
+    ctx.font = 'bold 22px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText?.('★ MISSION ACCOMPLISHED ★', width / 2, height / 2 - 25);
+
+    ctx.fillStyle = '#00f0ff';
+    ctx.font = '14px monospace';
+    ctx.fillText?.('TZORG SECURITY FORCEFIELD PERFORATED // NEXUS ACCESSED', width / 2, height / 2 + 5);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 0;
+    ctx.font = '12px monospace';
+    ctx.fillText?.('PRESS [ R ] TO RESTART SIMULATION', width / 2, height / 2 + 35);
+
     ctx.restore?.();
   }
 }

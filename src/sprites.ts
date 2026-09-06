@@ -228,6 +228,7 @@ export function drawTileSprite(
     ctx.fillRect(x, y, size, size);
     ctx.fillStyle = '#3d301f';
     ctx.fillRect(x + 3, y + 3, size - 6, size - 6);
+    // 橘色反抗軍噴漆標誌
     ctx.fillStyle = '#ff7700';
     ctx.shadowColor = '#ff7700';
     ctx.shadowBlur = 5;
@@ -421,6 +422,74 @@ export function drawPlayerSprite(
   ctx.restore();
 }
 
+// 殘骸金屬堆渲染 (Wreckage Scrap for Destroyed Bots)
+export function drawRobotWreckageSprite(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number
+): void {
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  ctx.save();
+
+  // 燃燒焦黑油漬
+  ctx.fillStyle = 'rgba(15, 10, 8, 0.7)';
+  ctx.beginPath();
+  ctx.arc(cx, cy + 4, size * 0.35, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 扭曲金屬外殼廢鐵
+  ctx.fillStyle = '#22252c';
+  ctx.fillRect(cx - size * 0.25, cy - size * 0.1, size * 0.5, size * 0.25);
+  ctx.fillStyle = '#3a3e48';
+  ctx.fillRect(cx - size * 0.15, cy - size * 0.2, size * 0.3, size * 0.15);
+
+  // 冒煙火星與斷線 (Glowing Embers)
+  ctx.fillStyle = '#ff4400';
+  ctx.shadowColor = '#ff4400';
+  ctx.shadowBlur = 4;
+  ctx.fillRect(cx - size * 0.1, cy, 3, 3);
+  ctx.fillRect(cx + size * 0.12, cy - 2, 2, 2);
+  ctx.shadowBlur = 0;
+
+  ctx.restore();
+}
+
+// 掉落物渲染 (能量電池 / 信用點晶片)
+export function drawItemDropSprite(
+  ctx: CanvasRenderingContext2D,
+  itemType: string,
+  x: number,
+  y: number,
+  size: number,
+  time: number = 0
+): void {
+  const cx = x + size / 2;
+  const cy = y + size / 2 + Math.sin(time * 0.005) * 3;
+  ctx.save();
+
+  if (itemType === 'ENERGY' || itemType === 'GADGET') {
+    // 藍色能量電池 (Energy Cell)
+    ctx.fillStyle = '#00f0ff';
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(cx - 5, cy - 8, 10, 16);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(cx - 3, cy - 6, 6, 4);
+  } else {
+    // 金色信用點數金鑰 (Credit Keycard / Chip)
+    ctx.fillStyle = '#ffaa00';
+    ctx.shadowColor = '#ffaa00';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(cx - 7, cy - 5, 14, 10);
+    ctx.fillStyle = '#ffea66';
+    ctx.fillRect(cx - 5, cy - 3, 10, 2);
+  }
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
 export function drawRobotSprite(
   ctx: CanvasRenderingContext2D,
   robot: Robot,
@@ -430,6 +499,12 @@ export function drawRobotSprite(
   visible: boolean = true,
   time: number = 0
 ): void {
+  // 若已摧毀，渲染金屬殘骸
+  if (robot.isAlive === false) {
+    drawRobotWreckageSprite(ctx, x, y, size);
+    return;
+  }
+
   const cx = x + size / 2;
   const cy = y + size / 2;
   const type = String(robot?.robotType ?? 'SCOUT_DRONE').toUpperCase();
@@ -520,6 +595,18 @@ export function drawRobotSprite(
     ctx.fillStyle = '#ff0044';
     ctx.beginPath();
     ctx.arc(cx, cy - size * 0.1, size * 0.09, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+  } else if (type.includes('SERVICE') || type.includes('BOT')) {
+    // SERVICE BOT: 工業維修型服務機器人
+    ctx.fillStyle = '#3a3320';
+    ctx.fillRect(cx - size * 0.22, cy - size * 0.2, size * 0.44, size * 0.45);
+    ctx.fillStyle = '#ff9900';
+    ctx.shadowColor = '#ff9900';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(cx, cy - size * 0.26, 4, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
 

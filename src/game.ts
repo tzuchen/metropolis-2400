@@ -4,7 +4,7 @@ import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise } from './e
 import { updateRobotAI } from './ai';
 import { TerminalSession } from './terminal';
 import { GameRenderer } from './renderer';
-
+import { soundFX } from './audio';
 
 export class GameEngine {
   canvas: HTMLCanvasElement;
@@ -18,6 +18,7 @@ export class GameEngine {
   exploredTiles: Set<string>;
   activeTerminal: TerminalSession | null;
   laserBeams: Array<{ from: Position; to: Position; color: string }>;
+  floatingTexts: Array<{ x: number; y: number; text: string; color: string }>;
   terminalInputBuffer: string = '';
   victory: boolean = false;
 
@@ -26,15 +27,12 @@ export class GameEngine {
     this.renderer = new GameRenderer(canvas);
     this.map = buildSector1Map();
     this.player = createPlayer(this.map.playerStart);
-    this.robots = [
-      createRobot('SCOUT_DRONE' as RobotType, { x: 12, y: 5 }, [{ x: 12, y: 5 }, { x: 12, y: 12 }]),
-      createRobot('SCOUT_DRONE' as RobotType, { x: 18, y: 8 }, [{ x: 18, y: 8 }, { x: 24, y: 8 }]),
-      createRobot('SHOCK_ENFORCER' as RobotType, { x: 25, y: 6 }, [{ x: 25, y: 6 }, { x: 27, y: 6 }]),
-    ];
+    this.robots = this.createSectorRobots();
     this.securityLevel = 'CLEAR' as SecurityLevel;
     this.messages = [];
-    this.pushMessage('SYSTEM: Resistance link established.', 'info');
-    this.pushMessage('MISSION: Infiltrate the Tzorg facility and disable the checkpoint forcefield.', 'warning');
+    this.floatingTexts = [];
+    this.pushMessage('SYSTEM: Resistance neural-link online.', 'info');
+    this.pushMessage('MISSION: Infiltrate Tzorg facility & deactivate checkpoint forcefield.', 'warning');
     this.visibleTiles = new Set<string>();
     this.exploredTiles = new Set<string>();
     this.activeTerminal = null;
@@ -45,10 +43,27 @@ export class GameEngine {
     this.render();
   }
 
+  private createSectorRobots(): Robot[] {
+    return [
+      createRobot('SCOUT_DRONE' as RobotType, { x: 12, y: 5 }, [{ x: 12, y: 5 }, { x: 12, y: 12 }]),
+      createRobot('SCOUT_DRONE' as RobotType, { x: 18, y: 8 }, [{ x: 18, y: 8 }, { x: 24, y: 8 }]),
+      createRobot('SHOCK_ENFORCER' as RobotType, { x: 25, y: 6 }, [{ x: 25, y: 6 }, { x: 27, y: 6 }]),
+      createRobot('HUNTER_KILLER' as RobotType, { x: 32, y: 18 }, [{ x: 32, y: 18 }, { x: 32, y: 24 }]),
+      createRobot('SERVICE_BOT' as RobotType, { x: 8, y: 10 }, [{ x: 8, y: 10 }, { x: 8, y: 14 }]),
+    ];
+  }
+
   private pushMessage(text: string, type: GameMessage['type']): void {
     this.messages.push({ text, type });
     if (this.messages.length > 50) {
       this.messages.splice(0, this.messages.length - 50);
+    }
+  }
+
+  private pushFloatingText(x: number, y: number, text: string, color: string): void {
+    this.floatingTexts.push({ x, y, text, color });
+    if (this.floatingTexts.length > 8) {
+      this.floatingTexts.shift();
     }
   }
 
@@ -60,6 +75,7 @@ export class GameEngine {
   }
 
   render(): void {
+    (this.player as any).victory = this.victory;
     this.renderer.render(
       this.map,
       this.player,
@@ -69,36 +85,51 @@ export class GameEngine {
       this.securityLevel,
       this.messages,
       this.activeTerminal,
-      this.laserBeams
+      this.laserBeams,
+      this.floatingTexts
     );
   }
 
   handleKeyDown(key: string): void {
+    // 遊戲結束或勝利時按 R 重新開始
+    if (key === 'r' || key === 'R') {
+      if (!this.player.isAlive || this.victory) {
+        this.restartGame();
+        return;
+      }
+    }
+
     if (!this.player.isAlive) {
       return;
     }
 
+    // 活躍終端機模式 (Terminal Session)
     if (this.activeTerminal) {
       if (key === 'Escape' || key === 'Esc') {
         this.activeTerminal = null;
+        soundFX.terminal();
         this.render();
         return;
       }
 
       if (key === 'Enter') {
+        soundFX.terminal();
         const result: any = this.activeTerminal.executeCommand(this.terminalInputBuffer);
         this.terminalInputBuffer = '';
 
         if (result?.disabledForcefield) {
           disableForcefield(this.map, result.disabledForcefield);
           this.securityLevel = 'CLEAR' as SecurityLevel;
-
           this.victory = true;
-          this.pushMessage('Checkpoint forcefield disabled. Mission objective complete.', 'success');
+          soundFX.victory();
+          this.pushMessage('Checkpoint forcefield disabled. Resistance objective accomplished!', 'success');
+          this.pushFloatingText(this.player.x, this.player.y, 'VICTORY!', '#00ff88');
         }
 
         if (result?.clearedAlert) {
           this.securityLevel = 'CLEAR' as SecurityLevel;
+          soundFX.pickup();
+          this.pushMessage('Security alert cleared from terminal database.', 'success');
         }
 
         if (result?.shouldExit) {
@@ -110,17 +141,18 @@ export class GameEngine {
       }
 
       if (key === 'Backspace') {
+        soundFX.terminal();
         this.terminalInputBuffer = this.terminalInputBuffer.slice(0, -1);
         this.render();
         return;
       }
 
       if (key.length === 1) {
+        soundFX.terminal();
         this.terminalInputBuffer += key;
         this.render();
         return;
       }
-
 
       return;
     }
@@ -130,20 +162,34 @@ export class GameEngine {
 
     if (key === 'ArrowUp' || key === 'w' || key === 'W') {
       dy = -1;
+      (this.player as any).facing = 'up';
     } else if (key === 'ArrowDown' || key === 's' || key === 'S') {
       dy = 1;
+      (this.player as any).facing = 'down';
     } else if (key === 'ArrowLeft' || key === 'a' || key === 'A') {
       dx = -1;
+      (this.player as any).facing = 'left';
     } else if (key === 'ArrowRight' || key === 'd' || key === 'D') {
       dx = 1;
+      (this.player as any).facing = 'right';
     } else if (key === 'f' || key === 'F') {
       const drawn = toggleWeaponDraw(this.player);
-      this.pushMessage(drawn ? 'Weapon drawn! Security robots will be suspicious.' : 'Weapon holstered.', drawn ? 'warning' : 'info');
+      soundFX.laser();
+      this.pushMessage(
+        drawn ? 'Blaster drawn! Security will treat operative as hostile.' : 'Blaster holstered.',
+        drawn ? 'warning' : 'info'
+      );
       this.render();
       return;
     } else if (key === 'c' || key === 'C') {
       const ok = toggleDisguise(this.player);
-      this.pushMessage(ok ? 'Holo-disguise toggled.' : 'Not enough energy for holo-disguise!', ok ? 'info' : 'danger');
+      if (ok) {
+        soundFX.pickup();
+        this.pushMessage('Holo-disguise activated.', 'info');
+      } else {
+        soundFX.hit();
+        this.pushMessage('Not enough energy for holo-disguise!', 'danger');
+      }
       this.render();
       return;
     } else if (key === 'e' || key === 'E') {
@@ -152,12 +198,14 @@ export class GameEngine {
         const tx = this.player.x + ox;
         const ty = this.player.y + oy;
         if (toggleDoor(this.map, { x: tx, y: ty })) {
-          this.pushMessage('Airlock door cycled.', 'info');
+          soundFX.door();
+          this.pushMessage('Airlock blast door cycled.', 'info');
           this.tick();
           return;
         }
-
       }
+      this.pushMessage('No blast door within reach.', 'warning');
+      this.render();
       return;
     } else if (key === 't' || key === 'T') {
       const dirs: [number, number][] = [[0, 0], [0, 1], [0, -1], [1, 0], [-1, 0]];
@@ -166,13 +214,13 @@ export class GameEngine {
         const ty = this.player.y + oy;
         const terminal = this.findTerminalAt(tx, ty);
         if (terminal) {
+          soundFX.terminal();
           this.activeTerminal = new TerminalSession(terminal);
           this.render();
           return;
         }
-
       }
-      this.pushMessage('No terminal in range.', 'warning');
+      this.pushMessage('No terminal console in range.', 'warning');
       this.render();
       return;
     } else if (key === ' ' || key === '.') {
@@ -181,33 +229,70 @@ export class GameEngine {
     }
 
     if (dx !== 0 || dy !== 0) {
-      const nx = this.player.x + dx;
-      const ny = this.player.y + dy;
-      const targetRobot = this.robots.find((r) => r.isAlive && r.x === nx && r.y === ny);
+      // 檢查是否拔槍射擊 (遠程或近戰雷射射擊)
+      if (this.player.isWeaponDrawn) {
+        let hitRobot: Robot | null = null;
+        for (let range = 1; range <= 5; range++) {
+          const tx = this.player.x + dx * range;
+          const ty = this.player.y + dy * range;
+          const tTile = getTile(this.map, { x: tx, y: ty });
+          const tName = String(tTile).toUpperCase();
+          if (tName === 'WALL' || tTile === 2) break; // 牆面阻擋雷射
 
-      if (targetRobot) {
-        if (this.player.isWeaponDrawn) {
+          const found = this.robots.find((r) => r.isAlive && r.x === tx && r.y === ty);
+          if (found) {
+            hitRobot = found;
+            break;
+          }
+        }
+
+        if (hitRobot) {
+          if (this.player.energy < 5) {
+            soundFX.hit();
+            this.pushMessage('Energy depleted! Blaster power cells exhausted.', 'danger');
+            this.render();
+            return;
+          }
+
+          this.player.energy -= 5;
+          soundFX.laser();
           const damage = 35;
-          targetRobot.hp -= damage;
+          hitRobot.hp -= damage;
           this.laserBeams.push({
-
             from: { x: this.player.x, y: this.player.y },
-            to: { x: targetRobot.x, y: targetRobot.y },
-            color: '#ff3355',
+            to: { x: hitRobot.x, y: hitRobot.y },
+            color: '#00f0ff',
           });
-          this.pushMessage(`Fired laser at ${targetRobot.name} for ${damage} dmg!`, 'danger');
+          this.pushFloatingText(hitRobot.x, hitRobot.y, `-${damage}`, '#ff3855');
+          this.pushMessage(`Fired laser at ${hitRobot.name} for ${damage} dmg!`, 'danger');
 
-          if (targetRobot.hp <= 0) {
-            targetRobot.isAlive = false;
-            this.pushMessage(`${targetRobot.name} destroyed!`, 'success');
+          if (hitRobot.hp <= 0) {
+            hitRobot.isAlive = false;
+            soundFX.explosion();
+            this.player.credits += 50;
+            this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + 20);
+            this.pushFloatingText(hitRobot.x, hitRobot.y, '+50 CR', '#ffaa00');
+            this.pushMessage(`${hitRobot.name} destroyed! Salvaged 50 CR & 20 EN.`, 'success');
+          } else {
+            soundFX.hit();
           }
 
           this.securityLevel = 'ALERT' as SecurityLevel;
-        } else {
-          this.pushMessage('Cannot attack with weapon holstered! Press F to draw weapon.', 'warning');
+          soundFX.alarm();
+          this.tick();
+          return;
         }
+      }
 
-        this.tick();
+      // 一般行走移動
+      const nx = this.player.x + dx;
+      const ny = this.player.y + dy;
+      const adjacentRobot = this.robots.find((r) => r.isAlive && r.x === nx && r.y === ny);
+
+      if (adjacentRobot) {
+        soundFX.hit();
+        this.pushMessage('Path blocked by security robot! Press F to draw weapon.', 'warning');
+        this.render();
         return;
       }
 
@@ -215,8 +300,20 @@ export class GameEngine {
       if (tile && isWalkable(tile)) {
         this.player.x = nx;
         this.player.y = ny;
-        this.tick();
+        soundFX.step();
 
+        // 偽裝能量消耗
+        if (this.player.isDisguised) {
+          if (this.player.energy > 0) {
+            this.player.energy = Math.max(0, this.player.energy - 1);
+          } else {
+            this.player.isDisguised = false;
+            soundFX.powerDown();
+            this.pushMessage('Energy depleted! Holo-disguise collapsed!', 'danger');
+          }
+        }
+
+        this.tick();
       }
     }
   }
@@ -238,20 +335,31 @@ export class GameEngine {
 
       if (result?.action === 'alarm') {
         this.securityLevel = 'ALERT' as SecurityLevel;
+        soundFX.alarm();
         if (result.message) {
-
           this.pushMessage(result.message, 'danger');
         }
       } else if (result?.action === 'attack') {
-        const damage = result.damage ?? robot.attackPower ?? 10;
+        let damage = result.damage ?? robot.attackPower ?? 10;
+
+        // 個人能量護盾抵擋 50% 傷害
+        if (this.player.equippedShield && this.player.energy >= 4) {
+          this.player.energy -= 4;
+          damage = Math.max(1, Math.round(damage * 0.5));
+          this.pushFloatingText(this.player.x, this.player.y, 'SHIELD ABSORB', '#00f0ff');
+        }
+
         this.player.hp = Math.max(0, this.player.hp - damage);
+        soundFX.hit();
+        this.pushFloatingText(this.player.x, this.player.y, `-${damage}`, '#ff1744');
         if (result.message) {
           this.pushMessage(result.message, 'danger');
         }
 
         if (this.player.hp <= 0) {
           this.player.isAlive = false;
-          this.pushMessage('MISSION FAILED: Operative eliminated.', 'danger');
+          soundFX.powerDown();
+          this.pushMessage('MISSION FAILED: Operative neutralized by Tzorg forces.', 'danger');
         }
       }
     }
@@ -259,6 +367,23 @@ export class GameEngine {
     this.updateFOV();
     this.render();
     this.laserBeams = [];
+  }
+
+  restartGame(): void {
+    this.map = buildSector1Map();
+    this.player = createPlayer(this.map.playerStart);
+    this.robots = this.createSectorRobots();
+    this.securityLevel = 'CLEAR' as SecurityLevel;
+    this.messages = [];
+    this.floatingTexts = [];
+    this.pushMessage('SYSTEM: Protocol restarted. Resistance operative deployed.', 'info');
+    this.activeTerminal = null;
+    this.laserBeams = [];
+    this.terminalInputBuffer = '';
+    this.victory = false;
+    soundFX.pickup();
+    this.updateFOV();
+    this.render();
   }
 
   private findTerminalAt(x: number, y: number): any {
