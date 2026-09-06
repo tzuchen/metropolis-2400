@@ -1,6 +1,7 @@
 import type { SectorMap, Player, Robot, SecurityLevel, GameMessage } from './types';
 import type { TerminalSession } from './terminal';
 import * as MapModule from './map';
+import { drawTileSprite, drawPlayerSprite, drawRobotSprite } from './sprites';
 
 export type Position = { x: number; y: number };
 
@@ -164,19 +165,7 @@ export class GameRenderer {
     ctx.strokeRect?.(sx + 0.5, sy + 0.5, this.tileSize - 1, this.tileSize - 1);
 
     const tile = this.getTile(m, x, y);
-    if (tile) {
-      const type = String(tile.type ?? tile.kind ?? tile.name ?? '');
-      if (type === 'wall' || type === 'block' || type === 'obstacle') {
-        ctx.fillStyle = visible ? '#1d2a35' : '#101820';
-        ctx.fillRect?.(sx + 2, sy + 2, this.tileSize - 4, this.tileSize - 4);
-      } else if (type === 'door') {
-        ctx.fillStyle = visible ? '#3a2f1d' : '#1a1610';
-        ctx.fillRect?.(sx + 4, sy + 4, this.tileSize - 8, this.tileSize - 8);
-      } else if (type === 'laser' || type === 'trap') {
-        ctx.fillStyle = visible ? '#3a1414' : '#1a0d0d';
-        ctx.fillRect?.(sx + 4, sy + 4, this.tileSize - 8, this.tileSize - 8);
-      }
-    }
+    drawTileSprite(ctx, tile ?? 1, sx, sy, this.tileSize, visible, performance.now());
 
     ctx.restore?.();
   }
@@ -213,41 +202,14 @@ export class GameRenderer {
     camY: number,
     ctx: any
   ): void {
-    const sx = rx * this.tileSize - camX + this.tileSize / 2;
-    const sy = ry * this.tileSize - camY + this.tileSize / 2;
-
-    ctx.save?.();
-    ctx.fillStyle = '#ff5555';
-    ctx.beginPath?.();
-    ctx.arc?.(sx, sy, this.tileSize * 0.32, 0, Math.PI * 2);
-    ctx.fill?.();
-
-    ctx.fillStyle = '#2a0a0a';
-    ctx.beginPath?.();
-    ctx.arc?.(sx, sy, this.tileSize * 0.14, 0, Math.PI * 2);
-    ctx.fill?.();
-
-    ctx.restore?.();
+    drawRobotSprite(ctx, robot, rx * this.tileSize - camX, ry * this.tileSize - camY, this.tileSize, true, performance.now());
   }
 
   drawPlayer(player: Player, camX: number, camY: number, ctx: any): void {
     const p = player as any;
     const px = Number(p?.x) || 0;
     const py = Number(p?.y) || 0;
-    const sx = px * this.tileSize - camX + this.tileSize / 2;
-    const sy = py * this.tileSize - camY + this.tileSize / 2;
-
-    ctx.save?.();
-    ctx.fillStyle = '#4dd0e1';
-    ctx.beginPath?.();
-    ctx.arc?.(sx, sy, this.tileSize * 0.36, 0, Math.PI * 2);
-    ctx.fill?.();
-
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.stroke?.();
-
-    ctx.restore?.();
+    drawPlayerSprite(ctx, player, px * this.tileSize - camX, py * this.tileSize - camY, this.tileSize, performance.now());
   }
 
   drawLine(
