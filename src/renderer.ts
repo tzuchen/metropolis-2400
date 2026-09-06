@@ -1,4 +1,4 @@
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, NPC, DialogueSession, GroundItem, MissionObjective } from './types';
+import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog } from './types';
 import type { TerminalSession } from './terminal';
 import * as MapModule from './map';
 import { drawTileSprite, drawPlayerSprite, drawRobotSprite, drawNPCSprite, drawItemSprite } from './sprites';
@@ -50,7 +50,10 @@ export class GameRenderer {
     groundItems?: GroundItem[],
     isInventoryOpen?: boolean,
     isMissionLogOpen?: boolean,
-    missionObjectives?: MissionObjective[]
+    missionObjectives?: MissionObjective[],
+    activeStoryLog?: StoryLog | null,
+    isStoryArchiveOpen?: boolean,
+    storyLogs?: StoryLog[]
   ): void {
     const width = Number(this.canvas.width) || 800;
     const height = Number(this.canvas.height) || 600;
@@ -234,6 +237,16 @@ export class GameRenderer {
     // 14.6 任務目標情報日誌 (Mission Log Modal)
     if (isMissionLogOpen) {
       this.drawMissionLogModal(missionObjectives ?? [], width, height, ctx, now);
+    }
+
+    // 14.7 故事數據檔案閱讀器 (Data Slate Story Viewer)
+    if (activeStoryLog) {
+      this.drawStoryLogModal(activeStoryLog, width, height, ctx, now);
+    }
+
+    // 14.8 反抗軍資料庫視窗 (Story Archive Modal)
+    if (isStoryArchiveOpen) {
+      this.drawStoryArchiveModal(storyLogs ?? [], width, height, ctx, now);
     }
 
     // 15. 死亡／勝利畫面橫幅 (Game Over / Victory Banner)
@@ -618,10 +631,10 @@ export class GameRenderer {
     const empCount = p?.consumables?.empGrenades ?? 0;
 
     ctx.fillStyle = 'rgba(7, 13, 20, 0.85)';
-    ctx.fillRect?.(0, height - 26, 400, 26);
+    ctx.fillRect?.(0, height - 26, 490, 26);
     ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
     ctx.lineWidth = 1;
-    ctx.strokeRect?.(0, height - 26, 400, 1);
+    ctx.strokeRect?.(0, height - 26, 490, 1);
 
     ctx.font = 'bold 11px monospace';
     ctx.textBaseline = 'middle';
@@ -635,6 +648,8 @@ export class GameRenderer {
     ctx.fillText?.('[I] INV', 265, height - 13);
     ctx.fillStyle = '#00ffaa';
     ctx.fillText?.('[M] MISSIONS', 320, height - 13);
+    ctx.fillStyle = '#ffb700';
+    ctx.fillText?.('[L] ARCHIVE', 410, height - 13);
 
     ctx.restore?.();
   }
@@ -994,6 +1009,167 @@ export class GameRenderer {
     ctx.font = '13px monospace';
     ctx.fillText?.('PRESS [ R ] TO RE-INITIALIZE RESISTANCE PROTOCOL', width / 2, height / 2 + 20);
 
+    ctx.restore?.();
+  }
+
+  // 故事數據晶片檔案閱讀器 (Encrypted Data Slate Story Viewer)
+  drawStoryLogModal(
+    log: StoryLog,
+    width: number,
+    height: number,
+    ctx: any,
+    now: number
+  ): void {
+    ctx.save?.();
+    const boxW = Math.min(width - 40, 720);
+    const boxH = Math.min(height - 60, 440);
+    const x = (width - boxW) / 2;
+    const y = (height - boxH) / 2;
+
+    ctx.fillStyle = 'rgba(2, 8, 14, 0.97)';
+    ctx.fillRect?.(x, y, boxW, boxH);
+
+    ctx.strokeStyle = '#00e5ff';
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 12;
+    ctx.lineWidth = 2;
+    ctx.strokeRect?.(x + 1, y + 1, boxW - 2, boxH - 2);
+
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 13px monospace';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    ctx.fillText?.('// TZORG INTELLIGENCE ARCHIVE // CLASSIFIED RECORD //', x + 24, y + 18);
+
+    ctx.fillStyle = '#ffea00';
+    ctx.font = 'bold 13px monospace';
+    ctx.fillText?.('► ' + log.title.toUpperCase(), x + 24, y + 38);
+
+    ctx.fillStyle = '#8aa0b2';
+    ctx.font = '10px monospace';
+    ctx.fillText?.(`OPERATIVE: RAVEN  |  SOURCE: ${log.author}  |  TIMESTAMP: ${log.timestamp}`, x + 24, y + 56);
+
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath?.();
+    ctx.moveTo?.(x + 24, y + 72);
+    ctx.lineTo?.(x + boxW - 24, y + 72);
+    ctx.stroke?.();
+
+    ctx.fillStyle = '#e4f4fc';
+    ctx.font = '12px monospace';
+    let lineY = y + 84;
+    const maxLineW = boxW - 48;
+
+    log.content.forEach((paragraph) => {
+      const words = paragraph.split(' ');
+      let line = '  ';
+      for (let i = 0; i < words.length; i++) {
+        const testLine = line + words[i] + ' ';
+        const metrics = ctx.measureText ? ctx.measureText(testLine) : { width: testLine.length * 8 };
+        if (metrics.width > maxLineW && i > 0) {
+          ctx.fillText?.(line, x + 24, lineY);
+          line = '  ' + words[i] + ' ';
+          lineY += 17;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText?.(line, x + 24, lineY);
+      lineY += 22;
+    });
+
+    const pulse = 0.7 + 0.3 * Math.sin(now * 0.008);
+    ctx.fillStyle = `rgba(0, 229, 255, ${pulse})`;
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText?.('PRESS [ SPACE ] OR [ ENTER ] OR [ ESC ] TO CLOSE ARCHIVAL RECORD', x + boxW / 2, y + boxH - 18);
+
+    ctx.shadowBlur = 0;
+    ctx.restore?.();
+  }
+
+  // 反抗軍資料庫總覽視窗 (Story Archive Modal)
+  drawStoryArchiveModal(
+    logs: StoryLog[],
+    width: number,
+    height: number,
+    ctx: any,
+    now: number
+  ): void {
+    ctx.save?.();
+    const boxW = Math.min(width - 40, 720);
+    const boxH = Math.min(height - 60, 440);
+    const x = (width - boxW) / 2;
+    const y = (height - boxH) / 2;
+
+    ctx.fillStyle = 'rgba(4, 10, 16, 0.97)';
+    ctx.fillRect?.(x, y, boxW, boxH);
+
+    ctx.strokeStyle = '#ff9900';
+    ctx.shadowColor = '#ff9900';
+    ctx.shadowBlur = 10;
+    ctx.lineWidth = 2;
+    ctx.strokeRect?.(x + 1, y + 1, boxW - 2, boxH - 2);
+
+    ctx.fillStyle = '#ff9900';
+    ctx.font = 'bold 14px monospace';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    ctx.fillText?.('// RESISTANCE LORE ARCHIVES // SECTOR 1 DATA BANK //', x + 20, y + 16);
+
+    const readCount = logs.filter((l) => l.read).length;
+    ctx.fillStyle = '#8aa0aa';
+    ctx.font = '11px monospace';
+    ctx.fillText?.(`RECOVERED DATA SLATES: ${readCount} / ${logs.length} FOUND IN SECTOR`, x + 20, y + 36);
+
+    ctx.strokeStyle = 'rgba(255, 153, 0, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath?.();
+    ctx.moveTo?.(x + 20, y + 54);
+    ctx.lineTo?.(x + boxW - 20, y + 54);
+    ctx.stroke?.();
+
+    logs.forEach((log, i) => {
+      const ly = y + 66 + i * 80;
+      const isFound = log.read;
+
+      ctx.fillStyle = isFound ? 'rgba(15, 28, 38, 0.7)' : 'rgba(10, 15, 20, 0.5)';
+      ctx.fillRect?.(x + 20, ly, boxW - 40, 70);
+
+      ctx.strokeStyle = isFound ? '#00e5ff' : '#334455';
+      ctx.strokeRect?.(x + 20, ly, boxW - 40, 70);
+
+      ctx.fillStyle = isFound ? '#00e5ff' : '#667788';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText?.(
+        isFound ? `[ SLATE 0${i + 1} ] ${log.title}` : `[ SLATE 0${i + 1} ] // ENCRYPTED DATA CORRUPTED //`,
+        x + 30,
+        ly + 10
+      );
+
+      ctx.fillStyle = isFound ? '#ffea00' : '#445566';
+      ctx.font = '10px monospace';
+      ctx.fillText?.(
+        isFound ? `SOURCE: ${log.author} | DATE: ${log.timestamp}` : 'SEARCH SECTOR 1 DEPOTS TO RECOVER DISK',
+        x + 30,
+        ly + 28
+      );
+
+      ctx.fillStyle = isFound ? '#c0d4de' : '#334455';
+      ctx.font = '10px monospace';
+      const snippet = isFound
+        ? (log.content[0] ? log.content[0].slice(0, 80) + '...' : '')
+        : 'Access restricted by Tzorg firewall.';
+      ctx.fillText?.(snippet, x + 30, ly + 46);
+    });
+
+    ctx.fillStyle = '#ff9900';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText?.('PRESS [ L ] OR [ ESC ] TO RETURN TO TACTICAL VIEW', x + boxW / 2, y + boxH - 18);
+
+    ctx.shadowBlur = 0;
     ctx.restore?.();
   }
 

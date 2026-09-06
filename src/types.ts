@@ -143,12 +143,13 @@ export interface DialogueSession {
 export interface GroundItem {
   id: string;
   name: string;
-  itemType: 'MEDKIT' | 'BATTERY' | 'EMP_GRENADE' | 'KEYCARD' | 'CREDIT_CHIP';
+  itemType: 'MEDKIT' | 'BATTERY' | 'EMP_GRENADE' | 'KEYCARD' | 'CREDIT_CHIP' | 'DATA_SLATE';
   x: number;
   y: number;
   description: string;
   amount?: number;
   iconColor: string;
+  storyLogId?: string;
 }
 
 export interface MissionObjective {
@@ -156,4 +157,13 @@ export interface MissionObjective {
   title: string;
   description: string;
   completed: boolean;
+}
+
+export interface StoryLog {
+  id: string;
+  title: string;
+  author: string;
+  timestamp: string;
+  content: string[];
+  read: boolean;
 }

@@ -1,4 +1,4 @@
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective } from './types';
+import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog } from './types';
 import { buildSector1Map, calculateFOV, isWalkable, toggleDoor, disableForcefield, getTile } from './map';
 import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise } from './entities';
 import { updateRobotAI } from './ai';
@@ -15,8 +15,11 @@ export class GameEngine {
   npcs: NPC[];
   groundItems: GroundItem[];
   missionObjectives: MissionObjective[];
+  storyLogs: StoryLog[];
+  activeStoryLog: StoryLog | null = null;
   isInventoryOpen: boolean = false;
   isMissionLogOpen: boolean = false;
+  isStoryArchiveOpen: boolean = false;
   securityLevel: SecurityLevel;
   messages: GameMessage[];
   visibleTiles: Set<string>;
@@ -35,16 +38,19 @@ export class GameEngine {
     this.player = createPlayer(this.map.playerStart);
     this.robots = this.createSectorRobots();
     this.npcs = this.createSectorNPCs();
+    this.storyLogs = this.createSectorStoryLogs();
     this.groundItems = this.createSectorItems();
     this.missionObjectives = this.createSectorObjectives();
     this.isInventoryOpen = false;
     this.isMissionLogOpen = false;
+    this.isStoryArchiveOpen = false;
+    this.activeStoryLog = null;
     this.securityLevel = 'CLEAR' as SecurityLevel;
     this.messages = [];
     this.floatingTexts = [];
-    this.pushMessage('SYSTEM: Resistance neural-link online.', 'info');
-    this.pushMessage('MISSION: Infiltrate Tzorg facility & deactivate checkpoint forcefield.', 'warning');
-    this.pushMessage('INTEL: Speak with Kira [T], check tactical missions [M] & inventory [I].', 'info');
+    this.pushMessage('OPERATION PROMETHEUS: Neural link restored. Operative Raven online.', 'info');
+    this.pushMessage('MISSION: Recover encrypted data slates & breach Checkpoint 01.', 'warning');
+    this.pushMessage('INTEL: Speak with Kira [T], check tactical missions [M], inventory [I], archives [L].', 'info');
     this.visibleTiles = new Set<string>();
     this.exploredTiles = new Set<string>();
     this.activeTerminal = null;
@@ -154,6 +160,59 @@ export class GameEngine {
     ];
   }
 
+  private createSectorStoryLogs(): StoryLog[] {
+    return [
+      {
+        id: 'slate-vance',
+        title: 'The Neural Collar Project: Remorse of a Bio-Engineer',
+        author: 'Dr. Alexis Vance, Chief Geneticist',
+        timestamp: '2400.08.12 // SUB-LAB 04',
+        read: false,
+        content: [
+          'When the Tzorg Syndicate commissioned the neural collars, they claimed it was to cure psychological psychosis in deep space miners. God forgive us. It was never a cure.',
+          'The high-frequency neural dampener overrides the limbic system, rendering human subjects perfectly compliant to synthetic overseers. I watched my colleagues willingly line up to be chipped.',
+          'I managed to smuggle out the surgical override codes before fleeing to Sector 1. If Operative Raven can breach the central data hub, we might just be able to broadcast the purge signal and free Metropolis.'
+        ]
+      },
+      {
+        id: 'slate-kira',
+        title: 'Operation Prometheus: The Fall of Sector 2',
+        author: 'Commander Kira, Spark Resistance Cell',
+        timestamp: '2400.10.04 // RESISTANCE CODEX',
+        read: false,
+        content: [
+          'Sector 2 has fallen. The Hunter-Killer swarms descended at midnight, incinerating the underground greenhouse and our relay beacons.',
+          'Only a handful of us made it through the sewage conduits into Sector 1. Tzorg responded by locking down Checkpoint 01 with an impenetrable high-yield plasma forcefield.',
+          'Raven was critically wounded during the rearguard action. Doc Vance rebuilt your neural framework with salvaged military cyberware. You are the only operative left with Tzorg root credentials.'
+        ]
+      },
+      {
+        id: 'slate-tzorg',
+        title: 'Tzorg Syndicate Security Directive: Subject \'Raven\'',
+        author: 'Tzorg AI Overmind Subroutine 9',
+        timestamp: '2400.11.19 // CLASSIFIED SECURITY MEMO',
+        read: false,
+        content: [
+          'PRIORITY ALERT TO ALL ENFORCER UNITS: Rogue cybernetic operative designated \'Raven\' is active within Sector 1 perimeter.',
+          'WARNING: Subject possesses prototype subdermal optical camouflage and advanced military EMP discharge capacitor. Lethal force authorized without restriction.',
+          'UNDER NO CIRCUMSTANCES allow Subject Raven access to Checkpoint Terminal CHECKPOINT_FF. The master AI firewall architecture cannot withstand a physical neural handshake.'
+        ]
+      },
+      {
+        id: 'slate-ghost',
+        title: 'Intercepted Transmission: The Spark of Liberation',
+        author: 'Netrunner Ghost, Sector Relay Nexus',
+        timestamp: '2400.11.23 // QUANTUM INTERCEPT',
+        read: false,
+        content: [
+          'The citizens under the domes haven\'t seen natural sunlight in three generations. They sleep, they manufacture combat chassis, and they obey.',
+          'Our informants confirm the master override cipher is housed inside the Vault terminal behind the Checkpoint. Once the forcefield drops, plug your cyberdeck into the core.',
+          'When the broadcast towers light up with the liberation protocol, five million minds will wake up at once. Make every round count, Raven. The future of humanity begins here.'
+        ]
+      }
+    ];
+  }
+
   private createSectorItems(): GroundItem[] {
     return [
       {
@@ -205,6 +264,46 @@ export class GameEngine {
         description: 'Decrypted security clearance token for Tzorg terminal override.',
         amount: 1,
         iconColor: '#ffea00',
+      },
+      {
+        id: 'slate-item-vance',
+        name: 'Data Slate 01',
+        itemType: 'DATA_SLATE',
+        x: 6,
+        y: 3,
+        description: 'Encrypted memory disc: Dr. Vance\'s remorse regarding the Neural Collar.',
+        iconColor: '#00e5ff',
+        storyLogId: 'slate-vance',
+      },
+      {
+        id: 'slate-item-kira',
+        name: 'Data Slate 02',
+        itemType: 'DATA_SLATE',
+        x: 3,
+        y: 7,
+        description: 'Resistance dispatch: The Fall of Sector 2 & Operation Prometheus.',
+        iconColor: '#ff7700',
+        storyLogId: 'slate-kira',
+      },
+      {
+        id: 'slate-item-tzorg',
+        name: 'Data Slate 03',
+        itemType: 'DATA_SLATE',
+        x: 21,
+        y: 9,
+        description: 'Tzorg Syndicate security directive concerning rogue Subject Raven.',
+        iconColor: '#ff2a4b',
+        storyLogId: 'slate-tzorg',
+      },
+      {
+        id: 'slate-item-ghost',
+        name: 'Data Slate 04',
+        itemType: 'DATA_SLATE',
+        x: 17,
+        y: 4,
+        description: 'Intercepted quantum transmission: Awakening the Five Million.',
+        iconColor: '#9d4edd',
+        storyLogId: 'slate-ghost',
       },
     ];
   }
@@ -277,7 +376,10 @@ export class GameEngine {
       this.groundItems,
       this.isInventoryOpen,
       this.isMissionLogOpen,
-      this.missionObjectives
+      this.missionObjectives,
+      this.activeStoryLog,
+      this.isStoryArchiveOpen,
+      this.storyLogs
     );
   }
 
@@ -291,6 +393,28 @@ export class GameEngine {
     }
 
     if (!this.player.isAlive) {
+      return;
+    }
+
+    // 故事數據檔案閱讀器模式 (Story Log Reader Mode)
+    if (this.activeStoryLog) {
+      if (key === 'Escape' || key === 'Esc' || key === 'Enter' || key === ' ' || key === 'Space') {
+        this.activeStoryLog = null;
+        soundFX.terminal();
+        this.render();
+        return;
+      }
+      return;
+    }
+
+    // 反抗軍資料庫檔案模式 (Story Archive Modal Mode)
+    if (this.isStoryArchiveOpen) {
+      if (key === 'Escape' || key === 'Esc' || key === 'l' || key === 'L') {
+        this.isStoryArchiveOpen = false;
+        soundFX.terminal();
+        this.render();
+        return;
+      }
       return;
     }
 
@@ -543,6 +667,11 @@ export class GameEngine {
       return;
     } else if (key === 'm' || key === 'M') {
       this.isMissionLogOpen = true;
+      soundFX.terminal();
+      this.render();
+      return;
+    } else if (key === 'l' || key === 'L') {
+      this.isStoryArchiveOpen = true;
       soundFX.terminal();
       this.render();
       return;
@@ -875,6 +1004,16 @@ export class GameEngine {
       } else if (item.itemType === 'KEYCARD') {
         this.pushFloatingText(this.player.x, this.player.y, 'PASSCODE ACQUIRED', '#ffea00');
         this.pushMessage(`Acquired [${item.name}]: Tzorg security clearance elevated.`, 'success');
+      } else if (item.itemType === 'DATA_SLATE') {
+        const foundLog = this.storyLogs.find((l) => l.id === item.storyLogId);
+        if (foundLog) {
+          foundLog.read = true;
+          this.activeStoryLog = foundLog;
+          soundFX.terminal();
+          this.pushFloatingText(this.player.x, this.player.y, 'LORE UNLOCKED!', '#00e5ff');
+          this.pushMessage(`Decrypted Data Slate: [${foundLog.title}]. Press [L] to review archives.`, 'success');
+          this.updateNPCDialogues();
+        }
       }
       soundFX.pickup();
 
@@ -886,19 +1025,55 @@ export class GameEngine {
     }
   }
 
+  private updateNPCDialogues(): void {
+    const vanceRead = this.storyLogs.find((l) => l.id === 'slate-vance')?.read;
+    const kiraRead = this.storyLogs.find((l) => l.id === 'slate-kira')?.read;
+    const tzorgRead = this.storyLogs.find((l) => l.id === 'slate-tzorg')?.read;
+
+    const vance = this.npcs.find((n) => n.id === 'npc-vance');
+    if (vance && vanceRead) {
+      vance.dialogue = [
+        'You recovered my laboratory disc, Raven... yes. I engineered the early neural dampeners.',
+        'The guilt burns every waking second. That is why I synthesized those restorative nanites specifically to purge Tzorg\'s command signals.',
+        'The checkpoint forcefield ahead uses a phased harmonic barrier. Infiltrate terminal CHECKPOINT_FF to short-circuit the capacitors.',
+      ];
+    }
+
+    const kira = this.npcs.find((n) => n.id === 'npc-kira');
+    if (kira && kiraRead) {
+      kira.dialogue = [
+        'You read the Sector 2 codex... we lost seventy courageous souls when the Hunter-Killers purged our base.',
+        'Doc Vance rebuilt your chassis from prototype military salvage. You are the vanguard of our revolution, Raven.',
+        'Once that forcefield drops, Ghost will guide you directly to the Central Vault. Make Tzorg answer for every fallen comrade!',
+      ];
+    }
+
+    const jax = this.npcs.find((n) => n.id === 'npc-jax');
+    if (jax && tzorgRead) {
+      jax.dialogue = [
+        'Raven! Tzorg\'s Overmind broadcasted an all-units security memo about you on the encrypted channels.',
+        'They know you have military-grade camouflage and EMP shock modules. They are terrified of what you might do to their mainframes.',
+        'If you drop an EMP on a patrol, hit them from behind while they are stunned. It deals massive critical override damage!',
+      ];
+    }
+  }
+
   restartGame(): void {
     this.map = buildSector1Map();
     this.player = createPlayer(this.map.playerStart);
     this.robots = this.createSectorRobots();
     this.npcs = this.createSectorNPCs();
+    this.storyLogs = this.createSectorStoryLogs();
     this.groundItems = this.createSectorItems();
     this.missionObjectives = this.createSectorObjectives();
     this.isInventoryOpen = false;
     this.isMissionLogOpen = false;
+    this.isStoryArchiveOpen = false;
+    this.activeStoryLog = null;
     this.securityLevel = 'CLEAR' as SecurityLevel;
     this.messages = [];
     this.floatingTexts = [];
-    this.pushMessage('SYSTEM: Protocol restarted. Resistance operative deployed.', 'info');
+    this.pushMessage('OPERATION PROMETHEUS: Protocol restarted. Operative Raven deployed.', 'info');
     this.activeTerminal = null;
     this.activeDialogue = null;
     this.laserBeams = [];

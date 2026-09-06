@@ -903,6 +903,26 @@ export function drawItemSprite(
     ctx.beginPath();
     ctx.arc(cx, cy, 3, 0, Math.PI * 2);
     ctx.fill();
+  } else if (type === 'DATA_SLATE') {
+    // 故事數據晶片盤：全息青/金光澤的數據板
+    ctx.fillStyle = '#081824';
+    ctx.fillRect(cx - size * 0.22, cy - size * 0.16, size * 0.44, size * 0.32);
+    ctx.strokeStyle = '#00e5ff';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(cx - size * 0.22, cy - size * 0.16, size * 0.44, size * 0.32);
+
+    // 數據紋路
+    ctx.fillStyle = '#00f0ff';
+    ctx.fillRect(cx - size * 0.16, cy - size * 0.1, size * 0.32, 2);
+    ctx.fillRect(cx - size * 0.16, cy - 2, size * 0.22, 2);
+    ctx.fillRect(cx - size * 0.16, cy + size * 0.06, size * 0.28, 2);
+
+    // 全息閃爍光點
+    const holoPulse = 0.5 + 0.5 * Math.sin(time * 0.01);
+    ctx.fillStyle = 'rgba(255, 234, 0, ' + holoPulse + ')';
+    ctx.beginPath();
+    ctx.arc(cx + size * 0.12, cy - size * 0.06, 2.5, 0, Math.PI * 2);
+    ctx.fill();
   } else {
     // 晶片／金鑰通行卡
     ctx.fillStyle = '#282005';
