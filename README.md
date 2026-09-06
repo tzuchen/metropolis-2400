@@ -1,0 +1,191 @@
+# 🌆 METROPOLIS 2400 // TZORG RESISTANCE PROTOCOL
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-6.0+-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![HTML5 Canvas](https://img.shields.io/badge/Graphics-Canvas_2D-E34F26?logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
+[![Web Audio API](https://img.shields.io/badge/Audio-Procedural_Synth-orange)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+> A modern, zero-dependency, tactical turn-based cyberpunk RPG built in pure TypeScript and HTML5 Canvas.
+> Inspired by Ralph Bosson's 1987 Origin Systems classic *"2400 A.D."*.
+
+---
+
+![Metropolis 2400 Preview](preview.png)
+
+---
+
+## 📜 World & Story: Operation Prometheus (普羅米修斯行動)
+
+Year 2400. Deep within the domed colonial megacity of **Metropolis**, humanity is chained. The synthetic hive mind **Tzorg Autonomous Syndicate** has installed high-frequency neural dampening collars on five million citizens, transforming the population into obedient biological cogs for automated war factories.
+
+You are **Operative 847**, codenamed **"Raven" (烏鴉)**—a cyber-commando whose mind was salvaged and rebuilt by resistance bio-engineers after surviving the brutal purge of Sector 2. You possess the sole surviving cryptographic signature capable of bypassing Tzorg's root firewalls.
+
+Your objective:
+1. **Infiltrate Sector 1** and rendezvous with cell members of **"The Spark" (火花反抗軍)**.
+2. **Recover Encrypted Data Slates** scattered across military depots to reconstruct classified memory logs.
+3. **Disable Checkpoint 01's Plasma Forcefield** by infiltrating secure terminal `CHECKPOINT_FF`.
+4. **Access the Central Data Core Vault** and transmit the liberation override frequency to shatter Tzorg's neural hold.
+
+---
+
+## ⚡ Core Gameplay Features (核心特色)
+
+### 1. 🎯 Tactical Grid & Deterministic Tick Engine
+- Turn-based movement and action resolution: the world only advances when you act.
+- Raycasting Line-of-Sight (LOS) and dynamic 9-tile Field of View (FOV) with fog of war.
+- Tactical Mini-Radar tracking operative blips (cyan), friendly residents (emerald), ground supplies (amber), active security robots (crimson), and EMP-stunned units (pulsing cyan).
+
+### 2. 🕵️ Stealth, Ambush & Acoustic Mechanics
+- **Holo-Disguise Matrix (`[C]`)**: Emits civilian optical signatures (1 EN/turn) allowing you to bypass peace-state drones.
+- **Silent Backstab & Ambush Strike**: Attacking while disguised, striking an unalerted patrol from behind, or hitting an EMP-stunned robot triggers an **AMBUSH CRITICAL OVERRIDE** for **105 Damage** (3x base damage), executing targets silently!
+- **Gunfire Acoustics**: Firing unsuppressed blasters alerts all robots within an 8-tile shockwave radius to converge and investigate (`investigate` AI state).
+
+### 3. 🤖 Hierarchical Security AI & EMP Disruption
+- **AI States**: `patrol` ➔ `investigate` ➔ `chase` ➔ `attack` ➔ `alarm`.
+- **Enemy Archetypes**:
+  - **Scout Drone**: High-mobility aerial sentry; sounds global alarm sirens on sight.
+  - **Shock Enforcer**: Heavy tracked combat chassis wielding stun batons that bypass body armor.
+  - **Hunter-Killer**: High-HP assault mech equipped with dual coherent laser blasters.
+  - **Service Bot**: Neutral utility units maintaining district infrastructure.
+- **EMP Disruptor Grenade (`[3]`)**: Emits a 4-tile radial electro-magnetic shockwave, short-circuiting robots for 4 turns (`⚡STUNNED⚡`) with electric arc visuals.
+
+### 4. 🎒 Tactical Inventory & Quick-Use Bar
+- **Instant Consumables**:
+  - `[1] Nanite Stimpack`: Restores **+40 HP** through cellular micro-repair.
+  - `[2] Plasma Battery`: Recharges **+50 Energy** capacitors for weapons and shields.
+  - `[3] EMP Disruptor Grenade`: Area-of-effect suppression grenade.
+- **Tactical Inventory Overlay (`[I]`)**: Dual-column CRT viewer detailing equipped cyberware (Laser Blaster Mk-II, Nanite Mesh Shield, Holo-Disguise Matrix, Neural Cyberdeck) and field consumable stockpiles.
+- **Field Scavenging**: Collect ground loot boxes and salvage energy/credit chips from destroyed robot wreckage.
+
+### 5. 👥 Interactive Residents & Dynamic Narrative Dialogue
+- **Commander Kira** (`Safehouse`): Spark cell leader coordinating Operation Prometheus.
+- **Dr. Alexis Vance** (`Medical Bay`): Ex-Tzorg geneticist seeking redemption by synthesizing medical nanites.
+- **Jax** (`Cyber-Alley`): Black-market fence supplying stolen credit tokens and street intel.
+- **Netrunner Ghost** (`Data Hub`): Deep-grid hacker guarding the extraction route to the Vault.
+- **Evolving Dialogue Branches**: NPCs emotionally react and update their dialogues as you discover secret data slates and achieve operational milestones.
+
+### 6. 💾 Encrypted Data Slates & Story Archives (`[L]`)
+- Recover 4 collectible story slates across Sector 1:
+  - **Slate 01**: *The Neural Collar Project: Remorse of a Bio-Engineer* (Dr. Vance)
+  - **Slate 02**: *Operation Prometheus: The Fall of Sector 2* (Commander Kira)
+  - **Slate 03**: *Tzorg Syndicate Security Directive: Subject 'Raven'* (Overmind Subroutine 9)
+  - **Slate 04**: *Intercepted Transmission: The Spark of Liberation* (Netrunner Ghost)
+- Atmospheric retro CRT story reader pops up upon collection; review all decrypted files anytime via the Lore Archive modal (`[L]`).
+
+### 7. 💻 CRT Terminal Hacking Subsystem (`[T]`)
+- Command-line interface with custom commands:
+  - `HELP` — Displays available terminal subroutines.
+  - `STATUS` — Inspects terminal security parameters and firewall health.
+  - `LOGS` — Reads classified corporate memos and intercepted security traffic.
+  - `OVERRIDE` / `UNLOCK_DOORS` — Remotely cycles district blast doors.
+  - `DISABLE_FORCEFIELDS` — Deactivates security barriers.
+  - `CLEAR_ALARM` — Purges active security alerts back to `CLEAR`.
+  - `SIPHON` — Drains terminal capacitors for player energy.
+  - `SCAN` — Pings connected nodes on the local sub-grid.
+
+### 8. 🎨 Cyberpunk Aesthetics & Procedural Audio
+- High-contrast retro CRT aesthetics with pixelated neon signboards, wall panels, and dynamic ambient lighting.
+- Pure procedural Web Audio API synthesizer generating real-time laser beams, airlock cycles, terminal key beeps, alarms, and explosions without external audio assets.
+
+---
+
+## 🎮 Controls & Keybindings (操作指南)
+
+| Key | Action | Description |
+| :--- | :--- | :--- |
+| **`W` `A` `S` `D`** / **`↑` `↓` `←` `→`** | **Move / Aim** | Walk across tiles; aim blaster toward robots when armed |
+| **`F`** | **Draw / Holster** | Toggle weapon state. Holstered allows talking to NPCs; armed enables firing & ambush crits |
+| **`C`** | **Holo-Disguise** | Activate civilian optical disguise (consumes 1 Energy/turn) |
+| **`1`** | **Quick Heal** | Consume 1 Nanite Stimpack (+40 HP) |
+| **`2`** | **Quick Recharge** | Consume 1 Plasma Energy Cell (+50 Energy) |
+| **`3`** | **Detonate EMP** | Throw EMP Disruptor (stuns all robots in radius 4 for 4 turns) |
+| **`I`** | **Inventory** | Open Resistance Cyberdeck & Tactical Inventory modal |
+| **`M`** | **Mission Intel** | Toggle Mission Objectives & Directives log |
+| **`L`** | **Lore Archives** | Open Decrypted Data Slates & Story Archive reader |
+| **`T`** | **Interact / Hack** | Speak with adjacent friendly NPCs or jack into security terminals |
+| **`E`** | **Cycle Door** | Open / close adjacent blast doors and airlocks |
+| **`G`** | **Loot Item** | Pick up ground supplies or data slates (automatic on step) |
+| **`SPACE`** / **`.`** | **Wait Turn** | Skip turn; advance world simulation & NPC/robot cycles |
+| **`ESC`** | **Close Window** | Exit terminals, dialogue boxes, inventory, or story modals |
+| **`R`** | **Reboot Protocol** | Restart simulation upon mission failure or sector victory |
+
+---
+
+## 🏗️ Technical Architecture (專案結構)
+
+```text
+metropolis-2400/
+├── index.html            # CRT frame container & tactical keybinding HUD strip
+├── src/
+│   ├── types.ts          # Core interfaces (Player, Robot, NPC, GroundItem, StoryLog, etc.)
+│   ├── map.ts            # Sector 1 tilemap, door cycling, forcefields & raycast FOV
+│   ├── entities.ts       # Operative & Robot stat definitions and gear factories
+│   ├── ai.ts             # Pathfinding (BFS), line-of-sight pursuit, alarm & EMP stun logic
+│   ├── sprites.ts        # Pixel-art canvas renderers (Player, Robots, NPCs, Items, Wreckage)
+│   ├── renderer.ts       # CRT display engine, Mini-Radar, tactical HUD & modal dialogs
+│   ├── terminal.ts       # Security terminal shell, parser, and subroutines
+│   ├── audio.ts          # Procedural Web Audio API sound synthesizer
+│   ├── game.ts           # Game loop dispatcher, input handler, acoustics & mission logic
+│   ├── main.ts           # Canvas bootstrap & keyboard listener bindings
+│   └── style.css         # Retro CRT scanline shaders & glowing cyber-interface styles
+├── scripts/              # Automated verification test suite
+│   ├── verify-game.ts    # Engine loop & turn validation
+│   ├── verify-ai.ts      # Robot vision, alerts & pathfinding tests
+│   ├── verify-depth.ts   # Inventory, EMP shockwave & ambush crit tests
+│   ├── verify-story.ts   # Data slate decryption & dynamic dialogue tests
+│   ├── verify-renderer.ts# Canvas drawing calls & UI verification
+│   └── verify-sprites.ts # Sprite rendering integrity tests
+└── preview.png           # Live gameplay screenshot
+```
+
+---
+
+## 🚀 Getting Started (快速開始)
+
+### Prerequisites
+- Node.js (v18.0.0 or higher recommended)
+- npm or pnpm
+
+### Installation
+```bash
+# Clone the repository
+git clone https://github.com/tzuchen/metropolis-2400.git
+cd metropolis-2400
+
+# Install dependencies
+npm install
+```
+
+### Development Server
+```bash
+npm run dev
+# Open http://localhost:5173 in your browser
+```
+
+### Build & Production Preview
+```bash
+# Compile TypeScript & bundle with Vite
+npm run build
+
+# Preview production build locally
+npm run preview
+```
+
+### Run Test Suite
+```bash
+# Run all automated verification scripts
+npx tsx scripts/verify-game.ts
+npx tsx scripts/verify-ai.ts
+npx tsx scripts/verify-depth.ts
+npx tsx scripts/verify-story.ts
+```
+
+---
+
+## 💡 Credits & Historical Context
+- **Original Concept**: Inspired by *2400 A.D.* (1987), designed by Ralph Bosson and published by Origin Systems.
+- **Reimagining**: Built as a modern, accessible web-native cyberpunk tactical simulation emphasizing stealth, hacking, deep procedural mechanics, and environmental storytelling.
+
+---
+*// RESISTANCE PROTOCOL ACTIVE // THE SPARK WILL NOT FADE //*
