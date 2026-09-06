@@ -13,6 +13,10 @@ const PERSONAL_SHIELD_ID = 'personal-shield';
 const HOLO_DISGUISE_ID = 'holo-disguise';
 const HACKER_ID = 'hacker-id';
 
+const WEAPON_TYPE = 'weapon' as unknown as ItemType;
+const SHIELD_TYPE = 'shield' as unknown as ItemType;
+const GADGET_TYPE = 'gadget' as unknown as ItemType;
+
 function clonePosition(pos: Position): Position {
   return { ...pos } as Position;
 }
@@ -38,70 +42,138 @@ function lowSecurity(): SecurityLevel {
   return 'low' as unknown as SecurityLevel;
 }
 
-function mediumSecurity(): SecurityLevel {
-  return 'medium' as unknown as SecurityLevel;
-}
-
-function highSecurity(): SecurityLevel {
-  return 'high' as unknown as SecurityLevel;
-}
-
 export function createPlayer(startPos: Position): Player {
+  const laserPistol = createItem(
+    LASER_PISTOL_ID,
+    'Laser Pistol',
+    WEAPON_TYPE,
+    {
+      power: 20,
+      energyCost: 5,
+      equipped: true,
+      description: 'A futuristic pistol that fires concentrated laser beams.',
+    }
+  );
+
+  const personalShield = createItem(
+    PERSONAL_SHIELD_ID,
+    'Personal Shield',
+    SHIELD_TYPE,
+    {
+      power: 15,
+      energyCost: 10,
+      equipped: true,
+      description: 'A small personal energy shield that absorbs damage.',
+    }
+  );
+
+  const holoDisguise = createItem(
+    HOLO_DISGUISE_ID,
+    'Holo Disguise',
+    GADGET_TYPE,
+    {
+      power: 10,
+      energyCost: 8,
+      equipped: true,
+      description: 'Projects a holographic disguise to blend into crowds.',
+    }
+  );
+
+  const hackerId = createItem(
+    HACKER_ID,
+    'Hacker ID',
+    GADGET_TYPE,
+    {
+      power: 5,
+      energyCost: 0,
+      equipped: false,
+      description: 'An identification badge that grants access to hacking terminals.',
+    }
+  );
+
   return {
     id: 'player',
-    position: clonePosition(startPos),
-    health: 100,
-    maxHealth: 100,
+    name: 'Player',
+    x: startPos.x,
+    y: startPos.y,
+    hp: 100,
+    maxHp: 100,
+    isAlive: true,
     energy: 100,
     maxEnergy: 100,
-    inventory: [
-      createItem(LASER_PISTOL_ID, 'Laser Pistol', 'weapon' as unknown as ItemType, {
-        power: 20,
-        energyCost: 5,
-        equipped: true,
-        description: 'A futuristic pistol that fires concentrated laser beams.',
-      }),
-      createItem(PERSONAL_SHIELD_ID, 'Personal Shield', 'shield' as unknown as ItemType, {
-        power: 15,
-        energyCost: 10,
-        equipped: true,
-        description: 'A small personal energy shield that absorbs damage.',
-      }),
-      createItem(HOLO_DISGUISE_ID, 'Holo Disguise', 'tool' as unknown as ItemType, {
-        power: 10,
-        energyCost: 8,
-        equipped: false,
-        description: 'Projects a holographic disguise to blend into crowds.',
-      }),
-      createItem(HACKER_ID, 'Hacker ID', 'tool' as unknown as ItemType, {
-        power: 5,
-        energyCost: 0,
-        equipped: false,
-        description: 'An identification badge that grants access to hacking terminals.',
-      }),
-    ],
-    securityLevel: lowSecurity(),
+    credits: 0,
+    clearanceLevel: lowSecurity(),
+    inventory: [laserPistol, personalShield, holoDisguise, hackerId],
+    equippedWeapon: laserPistol,
+    equippedShield: personalShield,
+    equippedGadget: holoDisguise,
+    isDisguised: false,
+    isWeaponDrawn: false,
   } as unknown as Player;
 }
 
-export function createRobot(type: RobotType, startPos: Position): Robot {
-  const securityByType: Record<string, SecurityLevel> = {
-    guard: highSecurity(),
-    scout: lowSecurity(),
-    drone: mediumSecurity(),
+export function createRobot(type: RobotType, startPos: Position, patrolPath?: Position[]): Robot {
+  const statsByType: Record<string, { hp: number; attackPower: number; scanRange: number }> = {
+    SCOUT_DRONE: { hp: 30, attackPower: 5, scanRange: 6 },
+    SHOCK_ENFORCER: { hp: 60, attackPower: 15, scanRange: 5 },
+    HUNTER_KILLER: { hp: 100, attackPower: 25, scanRange: 8 },
+    EXTERMINATOR: { hp: 200, attackPower: 40, scanRange: 7 },
+    SERVICE_BOT: { hp: 20, attackPower: 0, scanRange: 2 },
   };
 
-  const key = String(type).toLowerCase();
-  const security = securityByType[key] ?? mediumSecurity();
+  const key = String(type).toUpperCase();
+  const stats = statsByType[key] ?? { hp: 50, attackPower: 10, scanRange: 5 };
+  const path = (patrolPath ?? []).map(clonePosition);
+  const targetPos = path.length > 0 ? clonePosition(path[0]) : null;
 
   return {
-    id: 'robot-' + String(type),
-    type,
-    position: clonePosition(startPos),
-    health: 50,
-    maxHealth: 50,
-    energy: 50,
-    maxEnergy: 50,
-    securityLevel: security,
+    id: `robot-${String(type)}`,
+    name: String(type),
+    x: startPos.x,
+    y: startPos.y,
+    hp: stats.hp,
+    maxHp: stats.hp,
+    isAlive: true,
+    robotType: type,
+    aiState: 'patrol' as Robot['aiState'],
+    patrolPath: path,
+    currentPatrolIndex: 0,
+    targetPos,
+    alertCooldown: 0,
+    attackPower: stats.attackPower,
+    scanRange: stats.scanRange,
   } as unknown as Robot;
+}
+
+export function toggleWeaponDraw(player: Player): boolean {
+  player.isWeaponDrawn = !player.isWeaponDrawn;
+  return player.isWeaponDrawn;
+}
+
+export function toggleDisguise(player: Player): boolean {
+  player.isDisguised = !player.isDisguised;
+  return player.isDisguised;
+}
+
+export function damageEntity(entity: { hp: number; isAlive: boolean }, amount: number): number {
+  if (!entity.isAlive || !Number.isFinite(amount) || amount <= 0) {
+    return entity.hp;
+  }
+
+  entity.hp = Math.max(0, entity.hp - amount);
+  entity.isAlive = entity.hp > 0;
+  return entity.hp;
+}
+
+export function consumeEnergy(player: Player, amount: number): boolean {
+  if (!Number.isFinite(amount) || amount < 0) {
+    return false;
+  }
+
+  if (player.energy < amount) {
+    return false;
+  }
+
+  player.energy -= amount;
+  return true;
 }
