@@ -1,5 +1,5 @@
 import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard } from './types';
-import { buildSector1Map, calculateFOV, isWalkable, toggleDoor, disableForcefield, getTile } from './map';
+import { buildSector1Map, buildSector2Map, calculateFOV, disableForcefield, getTile, isWalkable, toggleDoor } from './map';
 import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise, installAugment, cycleWeapon } from './entities';
 import { updateRobotAI } from './ai';
 import { TerminalSession } from './terminal';
@@ -27,7 +27,7 @@ export class GameEngine {
   activeTerminal: TerminalSession | null;
   activeDialogue: DialogueSession | null;
   laserBeams: Array<{ from: Position; to: Position; color: string }>;
-  floatingTexts: Array<{ x: number; y: number; text: string; color: string }>;
+  floatingTexts: Array<{ x: number; y: number; text: string; color: string; createdAt?: number }>;
   hazards: Hazard[] = [];
   isAugmentShopOpen: boolean = false;
   terminalInputBuffer: string = '';
@@ -350,6 +350,43 @@ export class GameEngine {
     ];
   }
 
+  switchSector(targetSectorId: string): void {
+    if (targetSectorId === 'sector-2') {
+      this.map = buildSector2Map();
+      this.player.x = 3;
+      this.player.y = 5;
+      (this.player as any).currentSectorId = 'sector-2';
+      this.robots = [
+        createRobot('SCOUT_DRONE' as RobotType, { x: 12, y: 5 }, [{ x: 12, y: 5 }, { x: 20, y: 5 }]),
+        createRobot('SHOCK_ENFORCER' as RobotType, { x: 20, y: 15 }, [{ x: 20, y: 15 }, { x: 20, y: 22 }]),
+        createRobot('HUNTER_KILLER' as RobotType, { x: 30, y: 22 }, [{ x: 30, y: 22 }, { x: 35, y: 22 }]),
+      ];
+      this.hazards = [
+        { id: 'hazard-sec2-1', x: 16, y: 8, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
+        { id: 'hazard-sec2-2', x: 25, y: 14, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
+      ];
+      this.visibleTiles.clear();
+      this.exploredTiles.clear();
+      this.updateFOV();
+      soundFX.door();
+      this.pushFloatingText(this.player.x, this.player.y, 'SECTOR 2: FAB-PLEX', '#00f0ff');
+      this.pushMessage('TRANSIT COMPLETE: Arrived at Sector 2 (Fab-Plex). Central Overmind core located to East!', 'warning');
+    } else if (targetSectorId === 'sector-1') {
+      this.map = buildSector1Map();
+      this.player.x = 37;
+      this.player.y = 25;
+      (this.player as any).currentSectorId = 'sector-1';
+      this.robots = this.createSectorRobots();
+      this.hazards = this.createSectorHazards();
+      this.visibleTiles.clear();
+      this.exploredTiles.clear();
+      this.updateFOV();
+      soundFX.door();
+      this.pushFloatingText(this.player.x, this.player.y, 'SECTOR 1: STREETS', '#00f0ff');
+      this.pushMessage('TRANSIT COMPLETE: Returned to Sector 1 Metropolis.', 'info');
+    }
+  }
+
   private pushMessage(text: string, type: GameMessage['type']): void {
     this.messages.push({ text, type });
     if (this.messages.length > 50) {
@@ -358,9 +395,19 @@ export class GameEngine {
   }
 
   private pushFloatingText(x: number, y: number, text: string, color: string): void {
-    this.floatingTexts.push({ x, y, text, color });
+    const item = { x, y, text, color, createdAt: Date.now() };
+    this.floatingTexts.push(item);
     if (this.floatingTexts.length > 8) {
       this.floatingTexts.shift();
+    }
+    if (typeof setTimeout !== 'undefined') {
+      setTimeout(() => {
+        const idx = this.floatingTexts.indexOf(item);
+        if (idx !== -1) {
+          this.floatingTexts.splice(idx, 1);
+          this.render();
+        }
+      }, 1200);
     }
   }
 
@@ -564,6 +611,14 @@ export class GameEngine {
           if (ffObj) ffObj.completed = true;
           const vaultObj = this.missionObjectives.find((o) => o.id === 'obj-vault');
           if (vaultObj) vaultObj.completed = true;
+        }
+
+        if (result?.endgameChoice) {
+          (this.player as any).endgameChoice = result.endgameChoice;
+          this.victory = true;
+          soundFX.victory();
+          this.pushMessage('OPERATION PROMETHEUS: [' + result.endgameChoice + '] protocol executed.', 'success');
+          this.pushFloatingText(this.player.x, this.player.y, 'ENDGAME: ' + result.endgameChoice, '#00ff88');
         }
 
         if (result?.clearedAlert) {
@@ -914,6 +969,14 @@ export class GameEngine {
         // 自動拾取地面物資 (Auto-loot ground items)
         this.checkItemPickup();
 
+        const standingTile = getTile(this.map, { x: nx, y: ny });
+        if (Number(standingTile) === 9 || String(standingTile).toUpperCase() === 'ELEVATOR') {
+          const nextSec = this.map.id === 'sector-1' ? 'sector-2' : 'sector-1';
+          this.switchSector(nextSec);
+          this.render();
+          return;
+        }
+
         // 偽裝能量消耗
         if (this.player.isDisguised) {
           if (this.player.energy > 0) {
@@ -931,6 +994,8 @@ export class GameEngine {
   }
 
   tick(): void {
+    const now = Date.now();
+    this.floatingTexts = this.floatingTexts.filter((ft) => !ft.createdAt || now - ft.createdAt < 1500);
     if (!this.player.isAlive) {
       this.updateFOV();
       this.render();

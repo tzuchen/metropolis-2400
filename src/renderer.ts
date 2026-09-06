@@ -225,9 +225,18 @@ export class GameRenderer {
     if (Array.isArray(floatingTexts)) {
       floatingTexts.forEach((ft) => {
         if (!ft) return;
+        let alpha = 1;
+        let floatOffset = 0;
+        if (typeof ft.createdAt === 'number') {
+          const age = now - ft.createdAt;
+          if (age > 1200) return;
+          floatOffset = Math.min(18, (age / 1200) * 16);
+          alpha = Math.max(0, 1 - age / 1200);
+        }
         const fx = ft.x * this.tileSize - camX + this.tileSize / 2;
-        const fy = ft.y * this.tileSize - camY - 12;
+        const fy = ft.y * this.tileSize - camY - 12 - floatOffset;
         ctx.save?.();
+        ctx.globalAlpha = alpha;
         ctx.font = 'bold 13px monospace';
         ctx.fillStyle = ft.color || '#ffea00';
         ctx.shadowColor = ft.color || '#ffea00';
@@ -235,6 +244,7 @@ export class GameRenderer {
         ctx.textAlign = 'center';
         ctx.fillText?.(ft.text, fx, fy);
         ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
         ctx.restore?.();
       });
     }
@@ -287,7 +297,7 @@ export class GameRenderer {
     if (!player.isAlive) {
       this.drawGameOverOverlay(width, height, ctx, now);
     } else if ((player as any).victory) {
-      this.drawVictoryOverlay(width, height, ctx, now);
+      this.drawVictoryOverlay(player, width, height, ctx, now);
     }
 
     ctx.restore?.();
@@ -629,8 +639,9 @@ export class GameRenderer {
     ctx.fillText?.('CR: ' + credits, 480, 18);
 
     const weaponStatus = p?.isWeaponDrawn ? 'WEAPON: ARMED' : 'WEAPON: HOLSTER';
+    const weaponName = p?.equippedWeapon?.name ? ' [Q: ' + p.equippedWeapon.name + ']' : '';
     ctx.fillStyle = p?.isWeaponDrawn ? '#ff3855' : '#8899a6';
-    ctx.fillText?.(weaponStatus, 570, 18);
+    ctx.fillText?.(weaponStatus + weaponName, 570, 18);
 
     if (p?.isDisguised) {
       ctx.fillStyle = '#b432ff';
@@ -1226,28 +1237,68 @@ export class GameRenderer {
     ctx.restore?.();
   }
 
-  drawVictoryOverlay(width: number, height: number, ctx: any, now: number): void {
+  drawVictoryOverlay(player: Player, width: number, height: number, ctx: any, now: number): void {
     ctx.save?.();
     ctx.fillStyle = 'rgba(0, 20, 15, 0.85)';
     ctx.fillRect?.(0, 0, width, height);
 
+    const p = player as any;
+    const endgameChoice = String(p?.endgameChoice ?? '').toUpperCase();
+
+    let title = '★ MISSION ACCOMPLISHED ★';
+    let subtitle = 'TZORG SECURITY FORCEFIELD PERFORATED // NEXUS ACCESSED';
+    let poem = '';
+    let accentColor = '#00ff88';
+    let shadowColor = '#00ff88';
+
+    if (endgameChoice === 'OVERLOAD') {
+      title = '☢ NEXUS OVERLOAD ☢';
+      subtitle = 'THE CORE BURNS // SECTOR 1 DROPS INTO SILENCE';
+      poem = 'We fed the machine our rage and it answered in fire.\nEvery screen went white, every drone fell from the sky.\nThe city breathes again — scarred, but free.';
+      accentColor = '#ff4444';
+      shadowColor = '#ff2200';
+    } else if (endgameChoice === 'SUBVERSION') {
+      title = '◈ GHOST PROTOCOL ◈';
+      subtitle = 'TZORG MAINFRAME REWRITTEN // NO TRACE REMAINS';
+      poem = 'No explosion, no alarm — just a whisper in the wire.\nTheir own walls now speak our names in the dark.\nThe rebellion lives in code, invisible and eternal.';
+      accentColor = '#00e5ff';
+      shadowColor = '#0088ff';
+    } else if (endgameChoice === 'EVACUATION') {
+      title = '▲ EXTRACTION COMPLETE ▲';
+      subtitle = 'RESISTANCE CELL PRESERVED // SECTOR 1 ABANDONED';
+      poem = 'We left the neon streets to the machines, but carried the spark.\nSomewhere beyond the grid, new cells are forming.\nThe fight does not end — it only changes address.';
+      accentColor = '#ffea00';
+      shadowColor = '#ffaa00';
+    }
+
     const pulse = 0.8 + 0.2 * Math.sin(now * 0.005);
-    ctx.fillStyle = 'rgba(0, 255, 136, ' + pulse + ')';
-    ctx.shadowColor = '#00ff88';
+    ctx.fillStyle = accentColor;
+    ctx.shadowColor = shadowColor;
     ctx.shadowBlur = 15;
     ctx.font = 'bold 22px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText?.('★ MISSION ACCOMPLISHED ★', width / 2, height / 2 - 25);
+    ctx.globalAlpha = pulse;
+    ctx.fillText?.(title, width / 2, height / 2 - 50);
+    ctx.globalAlpha = 1;
 
     ctx.fillStyle = '#00f0ff';
     ctx.font = '14px monospace';
-    ctx.fillText?.('TZORG SECURITY FORCEFIELD PERFORATED // NEXUS ACCESSED', width / 2, height / 2 + 5);
+    ctx.fillText?.(subtitle, width / 2, height / 2 - 20);
+
+    if (poem) {
+      ctx.fillStyle = '#c0d4de';
+      ctx.font = 'italic 12px monospace';
+      const poemLines = poem.split('\n');
+      poemLines.forEach((line, i) => {
+        ctx.fillText?.(line, width / 2, height / 2 + 5 + i * 18);
+      });
+    }
 
     ctx.fillStyle = '#ffffff';
     ctx.shadowBlur = 0;
     ctx.font = '12px monospace';
-    ctx.fillText?.('PRESS [ R ] TO RESTART SIMULATION', width / 2, height / 2 + 35);
+    ctx.fillText?.('PRESS [ R ] TO RESTART SIMULATION', width / 2, height / 2 + 70);
 
     ctx.restore?.();
   }

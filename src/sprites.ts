@@ -11,6 +11,9 @@ function getTileKind(tile: any): string {
       case 6: return 'TERMINAL';
       case 7: return 'REBEL_CACHE';
       case 8: return 'EXIT';
+      case 9: return 'ELEVATOR';
+      case 10: return 'CONVEYOR';
+      case 11: return 'TURRET';
       case 1:
       default: return 'FLOOR';
     }
@@ -248,6 +251,52 @@ export function drawTileSprite(
     ctx.closePath();
     ctx.fill();
     ctx.shadowBlur = 0;
+  } else if (kind === 'ELEVATOR') {
+    // 穿梭升降電梯 (Transit Elevator)
+    ctx.fillStyle = '#08101a';
+    ctx.fillRect(x, y, size, size);
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x + 2, y + 2, size - 4, size - 4);
+    const pulse = 0.6 + 0.4 * Math.sin(time * 0.006);
+    ctx.fillStyle = 'rgba(0, 240, 255, ' + pulse * 0.3 + ')';
+    ctx.fillRect(x + 4, y + 4, size - 8, size - 8);
+    // 箭頭
+    ctx.fillStyle = '#00f0ff';
+    ctx.beginPath();
+    ctx.moveTo(x + size / 2, y + 6);
+    ctx.lineTo(x + size - 8, y + size / 2);
+    ctx.lineTo(x + size / 2 + 3, y + size / 2);
+    ctx.lineTo(x + size / 2 + 3, y + size - 6);
+    ctx.lineTo(x + size / 2 - 3, y + size - 6);
+    ctx.lineTo(x + size / 2 - 3, y + size / 2);
+    ctx.lineTo(x + 8, y + size / 2);
+    ctx.closePath();
+    ctx.fill();
+  } else if (kind === 'CONVEYOR') {
+    // 工廠動態傳送帶 (Industrial Conveyor Belt)
+    ctx.fillStyle = '#12161c';
+    ctx.fillRect(x, y, size, size);
+    ctx.fillStyle = '#ffaa00';
+    ctx.fillRect(x, y, size, 2);
+    ctx.fillRect(x, y + size - 2, size, 2);
+    const offset = Math.floor((time * 0.04) % 8);
+    ctx.fillStyle = '#222d38';
+    for (let tx = -8 + offset; tx < size; tx += 8) {
+      ctx.fillRect(x + tx, y + 3, 4, size - 6);
+    }
+  } else if (kind === 'TURRET') {
+    // 自動防衛砲塔 (Automated Laser Turret)
+    ctx.fillStyle = '#10141a';
+    ctx.fillRect(x, y, size, size);
+    ctx.fillStyle = '#2d181e';
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size / 2, size * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff1744';
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size / 2, size * 0.16, 0, Math.PI * 2);
+    ctx.fill();
   } else {
     // FLOOR 賽博街景地磚 (Cyberpunk Street Pavement)
     ctx.fillStyle = '#0b121a';

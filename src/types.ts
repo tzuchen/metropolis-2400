@@ -17,6 +17,9 @@ export const TileType = {
   TERMINAL: 6,
   REBEL_CACHE: 7,
   EXIT: 8,
+  ELEVATOR: 9,
+  CONVEYOR: 10,
+  TURRET: 11,
 } as const;
 
 export type TileType = (typeof TileType)[keyof typeof TileType];
@@ -89,6 +92,7 @@ export interface Player extends Entity {
     empGrenades: number;
   };
   augments?: Record<string, boolean>;
+  currentSectorId?: string;
 }
 
 export type RobotAIState = 'idle' | 'patrol' | 'investigate' | 'chase' | 'attack';
@@ -129,6 +133,9 @@ export interface SectorMap {
   tiles: number[][];
   terminals: Record<string, TerminalData>;
   playerStart: Position;
+  id?: string;
+  elevatorPos?: Position;
+  targetSectorId?: string;
 }
 
 export interface NPC extends Entity {
@@ -199,3 +206,5 @@ export interface Hazard {
   hp: number;
   exploded: boolean;
 }
+
+export type EndgameChoice = 'OVERLOAD' | 'SUBVERSION' | 'EVACUATION' | null;

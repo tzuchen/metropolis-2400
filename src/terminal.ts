@@ -7,6 +7,7 @@ export interface TerminalCommandResult {
   unlockedDoor?: string;
   clearedAlert?: boolean;
   energyGain?: number;
+  endgameChoice?: 'OVERLOAD' | 'SUBVERSION' | 'EVACUATION';
 }
 
 export class TerminalSession {
@@ -60,6 +61,12 @@ export class TerminalSession {
     return '=== TZORG NETWORK: ' + this.terminal.name + ' ===\nType HELP for available commands.';
   }
 
+  private isCoreTerminal(): boolean {
+    const type = String((this.terminal as any).type || '').toUpperCase();
+    const id = String(this.terminal.id || '').toUpperCase();
+    return type === 'CORE' || id.includes('CORE') || id.includes('OVERMIND');
+  }
+
   executeCommand(cmd: string): TerminalCommandResult {
     const raw = cmd.trim();
     const c = raw.toLowerCase();
@@ -74,7 +81,7 @@ export class TerminalSession {
     if (c === 'help') {
       result = {
         output:
-          'COMMANDS: HELP, STATUS, LOGS, OVERRIDE, CLEAR_ALARM, SIPHON, SCAN, CLEAR, EXIT\n' +
+          'COMMANDS: HELP, STATUS, LOGS, OVERRIDE, CLEAR_ALARM, SIPHON, SCAN, OVERLOAD, SUBVERSION, EVACUATION, CLEAR, EXIT\n' +
           '- STATUS     : Check terminal status & subsystems\n' +
           '- LOGS       : Read decrypted intelligence data\n' +
           '- OVERRIDE   : Bypass forcefields (or HACK)\n' +
@@ -146,6 +153,42 @@ export class TerminalSession {
           '- Hunter Killers: 1 assault unit guarding Server Vault\n' +
           '- Threat Level: AUTOMATED PATROL PROTOCOL',
       };
+    } else if (c === 'overload') {
+      if (this.isCoreTerminal()) {
+        result = {
+          output:
+            'CORE TERMINAL OVERLOAD INITIATED: 核融過載 - Reactor meltdown sequence engaged.\n' +
+            'The Tzorg Overmind will be destroyed in a nuclear fusion cascade.',
+          endgameChoice: 'OVERLOAD',
+          shouldExit: true,
+        };
+      } else {
+        result = { output: 'ACCESS DENIED: Requires Core Terminal' };
+      }
+    } else if (c === 'subversion') {
+      if (this.isCoreTerminal()) {
+        result = {
+          output:
+            'NEURAL SUBVERSION COMPLETE: 神經同化覆寫 - Tzorg neural lattice overwritten.\n' +
+            'All Tzorg units are now under resistance command.',
+          endgameChoice: 'SUBVERSION',
+          shouldExit: true,
+        };
+      } else {
+        result = { output: 'ACCESS DENIED: Requires Core Terminal' };
+      }
+    } else if (c === 'evacuation') {
+      if (this.isCoreTerminal()) {
+        result = {
+          output:
+            'UNDERGROUND ARK EVACUATION LAUNCHED: 地下方舟撤離 - Resistance personnel are extracting.\n' +
+            'The subterranean ark is departing the sector.',
+          endgameChoice: 'EVACUATION',
+          shouldExit: true,
+        };
+      } else {
+        result = { output: 'ACCESS DENIED: Requires Core Terminal' };
+      }
     } else if (c === 'clear' || c === 'cls') {
       this.history = [];
       return { output: '' };
