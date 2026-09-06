@@ -107,6 +107,7 @@ export class GameEngine {
     if (this.activeTerminal) {
       if (key === 'Escape' || key === 'Esc') {
         this.activeTerminal = null;
+        this.terminalInputBuffer = '';
         soundFX.terminal();
         this.render();
         return;
@@ -114,8 +115,10 @@ export class GameEngine {
 
       if (key === 'Enter') {
         soundFX.terminal();
-        const result: any = this.activeTerminal.executeCommand(this.terminalInputBuffer);
+        const cmd = this.terminalInputBuffer;
         this.terminalInputBuffer = '';
+        this.activeTerminal.input = '';
+        const result: any = this.activeTerminal.executeCommand(cmd);
 
         if (result?.disabledForcefield) {
           disableForcefield(this.map, result.disabledForcefield);
@@ -132,6 +135,13 @@ export class GameEngine {
           this.pushMessage('Security alert cleared from terminal database.', 'success');
         }
 
+        if (result?.energyGain) {
+          this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + result.energyGain);
+          soundFX.pickup();
+          this.pushFloatingText(this.player.x, this.player.y, '+' + result.energyGain + ' EN', '#00f0ff');
+          this.pushMessage('Extracted +' + result.energyGain + ' energy from terminal capacitors.', 'success');
+        }
+
         if (result?.shouldExit) {
           this.activeTerminal = null;
         }
@@ -143,6 +153,7 @@ export class GameEngine {
       if (key === 'Backspace') {
         soundFX.terminal();
         this.terminalInputBuffer = this.terminalInputBuffer.slice(0, -1);
+        this.activeTerminal.input = this.terminalInputBuffer;
         this.render();
         return;
       }
@@ -150,6 +161,7 @@ export class GameEngine {
       if (key.length === 1) {
         soundFX.terminal();
         this.terminalInputBuffer += key;
+        this.activeTerminal.input = this.terminalInputBuffer;
         this.render();
         return;
       }
@@ -216,6 +228,9 @@ export class GameEngine {
         if (terminal) {
           soundFX.terminal();
           this.activeTerminal = new TerminalSession(terminal);
+          this.terminalInputBuffer = '';
+          this.activeTerminal.input = '';
+          this.pushMessage('Terminal interface accessed. Type HELP for commands.', 'info');
           this.render();
           return;
         }
@@ -237,7 +252,7 @@ export class GameEngine {
           const ty = this.player.y + dy * range;
           const tTile = getTile(this.map, { x: tx, y: ty });
           const tName = String(tTile).toUpperCase();
-          if (tName === 'WALL' || tTile === 2) break; // 牆面阻擋雷射
+          if (tName === 'WALL' || tTile === 2) break;
 
           const found = this.robots.find((r) => r.isAlive && r.x === tx && r.y === ty);
           if (found) {
@@ -263,8 +278,8 @@ export class GameEngine {
             to: { x: hitRobot.x, y: hitRobot.y },
             color: '#00f0ff',
           });
-          this.pushFloatingText(hitRobot.x, hitRobot.y, `-${damage}`, '#ff3855');
-          this.pushMessage(`Fired laser at ${hitRobot.name} for ${damage} dmg!`, 'danger');
+          this.pushFloatingText(hitRobot.x, hitRobot.y, '-' + damage, '#ff3855');
+          this.pushMessage('Fired laser at ' + hitRobot.name + ' for ' + damage + ' dmg!', 'danger');
 
           if (hitRobot.hp <= 0) {
             hitRobot.isAlive = false;
@@ -272,7 +287,7 @@ export class GameEngine {
             this.player.credits += 50;
             this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + 20);
             this.pushFloatingText(hitRobot.x, hitRobot.y, '+50 CR', '#ffaa00');
-            this.pushMessage(`${hitRobot.name} destroyed! Salvaged 50 CR & 20 EN.`, 'success');
+            this.pushMessage(hitRobot.name + ' destroyed! Salvaged 50 CR & 20 EN.', 'success');
           } else {
             soundFX.hit();
           }
@@ -351,7 +366,7 @@ export class GameEngine {
 
         this.player.hp = Math.max(0, this.player.hp - damage);
         soundFX.hit();
-        this.pushFloatingText(this.player.x, this.player.y, `-${damage}`, '#ff1744');
+        this.pushFloatingText(this.player.x, this.player.y, '-' + damage, '#ff1744');
         if (result.message) {
           this.pushMessage(result.message, 'danger');
         }
