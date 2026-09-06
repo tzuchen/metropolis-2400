@@ -20,12 +20,12 @@ function getTiles(map: SectorMap): TileType[][] | undefined {
 
 export function isWalkable(tile: TileType): boolean {
   const t = tile as any;
-  return t === FLOOR || t === DOOR_OPEN || t === 1 || t === 4 || t === 9 || t === 10 || t === 'ELEVATOR' || t === 'CONVEYOR';
+  return t === FLOOR || t === DOOR_OPEN || t === 1 || t === 4 || t === 9 || t === 10 || t === 16 || t === 'ELEVATOR' || t === 'CONVEYOR' || t === 'STEAM_VENT';
 }
 
 export function isTransparent(tile: TileType): boolean {
   const t = tile as any;
-  return t === FLOOR || t === DOOR_OPEN || t === FORCEFIELD || t === 1 || t === 4 || t === 5 || t === 9 || t === 10 || t === 11 || t === 'ELEVATOR' || t === 'CONVEYOR' || t === 'TURRET';
+  return t === FLOOR || t === DOOR_OPEN || t === FORCEFIELD || t === 1 || t === 4 || t === 5 || t === 9 || t === 10 || t === 11 || t === 13 || t === 16 || t === 17 || t === 'ELEVATOR' || t === 'CONVEYOR' || t === 'TURRET' || t === 'PARK_WATER' || t === 'STEAM_VENT' || t === 'REBEL_BARRICADE';
 }
 
 export function isInBounds(map: SectorMap, position: Position): boolean {
@@ -278,6 +278,24 @@ export function buildSector1Map(): SectorMap {
     },
   } as unknown as Record<string, TerminalData>;
 
+  // 西北反抗軍基地掩體
+  tiles[7][2] = 17 as any;
+  tiles[7][3] = 17 as any;
+  // 中央霓虹商店街攤位 (拉麵攤/黑市義體商/情報販子)
+  tiles[4][14] = 14 as any;
+  tiles[4][18] = 14 as any;
+  tiles[4][22] = 14 as any;
+  // 南側生化仿生生態公園 (水池與發光仿生樹)
+  for (let y = 21; y <= 23; y++) {
+    for (let x = 10; x <= 13; x++) {
+      tiles[y][x] = 13 as any;
+    }
+  }
+  tiles[19][9] = 12 as any;
+  tiles[19][14] = 12 as any;
+  tiles[25][9] = 12 as any;
+  tiles[25][14] = 12 as any;
+
   tiles[25][38] = 9 as any; // ELEVATOR to Sector 2
 
   const map = {
@@ -335,6 +353,19 @@ export function buildSector2Map(): SectorMap {
     setWall(tiles, x, 11);
   }
   setDoor(tiles, 14, 11, true);
+
+  // 西側黑市暗巷蒸氣孔與掩體
+  tiles[16][3] = 16 as any;
+  tiles[20][4] = 16 as any;
+  tiles[24][3] = 16 as any;
+  tiles[18][5] = 17 as any;
+  // 中央機房高密度伺服器機櫃
+  tiles[6][10] = 15 as any;
+  tiles[6][12] = 15 as any;
+  tiles[6][14] = 15 as any;
+  tiles[16][10] = 15 as any;
+  tiles[16][12] = 15 as any;
+  tiles[16][14] = 15 as any;
 
   // East Corridor Guard Turrets
   tiles[20][26] = 11 as any; // TURRET 1

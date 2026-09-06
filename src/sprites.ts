@@ -14,6 +14,12 @@ function getTileKind(tile: any): string {
       case 9: return 'ELEVATOR';
       case 10: return 'CONVEYOR';
       case 11: return 'TURRET';
+      case 12: return 'BIO_TREE';
+      case 13: return 'PARK_WATER';
+      case 14: return 'VENDOR_STALL';
+      case 15: return 'SERVER_RACK';
+      case 16: return 'STEAM_VENT';
+      case 17: return 'REBEL_BARRICADE';
       case 1:
       default: return 'FLOOR';
     }
@@ -277,13 +283,41 @@ export function drawTileSprite(
     // 工廠動態傳送帶 (Industrial Conveyor Belt)
     ctx.fillStyle = '#12161c';
     ctx.fillRect(x, y, size, size);
-    ctx.fillStyle = '#ffaa00';
-    ctx.fillRect(x, y, size, 2);
-    ctx.fillRect(x, y + size - 2, size, 2);
+
+    // 雙色警示邊框 (黃黑斜紋)
+    const borderW = 3;
+    for (let s = 0; s < size; s += 6) {
+      ctx.fillStyle = '#ffaa00';
+      ctx.fillRect(x + s, y, 3, borderW);
+      ctx.fillRect(x + s, y + size - borderW, 3, borderW);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(x + s + 3, y, 3, borderW);
+      ctx.fillRect(x + s + 3, y + size - borderW, 3, borderW);
+      ctx.fillStyle = '#ffaa00';
+      ctx.fillRect(x, y + s, borderW, 3);
+      ctx.fillRect(x + size - borderW, y + s, borderW, 3);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(x, y + s + 3, borderW, 3);
+      ctx.fillRect(x + size - borderW, y + s + 3, borderW, 3);
+    }
+
+    // 動態滾動黃黑齒軌
     const offset = Math.floor((time * 0.04) % 8);
     ctx.fillStyle = '#222d38';
     for (let tx = -8 + offset; tx < size; tx += 8) {
-      ctx.fillRect(x + tx, y + 3, 4, size - 6);
+      ctx.fillRect(x + tx, y + 4, 4, size - 8);
+    }
+
+    // 動態滾動箭頭條紋
+    const arrowOffset = Math.floor((time * 0.06) % 12);
+    ctx.fillStyle = '#ffaa00';
+    for (let ay = -12 + arrowOffset; ay < size; ay += 12) {
+      ctx.beginPath();
+      ctx.moveTo(x + size / 2 - 4, y + ay + 6);
+      ctx.lineTo(x + size / 2 + 4, y + ay + 6);
+      ctx.lineTo(x + size / 2, y + ay);
+      ctx.closePath();
+      ctx.fill();
     }
   } else if (kind === 'TURRET') {
     // 自動防衛砲塔 (Automated Laser Turret)
@@ -297,6 +331,177 @@ export function drawTileSprite(
     ctx.beginPath();
     ctx.arc(x + size / 2, y + size / 2, size * 0.16, 0, Math.PI * 2);
     ctx.fill();
+  } else if (kind === 'BIO_TREE') {
+    // 公園仿生樹 (Bio-Synthetic Tree)
+    ctx.fillStyle = '#0b121a';
+    ctx.fillRect(x, y, size, size);
+
+    // 金屬樹幹
+    ctx.fillStyle = '#3a4a5b';
+    ctx.fillRect(x + size / 2 - 2, y + size * 0.4, 4, size * 0.5);
+    ctx.fillStyle = '#5a738e';
+    ctx.fillRect(x + size / 2 - 1, y + size * 0.4, 2, size * 0.5);
+
+    // 發光青綠脈衝樹冠
+    const treePulse = 0.6 + 0.4 * Math.sin(time * 0.004 + (x + y) * 0.05);
+    ctx.fillStyle = `rgba(0, 255, 150, ${treePulse * 0.5})`;
+    ctx.shadowColor = '#00ff96';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size * 0.3, size * 0.28, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 湖水藍內核
+    ctx.fillStyle = `rgba(0, 180, 255, ${treePulse * 0.6})`;
+    ctx.shadowColor = '#00b4ff';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size * 0.3, size * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // 樹根金屬錨點
+    ctx.fillStyle = '#2d3a48';
+    ctx.fillRect(x + size * 0.3, y + size * 0.85, size * 0.4, 3);
+  } else if (kind === 'PARK_WATER') {
+    // 生態水池 (Eco Water Pool)
+    ctx.fillStyle = '#0a1a2a';
+    ctx.fillRect(x, y, size, size);
+
+    // 深藍水面
+    ctx.fillStyle = '#0d2840';
+    ctx.fillRect(x + 2, y + 2, size - 4, size - 4);
+
+    // 同心波紋隨 time 波動
+    const ripplePhase = (time * 0.003) % 1;
+    for (let r = 0; r < 3; r++) {
+      const rippleR = ((ripplePhase + r / 3) % 1) * size * 0.45;
+      const rippleAlpha = 0.5 * (1 - rippleR / (size * 0.45));
+      ctx.strokeStyle = `rgba(0, 200, 255, ${rippleAlpha})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, rippleR, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // 水面高光
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.fillRect(x + size * 0.3, y + size * 0.3, size * 0.15, 2);
+  } else if (kind === 'VENDOR_STALL') {
+    // 商店街拉麵/晶片攤位 (Vendor Stall)
+    ctx.fillStyle = '#1a1218';
+    ctx.fillRect(x, y, size, size);
+
+    // 紅紫霓虹遮陽棚
+    const stallPulse = 0.7 + 0.3 * Math.sin(time * 0.005 + x * 0.1);
+    ctx.fillStyle = `rgba(255, 0, 110, ${stallPulse * 0.6})`;
+    ctx.shadowColor = '#ff006e';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(x + 2, y + 2, size - 4, 6);
+    ctx.fillStyle = `rgba(180, 50, 255, ${stallPulse * 0.6})`;
+    ctx.shadowColor = '#b432ff';
+    ctx.fillRect(x + 2, y + 8, size - 4, 4);
+    ctx.shadowBlur = 0;
+
+    // 發光店面工作檯
+    ctx.fillStyle = '#2d1e18';
+    ctx.fillRect(x + 4, y + size * 0.5, size - 8, size * 0.35);
+    ctx.fillStyle = '#ffaa00';
+    ctx.shadowColor = '#ffaa00';
+    ctx.shadowBlur = 4;
+    ctx.fillRect(x + 6, y + size * 0.55, size - 12, 3);
+    ctx.shadowBlur = 0;
+
+    // 攤位支柱
+    ctx.fillStyle = '#3a2a20';
+    ctx.fillRect(x + 4, y + 12, 3, size * 0.38);
+    ctx.fillRect(x + size - 7, y + 12, 3, size * 0.38);
+  } else if (kind === 'SERVER_RACK') {
+    // 機房伺服器機櫃 (Server Rack)
+    ctx.fillStyle = '#0a0e14';
+    ctx.fillRect(x, y, size, size);
+
+    // 深色機殼
+    ctx.fillStyle = '#1a2230';
+    ctx.fillRect(x + 3, y + 3, size - 6, size - 6);
+    ctx.fillStyle = '#2d3a48';
+    ctx.fillRect(x + 5, y + 5, size - 10, size - 10);
+
+    // 多彩狀態矩陣 LED (隨 time 閃爍)
+    const ledColors = ['#00ff66', '#00f0ff', '#ffaa00', '#ff1e32', '#b432ff'];
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 3; col++) {
+        const ledIndex = (row * 3 + col + Math.floor(time * 0.002)) % ledColors.length;
+        const ledBlink = Math.sin(time * 0.01 + row * 1.5 + col * 2.3) > -0.3;
+        if (ledBlink) {
+          ctx.fillStyle = ledColors[ledIndex];
+          ctx.shadowColor = ledColors[ledIndex];
+          ctx.shadowBlur = 3;
+          ctx.fillRect(x + 8 + col * 8, y + 8 + row * 8, 4, 4);
+          ctx.shadowBlur = 0;
+        }
+      }
+    }
+
+    // 機櫃通風孔
+    ctx.fillStyle = '#0d1218';
+    ctx.fillRect(x + 6, y + size - 12, size - 12, 3);
+    ctx.fillRect(x + 6, y + size - 8, size - 12, 3);
+  } else if (kind === 'STEAM_VENT') {
+    // 暗巷蒸氣格柵 (Steam Vent Grate)
+    ctx.fillStyle = '#0d1118';
+    ctx.fillRect(x, y, size, size);
+
+    // 地面鋼鐵孔網
+    ctx.fillStyle = '#1a222c';
+    ctx.fillRect(x + 4, y + 4, size - 8, size - 8);
+    ctx.fillStyle = '#0a0e14';
+    for (let gy = 0; gy < 4; gy++) {
+      for (let gx = 0; gx < 4; gx++) {
+        ctx.fillRect(x + 7 + gx * 7, y + 7 + gy * 7, 4, 4);
+      }
+    }
+
+    // 隨 time 浮現向上淡化蒸氣白霧
+    const steamPhase = (time * 0.002) % 1;
+    for (let s = 0; s < 3; s++) {
+      const steamY = y + size * 0.6 - ((steamPhase + s / 3) % 1) * size * 0.5;
+      const steamAlpha = 0.3 * (1 - (y + size * 0.6 - steamY) / (size * 0.5));
+      const steamX = x + size / 2 + Math.sin(time * 0.003 + s * 2) * size * 0.15;
+      ctx.fillStyle = `rgba(200, 220, 240, ${steamAlpha})`;
+      ctx.beginPath();
+      ctx.arc(steamX, steamY, size * 0.12 + s * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'REBEL_BARRICADE') {
+    // 反抗軍防禦掩體 (Rebel Barricade)
+    ctx.fillStyle = '#1a1510';
+    ctx.fillRect(x, y, size, size);
+
+    // 加固合金防爆沙包
+    ctx.fillStyle = '#3d301f';
+    ctx.fillRect(x + 3, y + size * 0.3, size - 6, size * 0.5);
+    ctx.fillStyle = '#4a3a28';
+    ctx.fillRect(x + 5, y + size * 0.35, size - 10, size * 0.4);
+
+    // 黃黑警示條紋
+    for (let s = 0; s < size; s += 8) {
+      ctx.fillStyle = '#ffaa00';
+      ctx.fillRect(x + s, y + size * 0.3, 4, 4);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(x + s + 4, y + size * 0.3, 4, 4);
+      ctx.fillStyle = '#ffaa00';
+      ctx.fillRect(x + s, y + size * 0.76, 4, 4);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(x + s + 4, y + size * 0.76, 4, 4);
+    }
+
+    // 合金鉚釘
+    ctx.fillStyle = '#5a738e';
+    ctx.fillRect(x + 6, y + size * 0.4, 3, 3);
+    ctx.fillRect(x + size - 9, y + size * 0.4, 3, 3);
+    ctx.fillRect(x + 6, y + size * 0.65, 3, 3);
+    ctx.fillRect(x + size - 9, y + size * 0.65, 3, 3);
   } else {
     // FLOOR 賽博街景地磚 (Cyberpunk Street Pavement)
     ctx.fillStyle = '#0b121a';

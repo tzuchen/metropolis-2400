@@ -20,6 +20,12 @@ export const TileType = {
   ELEVATOR: 9,
   CONVEYOR: 10,
   TURRET: 11,
+  BIO_TREE: 12,
+  PARK_WATER: 13,
+  VENDOR_STALL: 14,
+  SERVER_RACK: 15,
+  STEAM_VENT: 16,
+  REBEL_BARRICADE: 17,
 } as const;
 
 export type TileType = (typeof TileType)[keyof typeof TileType];

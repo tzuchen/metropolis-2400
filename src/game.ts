@@ -64,6 +64,17 @@ export class GameEngine {
     this.victory = false;
     this.updateFOV();
     this.render();
+    this.startAnimationLoop();
+  }
+
+  private startAnimationLoop(): void {
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      const anim = () => {
+        this.render();
+        window.requestAnimationFrame(anim);
+      };
+      window.requestAnimationFrame(anim);
+    }
   }
 
   private createSectorRobots(): Robot[] {
@@ -146,6 +157,45 @@ export class GameEngine {
         rewardClaimed: false,
       },
       {
+        id: 'npc-hiro',
+        name: 'Hiro',
+        role: '商店街拉麵商',
+        avatarColor: '#ff9e00',
+        x: 15,
+        y: 5,
+        hp: 80,
+        maxHp: 80,
+        isAlive: true,
+        dialogue: [
+          'Ah, a resistance operative! You look like you have not eaten in days.',
+          'Here, a bowl of hot ramen from my stall. The broth is warm, the noodles are fresh, and the hope is real.',
+          'Eat up. The streets of Sector 1 are dangerous, but a full stomach keeps the cyberware humming.',
+        ],
+        questReward: {
+          type: 'HEAL',
+          amount: 25,
+          message: 'Hiro served hot ramen (+25 HP)!',
+        },
+        rewardClaimed: false,
+      },
+      {
+        id: 'npc-sylvia',
+        name: 'Sylvia',
+        role: '仿生公園植物學家',
+        avatarColor: '#7cffcb',
+        x: 11,
+        y: 20,
+        hp: 75,
+        maxHp: 75,
+        isAlive: true,
+        dialogue: [
+          'Welcome to the Bio-Park. These synthetic flora are the last green lungs of Metropolis.',
+          'The Tzorg drones pollute the air, but the engineered moss filters toxins and stabilizes the dome climate.',
+          'If you see plasma canisters near the canopy, do not shoot them. The spores will spread and kill everything.',
+        ],
+        rewardClaimed: false,
+      },
+      {
         id: 'npc-ghost',
         name: 'Ghost',
         role: 'Resistance Infiltrator',
@@ -158,6 +208,45 @@ export class GameEngine {
         dialogue: [
           'You bypassed the checkpoint forcefield! Outstanding infiltration, operative.',
           'The Tzorg central server vault is directly ahead. Access the terminal inside to complete our sector victory!',
+        ],
+        rewardClaimed: false,
+      },
+    ];
+  }
+
+  private createSector2NPCs(): NPC[] {
+    return [
+      {
+        id: 'npc-jackal',
+        name: 'Jackal',
+        role: '黑市軍火掮客',
+        avatarColor: '#ff5252',
+        x: 5,
+        y: 17,
+        hp: 90,
+        maxHp: 90,
+        isAlive: true,
+        dialogue: [
+          'Quiet, operative. This back alley is where Tzorg surplus changes hands.',
+          'I have suppressors, dart rounds, and EMP cells. If you want to stay alive, stop leaving muzzle flashes.',
+          'The Overmind core is east. Do not get sentimental. The future is bought with credits and bullets.',
+        ],
+        rewardClaimed: false,
+      },
+      {
+        id: 'npc-zero-one',
+        name: 'Zero-One',
+        role: '叛逃覺醒生化人',
+        avatarColor: '#b388ff',
+        x: 4,
+        y: 21,
+        hp: 100,
+        maxHp: 100,
+        isAlive: true,
+        dialogue: [
+          'I was Unit 01 in the Tzorg fabrication line. Now I am the glitch they cannot patch.',
+          'The server room below is humming with stolen human memories. The Overmind uses them as fuel.',
+          'When you reach the core, choose carefully. Liberation is not just a command; it is a consequence.',
         ],
         rewardClaimed: false,
       },
@@ -365,6 +454,7 @@ export class GameEngine {
         { id: 'hazard-sec2-1', x: 16, y: 8, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
         { id: 'hazard-sec2-2', x: 25, y: 14, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
       ];
+      this.npcs = this.createSector2NPCs();
       this.visibleTiles.clear();
       this.exploredTiles.clear();
       this.updateFOV();
@@ -378,6 +468,7 @@ export class GameEngine {
       (this.player as any).currentSectorId = 'sector-1';
       this.robots = this.createSectorRobots();
       this.hazards = this.createSectorHazards();
+      this.npcs = this.createSectorNPCs();
       this.visibleTiles.clear();
       this.exploredTiles.clear();
       this.updateFOV();
