@@ -649,9 +649,14 @@ export class GameEngine {
     (this.renderer as any).fx = this.fx;
     (this.renderer as any).activeWaypoint = this.activeWaypoint;
     const bossNear = this.robots.some((r) => r.isAlive && r.robotType === 'EXTERMINATOR' && Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 9);
+    const hostileEngaged = this.robots.some(
+      (r) =>
+        r.isAlive &&
+        ((r as any).aiState === 'chase' || (r as any).aiState === 'attack' || ((r as any).pursuitTurns ?? 0) > 0)
+    );
     if (bossNear) {
       bgm.setIntensity('boss');
-    } else if (this.securityLevel === 'ALERT' || this.securityLevel === 'LOCKDOWN') {
+    } else if (this.securityLevel === 'ALERT' || this.securityLevel === 'LOCKDOWN' || hostileEngaged) {
       bgm.setIntensity('combat');
     } else {
       bgm.setIntensity('exploration');
@@ -982,13 +987,13 @@ export class GameEngine {
       this.render();
       return;
     } else if (key === 'c' || key === 'C') {
-      const ok = toggleDisguise(this.player);
-      if (ok) {
+      const active = toggleDisguise(this.player);
+      if (active) {
         soundFX.pickup();
         this.pushMessage('Holo-disguise activated.', 'info');
       } else {
-        soundFX.hit();
-        this.pushMessage('Not enough energy for holo-disguise!', 'danger');
+        soundFX.powerDown();
+        this.pushMessage('Holo-disguise deactivated.', 'info');
       }
       this.render();
       return;
@@ -1355,6 +1360,9 @@ export class GameEngine {
           this.pushMessage(result.message, 'danger');
         }
       } else if (result?.action === 'attack') {
+        if (this.securityLevel === 'CLEAR') {
+          this.securityLevel = 'ALERT' as SecurityLevel;
+        }
         let damage = result.damage ?? robot.attackPower ?? 10;
 
         // 個人能量護盾抵擋 50% 傷害

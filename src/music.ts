@@ -227,3 +227,4 @@ export class MusicSynthesizer {
 }
 
 export const bgm = new MusicSynthesizer();
+export default bgm;

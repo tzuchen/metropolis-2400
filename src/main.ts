@@ -1,5 +1,6 @@
 import * as gameModule from './game';
 import * as audioModule from './audio';
+import * as musicModule from './music';
 
 type GameEngineInstance = {
   handleKeyDown(key: string): void;
@@ -22,6 +23,12 @@ function resolveGameEngine(): GameEngineConstructor {
 function resolveSoundFX(): unknown {
   const named = (audioModule as unknown as { soundFX?: unknown }).soundFX;
   const fallback = (audioModule as unknown as { default?: unknown }).default;
+  return named ?? fallback;
+}
+
+function resolveBGM(): unknown {
+  const named = (musicModule as unknown as { bgm?: unknown }).bgm;
+  const fallback = (musicModule as unknown as { default?: unknown }).default;
   return named ?? fallback;
 }
 
@@ -58,6 +65,7 @@ export function initGame(): GameEngineInstance {
   const engine = new GameEngineCtor(canvas);
   (window as any).game = engine;
   const soundFX = resolveSoundFX();
+  const bgm = resolveBGM() as { start?: () => void } | undefined;
   let audioUnlocked = false;
 
   window.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -70,6 +78,10 @@ export function initGame(): GameEngineInstance {
     if (!audioUnlocked) {
       audioUnlocked = true;
       unlockAudioContext(soundFX);
+
+      if (bgm && typeof bgm.start === 'function') {
+        bgm.start();
+      }
     }
 
     engine.handleKeyDown(event.key);

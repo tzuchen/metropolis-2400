@@ -189,13 +189,28 @@ export function updateRobotAI(
   const canSeePlayer = distance <= scanRange && hasLineOfSight(map, robotPos, playerPos);
   const inAlertProximity = isGlobalAlert && distance <= scanRange;
 
-  const isCovertCivilian =
-    player.isDisguised === true &&
-    player.isWeaponDrawn === false &&
-    globalAlert === SecurityLevel.CLEAR &&
-    robot.aiState !== 'chase';
+  const isCivilian =
+    globalAlert === SecurityLevel.CLEAR && player.isWeaponDrawn === false;
+  const isDisguisedOperative =
+    player.isDisguised === true && player.isWeaponDrawn === false;
 
-  if ((canSeePlayer || inAlertProximity) && !isCovertCivilian) {
+  // If the robot detects a target it should ignore, de-escalate any hostile state.
+  if ((canSeePlayer || inAlertProximity) && (isCivilian || isDisguisedOperative)) {
+    if (
+      robot.aiState !== 'patrol' ||
+      robot.targetPos != null ||
+      ((robot as any).pursuitTurns ?? 0) > 0
+    ) {
+      robot.aiState = 'patrol';
+      robot.targetPos = null;
+      (robot as any).pursuitTurns = 0;
+    }
+  }
+
+  const isPeacefulCivilian = isCivilian && robot.aiState !== 'chase';
+  const isIgnored = isPeacefulCivilian || isDisguisedOperative;
+
+  if ((canSeePlayer || inAlertProximity) && !isIgnored) {
     robot.targetPos = { x: player.x, y: player.y };
     robot.aiState = 'chase';
     (robot as any).pursuitTurns = 6;
