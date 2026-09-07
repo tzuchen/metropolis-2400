@@ -773,7 +773,132 @@ export function drawRobotSprite(
   ctx.arc(cx, cy + size * 0.35, size * 0.26, 0, Math.PI * 2);
   ctx.fill();
 
-  if (type.includes('SHOCK') || type.includes('ENFORCER')) {
+  if (type.includes('EXTERMINATOR')) {
+    // EXTERMINATOR: 重型紅黑裝甲巨型首領
+    const bossPulse = 0.6 + 0.4 * Math.sin(time * 0.006);
+    const shieldR = size * 0.52 + Math.sin(time * 0.004) * size * 0.04;
+
+    // 動態紅色相位護盾光暈
+    const shieldGrad = ctx.createRadialGradient(cx, cy, size * 0.18, cx, cy, shieldR);
+    shieldGrad.addColorStop(0, `rgba(255, 30, 50, ${0.08 * bossPulse})`);
+    shieldGrad.addColorStop(0.65, `rgba(255, 30, 50, ${0.18 * bossPulse})`);
+    shieldGrad.addColorStop(1, 'rgba(255, 30, 50, 0)');
+    ctx.fillStyle = shieldGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, shieldR, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = `rgba(255, 60, 80, ${0.3 + 0.4 * bossPulse})`;
+    ctx.shadowColor = '#ff1e32';
+    ctx.shadowBlur = 12;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, shieldR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const shieldPhase = (time * 0.0015) % (Math.PI * 2);
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 3; i++) {
+      const segStart = shieldPhase + i * ((Math.PI * 2) / 3);
+      ctx.beginPath();
+      ctx.arc(cx, cy, shieldR * 0.92, segStart, segStart + 0.9);
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+
+    // 履帶裝甲基座
+    const treadY = cy + size * 0.2;
+    const treadH = size * 0.2;
+    ctx.fillStyle = '#0d0f14';
+    ctx.fillRect(cx - size * 0.4, treadY, size * 0.8, treadH);
+    ctx.fillStyle = '#1a1f28';
+    ctx.fillRect(cx - size * 0.36, treadY + 3, size * 0.72, treadH - 6);
+    const treadOffset = Math.floor((time * 0.05) % 10);
+    ctx.fillStyle = '#3a1018';
+    for (let tx = -10 + treadOffset; tx < size * 0.72; tx += 10) {
+      ctx.fillRect(cx - size * 0.36 + tx, treadY + 4, 5, treadH - 8);
+    }
+    ctx.fillStyle = '#ff1e32';
+    ctx.shadowColor = '#ff1e32';
+    ctx.shadowBlur = 4;
+    ctx.fillRect(cx - size * 0.36, treadY + treadH - 4, size * 0.72, 2);
+    ctx.shadowBlur = 0;
+
+    // 重裝紅黑軀幹
+    ctx.fillStyle = '#150a0d';
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.32, cy + size * 0.2);
+    ctx.lineTo(cx - size * 0.26, cy - size * 0.24);
+    ctx.lineTo(cx + size * 0.26, cy - size * 0.24);
+    ctx.lineTo(cx + size * 0.32, cy + size * 0.2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#2a1016';
+    ctx.fillRect(cx - size * 0.22, cy - size * 0.2, size * 0.44, size * 0.38);
+    ctx.fillStyle = '#3a1018';
+    ctx.fillRect(cx - size * 0.18, cy - size * 0.16, size * 0.36, size * 0.3);
+
+    // 胸甲警示與核心
+    ctx.fillStyle = '#ff1e32';
+    ctx.shadowColor = '#ff1e32';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(cx - size * 0.18, cy - size * 0.12, size * 0.36, 3);
+    ctx.fillRect(cx - 2, cy - size * 0.08, 4, size * 0.22);
+    ctx.shadowBlur = 0;
+
+    // 雙聯肩部電漿砲
+    const shoulderY = cy - size * 0.3;
+    const shoulderH = size * 0.2;
+    ctx.fillStyle = '#10141a';
+    ctx.fillRect(cx - size * 0.5, shoulderY, size * 0.24, shoulderH);
+    ctx.fillRect(cx + size * 0.26, shoulderY, size * 0.24, shoulderH);
+    ctx.fillStyle = '#3a1018';
+    ctx.fillRect(cx - size * 0.48, shoulderY + 3, size * 0.2, shoulderH - 6);
+    ctx.fillRect(cx + size * 0.28, shoulderY + 3, size * 0.2, shoulderH - 6);
+
+    // 雙聯砲管
+    const barrelH = size * 0.18;
+    ctx.fillStyle = '#05070a';
+    ctx.fillRect(cx - size * 0.46, shoulderY + size * 0.04, 4, barrelH);
+    ctx.fillRect(cx - size * 0.4, shoulderY + size * 0.04, 4, barrelH);
+    ctx.fillRect(cx + size * 0.32, shoulderY + size * 0.04, 4, barrelH);
+    ctx.fillRect(cx + size * 0.38, shoulderY + size * 0.04, 4, barrelH);
+
+    // 電漿充能口
+    const plasmaPulse = 0.5 + 0.5 * Math.sin(time * 0.012);
+    ctx.fillStyle = `rgba(0, 240, 255, ${0.5 + plasmaPulse * 0.5})`;
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(cx - size * 0.46, shoulderY + shoulderH - size * 0.06, 4, 4);
+    ctx.fillRect(cx - size * 0.4, shoulderY + shoulderH - size * 0.06, 4, 4);
+    ctx.fillRect(cx + size * 0.32, shoulderY + shoulderH - size * 0.06, 4, 4);
+    ctx.fillRect(cx + size * 0.38, shoulderY + shoulderH - size * 0.06, 4, 4);
+    ctx.shadowBlur = 0;
+
+    // 頭部與三重複合感測眼
+    ctx.fillStyle = '#0b0d12';
+    ctx.fillRect(cx - size * 0.2, cy - size * 0.42, size * 0.4, size * 0.18);
+    ctx.fillStyle = '#1a1014';
+    ctx.fillRect(cx - size * 0.18, cy - size * 0.4, size * 0.36, size * 0.14);
+
+    const eyePulse = 0.7 + 0.3 * Math.sin(time * 0.01);
+    ctx.fillStyle = `rgba(255, 20, 50, ${eyePulse})`;
+    ctx.shadowColor = '#ff1432';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(cx, cy - size * 0.34, size * 0.07, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx - size * 0.12, cy - size * 0.32, size * 0.045, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx + size * 0.12, cy - size * 0.32, size * 0.045, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(cx - 1, cy - size * 0.35, 2, 2);
+    ctx.shadowBlur = 0;
+  } else if (type.includes('SHOCK') || type.includes('ENFORCER')) {
     // SHOCK ENFORCER: 重裝雙足/履帶執法機器人
     // 1. 重型雙腿/履帶基座
     ctx.fillStyle = '#1c1b18';

@@ -7,6 +7,9 @@ import { TerminalSession } from './terminal';
 import { GameRenderer } from './renderer';
 import { soundFX } from './audio';
 import { getSector1NPCs, getSector2NPCs, getSectorStoryLogs } from './dialogues';
+import { createBossExterminator } from './boss';
+import { createBreachSession, moveBreachCursor, selectBreachCell, type BreachSession } from './breachProtocol';
+import { handleSpecialInput } from './inputHandler';
 
 export class GameEngine {
   canvas: HTMLCanvasElement;
@@ -36,6 +39,8 @@ export class GameEngine {
   victory: boolean = false;
   isTitleScreen: boolean = false;
   language: Language = 'zh';
+  isManualOpen: boolean = false;
+  activeBreachSession: BreachSession | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -277,6 +282,7 @@ export class GameEngine {
         createRobot('SCOUT_DRONE' as RobotType, { x: 12, y: 5 }, [{ x: 12, y: 5 }, { x: 20, y: 5 }]),
         createRobot('SHOCK_ENFORCER' as RobotType, { x: 20, y: 15 }, [{ x: 20, y: 15 }, { x: 20, y: 22 }]),
         createRobot('HUNTER_KILLER' as RobotType, { x: 30, y: 22 }, [{ x: 30, y: 22 }, { x: 35, y: 22 }]),
+        createBossExterminator({ x: 32, y: 18 }),
       ];
       this.hazards = [
         { id: 'hazard-sec2-1', x: 16, y: 8, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
@@ -390,6 +396,8 @@ export class GameEngine {
     this.renderer.isTitleScreen = this.isTitleScreen;
     this.renderer.language = this.language;
     this.renderer.hasSaveData = this.hasSaveGame();
+    this.renderer.isManualOpen = this.isManualOpen;
+    this.renderer.activeBreachSession = this.activeBreachSession;
     (this.player as any).victory = this.victory;
     this.renderer.render(
       this.map,
@@ -417,6 +425,7 @@ export class GameEngine {
   }
 
   handleKeyDown(key: string): void {
+    if (handleSpecialInput(this, key)) return;
     if (this.isTitleScreen) {
       if (key === 'n' || key === 'N' || key === 'Enter' || key === ' ' || key === 'Space') {
         this.isTitleScreen = false;
@@ -592,6 +601,18 @@ export class GameEngine {
         const cmd = this.terminalInputBuffer;
         this.terminalInputBuffer = '';
         this.activeTerminal.input = '';
+        if (cmd.toUpperCase() === 'BREACH' || cmd.toUpperCase() === 'HACK') {
+          const terminalId =
+            (this.activeTerminal as any).terminalId ??
+            (this.activeTerminal as any).terminal?.id ??
+            (this.activeTerminal as any).id ??
+            'UNKNOWN';
+          this.activeBreachSession = createBreachSession(terminalId);
+          soundFX.terminal();
+          this.pushMessage(this.language === 'zh' ? '神經入侵協定啟動：正在載入賽博代碼矩陣...' : 'NEURAL BREACH: Initializing cyberspace matrix...', 'info');
+          this.render();
+          return;
+        }
         const result: any = this.activeTerminal.executeCommand(cmd);
 
         if (result?.disabledForcefield) {

@@ -45,7 +45,7 @@ export function drawTitleScreen(
   ctx.font = 'bold 38px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText?.('METROPOLIS 2400', width / 2, height * 0.22);
+  ctx.fillText?.('METROPOLIS 2400', width / 2, height * 0.20);
 
   // 副標題
   ctx.fillStyle = '#ff0077';
@@ -53,17 +53,17 @@ export function drawTitleScreen(
   ctx.shadowBlur = 8;
   ctx.font = 'bold 15px monospace';
   const subTitle = isZh ? '// 佐格反抗軍終端協定 //' : '// TZORG RESISTANCE PROTOCOL //';
-  ctx.fillText?.(subTitle, width / 2, height * 0.22 + 42);
+  ctx.fillText?.(subTitle, width / 2, height * 0.20 + 40);
 
   ctx.shadowBlur = 0;
 
   // 4. 中央控制選單框
-  const menuW = Math.min(width - 40, 580);
-  const menuH = 220;
+  const menuW = Math.min(width - 40, 600);
+  const menuH = 265;
   const mx = (width - menuW) / 2;
-  const my = height * 0.40;
+  const my = height * 0.36;
 
-  ctx.fillStyle = 'rgba(4, 12, 22, 0.90)';
+  ctx.fillStyle = 'rgba(4, 12, 22, 0.92)';
   ctx.fillRect?.(mx, my, menuW, menuH);
 
   ctx.strokeStyle = '#00f0ff';
@@ -106,6 +106,11 @@ export function drawTitleScreen(
       color: '#ffea00',
     },
     {
+      key: '[ H ]',
+      label: isZh ? '特工行動手冊 (AGENT FIELD MANUAL)' : 'TACTICAL MANUAL & CONTROLS',
+      color: '#00f0ff',
+    },
+    {
       key: '[ 8 / 9 ]',
       label: isZh ? '戰術快速存讀 : [8] 存檔 / [9] 讀檔' : 'TACTICAL SAVE [8] / LOAD [9]',
       color: '#b388ff',
@@ -113,7 +118,7 @@ export function drawTitleScreen(
   ];
 
   items.forEach((item, idx) => {
-    const iy = my + 34 + idx * 44;
+    const iy = my + 30 + idx * 44;
     ctx.textAlign = 'left';
     ctx.font = 'bold 13px monospace';
     ctx.fillStyle = item.color;

@@ -6,6 +6,8 @@ import * as MapModule from './map';
 import { drawTileSprite, drawPlayerSprite, drawRobotSprite, drawNPCSprite, drawItemSprite, drawHazardSprite } from './sprites';
 import { drawTitleScreen } from './titleScreen';
 import { wrapText } from './textWrap';
+import { drawManualModal } from './manualModal';
+import { drawBreachModal, type BreachSession } from './breachProtocol';
 
 export type Position = { x: number; y: number };
 export type Language = 'zh' | 'en';
@@ -36,6 +38,8 @@ export class GameRenderer {
   isTitleScreen: boolean = false;
   language: Language = 'zh';
   hasSaveData: boolean = false;
+  isManualOpen: boolean = false;
+  activeBreachSession: BreachSession | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -73,6 +77,9 @@ export class GameRenderer {
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     if (this.isTitleScreen) {
       this.drawTitleScreen(width, height, ctx, now, this.hasSaveData, this.language);
+      if (this.isManualOpen) {
+        this.drawManualModal(width, height, ctx, now, this.language);
+      }
       ctx.restore?.();
       return;
     }
@@ -302,6 +309,16 @@ export class GameRenderer {
     // 14.9 義體改裝診所 (Augmentation Clinic Modal)
     if (isAugmentShopOpen) {
       this.drawAugmentShopModal(player, width, height, ctx, now);
+    }
+
+    // 14.10 矩陣入侵協議畫面 (Breach Protocol Modal)
+    if (this.activeBreachSession) {
+      this.drawBreachModal(this.activeBreachSession, width, height, ctx, now, this.language);
+    }
+
+    // 14.11 操作手冊畫面 (Manual Modal)
+    if (this.isManualOpen) {
+      this.drawManualModal(width, height, ctx, now, this.language);
     }
 
     // 15. 死亡／勝利畫面橫幅 (Game Over / Victory Banner)
@@ -1403,5 +1420,13 @@ export class GameRenderer {
 
     ctx.shadowBlur = 0;
     ctx.restore?.();
+  }
+
+  drawManualModal(width: number, height: number, ctx: any, now: number, language: Language): void {
+    drawManualModal(width, height, ctx, now, language);
+  }
+
+  drawBreachModal(session: BreachSession, width: number, height: number, ctx: any, now: number, language: Language): void {
+    drawBreachModal(session, width, height, ctx, now, language);
   }
 }
