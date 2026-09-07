@@ -147,5 +147,17 @@ export function handleSpecialInput(game: any, key: string): boolean {
     return true;
   }
 
+  // 6. Secret Key [V]
+  if (key === 'v' || key === 'V') {
+    game.toggleOmniVision();
+    return true;
+  }
+
+  // 7. Secret Key [X]
+  if (key === 'x' || key === 'X') {
+    game.toggleFullMap();
+    return true;
+  }
+
   return false;
 }

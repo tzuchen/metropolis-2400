@@ -8,6 +8,7 @@ import { drawTitleScreen } from './titleScreen';
 import { wrapText } from './textWrap';
 import { drawManualModal } from './manualModal';
 import { drawBreachModal, type BreachSession } from './breachProtocol';
+import { drawMiniRadar } from './radar';
 
 export type Position = { x: number; y: number };
 export type Language = 'zh' | 'en';
@@ -40,6 +41,8 @@ export class GameRenderer {
   hasSaveData: boolean = false;
   isManualOpen: boolean = false;
   activeBreachSession: BreachSession | null = null;
+  isOmniVisionActive: boolean = false;
+  isFullMapActive: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -271,7 +274,7 @@ export class GameRenderer {
     this.drawScreenAtmosphere(width, height, ctx);
 
     // 11. 戰術小雷達 (Sector Mini Radar，包含道具黃點、居民綠點、機器人)
-    this.drawMiniRadar(width, map, player, robots, npcs, groundItems, visible, ctx, now);
+    this.drawMiniRadar(width, map, player, robots, npcs, groundItems, visible, ctx, now, this.isFullMapActive, this.language);
 
     // 12. 賽博風格抬頭顯示 HUD (Tactical HUD)
     this.drawHud(width, height, player, securityLevel, messages, ctx);
@@ -459,72 +462,11 @@ export class GameRenderer {
     groundItems: GroundItem[] | undefined,
     visible: Set<string>,
     ctx: any,
-    now: number
+    now: number,
+    isFull?: boolean,
+    language?: Language
   ): void {
-    ctx.save?.();
-    const radarW = 100;
-    const radarH = 75;
-    const rx = width - radarW - 12;
-    const ry = 46;
-
-    ctx.fillStyle = 'rgba(5, 12, 18, 0.85)';
-    ctx.fillRect?.(rx, ry, radarW, radarH);
-
-    ctx.strokeStyle = 'rgba(0, 229, 255, 0.4)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect?.(rx + 0.5, ry + 0.5, radarW - 1, radarH - 1);
-
-    ctx.fillStyle = '#00e5ff';
-    ctx.font = 'bold 8px monospace';
-    ctx.fillText?.('RADAR // SEC-01', rx + 4, ry + 9);
-
-    const mw = Number((map as any).width) || 40;
-    const mh = Number((map as any).height) || 30;
-    const scaleX = (radarW - 8) / mw;
-    const scaleY = (radarH - 16) / mh;
-    const ox = rx + 4;
-    const oy = ry + 12;
-
-    // 地面物資黃點
-    if (Array.isArray(groundItems)) {
-      groundItems.forEach((it) => {
-        if (!it) return;
-        const key = this.key(it.x, it.y);
-        if (!visible.has(key)) return;
-        ctx.fillStyle = '#ffaa00';
-        ctx.fillRect?.(ox + it.x * scaleX - 1, oy + it.y * scaleY - 1, 2, 2);
-      });
-    }
-
-    // 居民反抗軍綠點
-    if (Array.isArray(npcs)) {
-      npcs.forEach((n) => {
-        if (!n || !n.isAlive) return;
-        const key = this.key(n.x, n.y);
-        if (!visible.has(key)) return;
-        ctx.fillStyle = '#00ffaa';
-        ctx.fillRect?.(ox + n.x * scaleX - 1, oy + n.y * scaleY - 1, 2, 2);
-      });
-    }
-
-    // 機器人紅點 (若被 EMP 癱瘓則顯示青色)
-    if (Array.isArray(robots)) {
-      robots.forEach((r) => {
-        if (!r || !r.isAlive) return;
-        const key = this.key(r.x, r.y);
-        if (!visible.has(key)) return;
-        const isStunned = (r.stunnedTurns ?? 0) > 0;
-        ctx.fillStyle = isStunned ? '#00f0ff' : '#ff1744';
-        ctx.fillRect?.(ox + r.x * scaleX - 1, oy + r.y * scaleY - 1, 2, 2);
-      });
-    }
-
-    // 玩家青色閃爍點
-    const pPulse = 0.5 + 0.5 * Math.sin(now * 0.01);
-    ctx.fillStyle = 'rgba(0, 240, 255, ' + pPulse + ')';
-    ctx.fillRect?.(ox + player.x * scaleX - 1.5, oy + player.y * scaleY - 1.5, 3, 3);
-
-    ctx.restore?.();
+    drawMiniRadar(width, map, player, robots, npcs, groundItems, visible, ctx, now, isFull ?? this.isFullMapActive, language ?? this.language);
   }
 
   getTile(map: any, x: number, y: number): any {
@@ -708,10 +650,10 @@ export class GameRenderer {
     const empCount = p?.consumables?.empGrenades ?? 0;
 
     ctx.fillStyle = 'rgba(7, 13, 20, 0.85)';
-    ctx.fillRect?.(0, height - 26, 740, 26);
+    ctx.fillRect?.(0, height - 26, width, 26);
     ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
     ctx.lineWidth = 1;
-    ctx.strokeRect?.(0, height - 26, 740, 1);
+    ctx.strokeRect?.(0, height - 26, width, 1);
 
     ctx.font = 'bold 11px monospace';
     ctx.textBaseline = 'middle';
@@ -735,6 +677,10 @@ export class GameRenderer {
     ctx.fillText?.('[Z] ' + (this.language === 'zh' ? '中' : 'EN'), 615, height - 13);
     ctx.fillStyle = '#00ffaa';
     ctx.fillText?.('[B] BGM', 665, height - 13);
+    ctx.fillStyle = this.isOmniVisionActive ? '#00ffff' : '#667788';
+    ctx.fillText?.('[V] OMNI', 715, height - 13);
+    ctx.fillStyle = this.isFullMapActive ? '#ffea00' : '#667788';
+    ctx.fillText?.('[X] MAP', 770, height - 13);
 
     ctx.restore?.();
   }

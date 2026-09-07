@@ -80,6 +80,7 @@ export function drawManualModal(
             '終端機指令：輸入 HELP 查看命令，CLEAR_ALARM 解除全域警戒，OVERRIDE 關閉力場屏障。',
             '分區穿梭：解鎖 01 檢查哨後，可搭乘東側電梯往返 Sector 1 (街道) 與 Sector 2 (製造廠)。',
             '多結局核心：深入 Sector 2 東側佐格主腦終端，可執行【過載自毀】、【病毒改寫】或【軌道撤離】。',
+            '秘技測試：[ V ] 破除全圖視野限制（全知透鏡）  |  [ X ] 完整呈現小地圖測繪藍圖  |  [ B ] 背景音樂開關',
           ],
         },
       ]
@@ -118,6 +119,7 @@ export function drawManualModal(
             'Terminal Commands: Type HELP for commands, CLEAR_ALARM to drop alert, OVERRIDE for forcefields.',
             'Sector Transit: Take the elevator to travel between Sector 1 and Sector 2 Fab-Plex.',
             'Endgame Nexus: Breach Central Overmind terminal for OVERLOAD, SUBVERSION, or EVACUATION endings.',
+            'Testing Cheats: [ V ] Toggle Omni-Vision (Breaks vision limits) | [ X ] Toggle Full Minimap Blueprint | [ B ] Toggle Synth BGM',
           ],
         },
       ];

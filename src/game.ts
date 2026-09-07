@@ -43,6 +43,8 @@ export class GameEngine {
   language: Language = 'zh';
   isManualOpen: boolean = false;
   activeBreachSession: BreachSession | null = null;
+  isOmniVisionActive: boolean = false;
+  isFullMapActive: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -233,6 +235,26 @@ export class GameEngine {
         iconColor: '#9d4edd',
         storyLogId: 'slate-ghost',
       },
+      {
+        id: 'item-omni-visor',
+        name: '全知超感光子透鏡',
+        itemType: 'KEYCARD',
+        x: 5,
+        y: 23,
+        description: '全知超感光子透鏡：啟動全視域掃描，偵測全地圖單位。',
+        amount: 1,
+        iconColor: '#00f0ff',
+      },
+      {
+        id: 'item-full-map-uplink',
+        name: '全域軌道測繪晶片',
+        itemType: 'KEYCARD',
+        x: 6,
+        y: 23,
+        description: '全域軌道測繪晶片：啟動全地圖探索視圖。',
+        amount: 1,
+        iconColor: '#ffea00',
+      },
     ];
   }
 
@@ -360,11 +382,83 @@ export class GameEngine {
     }
   }
 
+  hasOmniVision(): boolean {
+    const inventory = (this.player as any).inventory;
+    return this.isOmniVisionActive || (Array.isArray(inventory) && inventory.some((it: any) => it?.id === 'item-omni-visor'));
+  }
+
+  hasFullMap(): boolean {
+    const inventory = (this.player as any).inventory;
+    return this.isFullMapActive || (Array.isArray(inventory) && inventory.some((it: any) => it?.id === 'item-full-map-uplink'));
+  }
+
+  toggleOmniVision(): boolean {
+    this.isOmniVisionActive = !this.isOmniVisionActive;
+    this.updateFOV();
+    const on = this.isOmniVisionActive;
+    const floating = this.language === 'zh' ? (on ? '全視域：啟動' : '全視域：關閉') : (on ? 'OMNI-VISION: ON' : 'OMNI-VISION: OFF');
+    this.pushFloatingText(this.player.x, this.player.y, floating, '#00f0ff');
+    this.pushMessage(
+      this.language === 'zh'
+        ? on
+          ? '系統提示：全視域掃描已啟動，可偵測全地圖單位。'
+          : '系統提示：全視域掃描已關閉。'
+        : on
+          ? 'SYSTEM: Omni-vision scan active. All map units visible.'
+          : 'SYSTEM: Omni-vision scan disabled.',
+      'info'
+    );
+    this.render();
+    return this.isOmniVisionActive;
+  }
+
+  toggleFullMap(): boolean {
+    this.isFullMapActive = !this.isFullMapActive;
+    this.updateFOV();
+    const on = this.isFullMapActive;
+    const floating = this.language === 'zh' ? (on ? '全地圖：啟動' : '全地圖：關閉') : (on ? 'FULL MAP: ON' : 'FULL MAP: OFF');
+    this.pushFloatingText(this.player.x, this.player.y, floating, '#ffea00');
+    this.pushMessage(
+      this.language === 'zh'
+        ? on
+          ? '系統提示：全地圖探索視圖已啟動。'
+          : '系統提示：全地圖探索視圖已關閉。'
+        : on
+          ? 'SYSTEM: Full-map exploration view active.'
+          : 'SYSTEM: Full-map exploration view disabled.',
+      'info'
+    );
+    this.render();
+    return this.isFullMapActive;
+  }
+
   updateFOV(): void {
-    this.visibleTiles = calculateFOV(this.map, { x: this.player.x, y: this.player.y }, 9);
+    if (this.hasOmniVision()) {
+      this.visibleTiles = new Set<string>();
+      const width = Number((this.map as any).width) || 0;
+      const height = Number((this.map as any).height) || 0;
+      for (let x = 0; x < width; x++) {
+        for (let y = 0; y < height; y++) {
+          this.visibleTiles.add(`${x},${y}`);
+        }
+      }
+    } else {
+      this.visibleTiles = calculateFOV(this.map, { x: this.player.x, y: this.player.y }, 9);
+    }
+
     this.visibleTiles.forEach((key) => {
       this.exploredTiles.add(key);
     });
+
+    if (this.hasFullMap()) {
+      const width = Number((this.map as any).width) || 0;
+      const height = Number((this.map as any).height) || 0;
+      for (let x = 0; x < width; x++) {
+        for (let y = 0; y < height; y++) {
+          this.exploredTiles.add(`${x},${y}`);
+        }
+      }
+    }
   }
 
   hasSaveGame(): boolean {
@@ -430,6 +524,8 @@ export class GameEngine {
     this.renderer.hasSaveData = this.hasSaveGame();
     this.renderer.isManualOpen = this.isManualOpen;
     this.renderer.activeBreachSession = this.activeBreachSession;
+    this.renderer.isOmniVisionActive = this.hasOmniVision();
+    this.renderer.isFullMapActive = this.hasFullMap();
     (this.player as any).victory = this.victory;
     this.renderer.render(
       this.map,
@@ -1273,8 +1369,29 @@ export class GameEngine {
         this.pushFloatingText(this.player.x, this.player.y, `+${cr} CR`, '#ffea00');
         this.pushMessage(`Retrieved encrypted credit chip (+${cr} CR).`, 'success');
       } else if (item.itemType === 'KEYCARD') {
-        this.pushFloatingText(this.player.x, this.player.y, 'PASSCODE ACQUIRED', '#ffea00');
-        this.pushMessage(`Acquired [${item.name}]: Tzorg security clearance elevated.`, 'success');
+        let inventory = (this.player as any).inventory;
+        if (!Array.isArray(inventory)) {
+          inventory = [];
+          (this.player as any).inventory = inventory;
+        }
+        if (!inventory.some((it: any) => it?.id === item.id)) {
+          inventory.push(item);
+        }
+
+        if (item.id === 'item-omni-visor') {
+          this.isOmniVisionActive = true;
+          this.updateFOV();
+          this.pushFloatingText(this.player.x, this.player.y, 'OMNI-VISOR ONLINE', '#00f0ff');
+          this.pushMessage(`Acquired [${item.name}]: Omni-vision scan activated.`, 'success');
+        } else if (item.id === 'item-full-map-uplink') {
+          this.isFullMapActive = true;
+          this.updateFOV();
+          this.pushFloatingText(this.player.x, this.player.y, 'FULL-MAP UPLINK ONLINE', '#ffea00');
+          this.pushMessage(`Acquired [${item.name}]: Full-map exploration view activated.`, 'success');
+        } else {
+          this.pushFloatingText(this.player.x, this.player.y, 'PASSCODE ACQUIRED', '#ffea00');
+          this.pushMessage(`Acquired [${item.name}]: Tzorg security clearance elevated.`, 'success');
+        }
       } else if (item.itemType === 'DATA_SLATE') {
         const foundLog = this.storyLogs.find((l) => l.id === item.storyLogId);
         if (foundLog) {
