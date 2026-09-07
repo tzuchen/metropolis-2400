@@ -1,5 +1,24 @@
 import type { SectorMap, Player, Robot, NPC, GroundItem, Language } from './types';
-import { TileType } from './types';
+
+function normalizeTileKind(tile: any): string {
+  if (typeof tile === 'string') return tile.toUpperCase();
+  if (typeof tile === 'number') {
+    switch (tile) {
+      case 2: return 'WALL';
+      case 3: return 'DOOR_CLOSED';
+      case 4: return 'DOOR_OPEN';
+      case 5: return 'FORCEFIELD';
+      case 6: return 'TERMINAL';
+      case 9: return 'ELEVATOR';
+      case 10: return 'CONVEYOR';
+      case 12: return 'BIO_TREE';
+      case 13: return 'PARK_WATER';
+      case 15: return 'SERVER_RACK';
+      default: return 'FLOOR';
+    }
+  }
+  return 'FLOOR';
+}
 
 /**
  * Tactical Big Map Modal (全螢幕戰術大地圖)
@@ -125,6 +144,28 @@ export function drawBigMapModal(
         const cellX = mapStartX + tx * tileSize;
         const cellY = mapStartY + ty * tileSize;
 
+        const kind = normalizeTileKind(row[tx]);
+
+        if (kind === 'WALL') {
+          if (isVis) {
+            ctx.fillStyle = '#265173';
+            ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
+            ctx.strokeStyle = '#00f0ff';
+            ctx.strokeRect?.(cellX + 0.5, cellY + 0.5, tileSize - 1, tileSize - 1);
+          } else if (isExplored) {
+            ctx.fillStyle = '#1b3b54';
+            ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
+            ctx.strokeStyle = '#2d658c';
+            ctx.strokeRect?.(cellX + 0.5, cellY + 0.5, tileSize - 1, tileSize - 1);
+          } else {
+            ctx.fillStyle = '#0f2231';
+            ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
+            ctx.strokeStyle = 'rgba(0, 180, 240, 0.4)';
+            ctx.strokeRect?.(cellX + 0.5, cellY + 0.5, tileSize - 1, tileSize - 1);
+          }
+          continue;
+        }
+
         if (!isExplored) {
           // 未探索區域：深黑背景微弱點陣
           if ((tx + ty) % 4 === 0) {
@@ -134,30 +175,23 @@ export function drawBigMapModal(
           continue;
         }
 
-        const t = row[tx];
-        // 牆體
-        if (t === TileType.WALL) {
-          ctx.fillStyle = isVis ? '#20435c' : '#142735';
-          ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
-          ctx.strokeStyle = isVis ? '#2d5e82' : '#1b3345';
-          ctx.strokeRect?.(cellX + 0.5, cellY + 0.5, tileSize - 1, tileSize - 1);
-        } else if (t === TileType.FORCEFIELD) {
+        if (kind === 'FORCEFIELD') {
           const pulseAlpha = 0.6 + 0.4 * Math.sin(now * 0.01 + tx);
           ctx.fillStyle = `rgba(255, 40, 80, ${pulseAlpha})`;
           ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
-        } else if (t === TileType.DOOR_CLOSED) {
+        } else if (kind === 'DOOR_CLOSED') {
           ctx.fillStyle = '#00e5ff';
           ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
-        } else if (t === TileType.DOOR_OPEN) {
+        } else if (kind === 'DOOR_OPEN') {
           ctx.fillStyle = 'rgba(0, 229, 255, 0.25)';
           ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
-        } else if (t === TileType.TERMINAL) {
+        } else if (kind === 'TERMINAL') {
           ctx.fillStyle = '#ffea00';
           ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
-        } else if (t === TileType.ELEVATOR) {
+        } else if (kind === 'ELEVATOR') {
           ctx.fillStyle = '#00aaff';
           ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
-        } else if (t === TileType.CONVEYOR) {
+        } else if (kind === 'CONVEYOR') {
           ctx.fillStyle = '#1e3830';
           ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
         } else {

@@ -2,13 +2,17 @@ import { GameEngine } from '../src/game';
 import { setupSubSectorZero } from '../src/sewerMap';
 
 function createMockCanvas(w = 960, h = 600): any {
+  const drawnRects: Array<{ x: number; y: number; w: number; h: number; fill?: any }> = [];
   return {
     width: w,
     height: h,
+    drawnRects,
     getContext: () => ({
       save: () => {},
       restore: () => {},
-      fillRect: () => {},
+      fillRect: (x: number, y: number, w: number, h: number) => {
+        drawnRects.push({ x, y, w, h });
+      },
       strokeRect: () => {},
       beginPath: () => {},
       moveTo: () => {},
@@ -29,7 +33,7 @@ function createMockCanvas(w = 960, h = 600): any {
   };
 }
 
-console.log('Testing Tactical Big Map System...');
+console.log('Testing Tactical Big Map System & Wall Visibility...');
 
 const canvas = createMockCanvas(960, 600);
 const game = new GameEngine(canvas as any);
@@ -47,9 +51,13 @@ if (!game.isBigMapOpen) {
 }
 console.log('✅ Big Map opens on [Tab] key');
 
-// 3. Render Sector 1 Big Map
+// 3. Render Sector 1 Big Map and verify walls are rendered
+canvas.drawnRects.length = 0;
 game.render();
-console.log('✅ Sector 1 Big Map renders cleanly');
+if (canvas.drawnRects.length < 500) {
+  throw new Error(`Expected at least 500 tile rects to be rendered on big map, got ${canvas.drawnRects.length}`);
+}
+console.log(`✅ Sector 1 Big Map renders cleanly (${canvas.drawnRects.length} rects drawn)`);
 
 // 4. Close Big Map via Tab
 game.handleKeyDown('Tab');
