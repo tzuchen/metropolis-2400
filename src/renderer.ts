@@ -681,6 +681,8 @@ export class GameRenderer {
     ctx.fillText?.('[V] OMNI', 715, height - 13);
     ctx.fillStyle = this.isFullMapActive ? '#ffea00' : '#667788';
     ctx.fillText?.('[X] MAP', 770, height - 13);
+    ctx.fillStyle = '#00f0ff';
+    ctx.fillText?.('[0] RES', 825, height - 13);
 
     ctx.restore?.();
   }

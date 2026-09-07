@@ -59,7 +59,7 @@ export function drawTitleScreen(
 
   // 4. 中央控制選單框
   const menuW = Math.min(width - 40, 600);
-  const menuH = 265;
+  const menuH = 280;
   const mx = (width - menuW) / 2;
   const my = height * 0.36;
 
@@ -114,6 +114,11 @@ export function drawTitleScreen(
       key: '[ 8 / 9 ]',
       label: isZh ? '戰術快速存讀 : [8] 存檔 / [9] 讀檔' : 'TACTICAL SAVE [8] / LOAD [9]',
       color: '#b388ff',
+    },
+    {
+      key: '[ 0 / F10 ]',
+      label: isZh ? '切換畫面解析度 (CYCLE RESOLUTION)' : 'CYCLE RESOLUTION (960x600/1200x750/800x500)',
+      color: '#00f0ff',
     },
   ];
 
