@@ -116,6 +116,7 @@ export interface Robot extends Entity {
   alertCooldown: number;
   attackPower: number;
   scanRange: number;
+  attackRange?: number;
   stunnedTurns?: number;
 }
 
@@ -224,3 +225,13 @@ export interface Hazard {
 }
 
 export type EndgameChoice = 'OVERLOAD' | 'SUBVERSION' | 'EVACUATION' | 'AWAKEN' | null;
+
+export interface LaserBeam {
+  from: Position;
+  to: Position;
+  color: string;
+  width?: number;
+  beamType?: 'LASER' | 'ELEC' | 'PLASMA' | 'NEEDLE' | string;
+  createdAt?: number;
+  duration?: number;
+}

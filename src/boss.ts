@@ -23,6 +23,7 @@ export function createBossExterminator(pos: Position = { x: 32, y: 18 }): Robot 
     targetPos: null,
     alertCooldown: 0,
     attackPower: 22,
+    attackRange: 5,
     scanRange: 9,
     stunnedTurns: 0,
   };

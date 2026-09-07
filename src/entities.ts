@@ -188,16 +188,16 @@ export function createPlayer(startPos: Position): Player {
 }
 
 export function createRobot(type: RobotType, startPos: Position, patrolPath?: Position[]): Robot {
-  const statsByType: Record<string, { hp: number; attackPower: number; scanRange: number }> = {
-    SCOUT_DRONE: { hp: 30, attackPower: 5, scanRange: 6 },
-    SHOCK_ENFORCER: { hp: 60, attackPower: 15, scanRange: 5 },
-    HUNTER_KILLER: { hp: 100, attackPower: 25, scanRange: 8 },
-    EXTERMINATOR: { hp: 200, attackPower: 40, scanRange: 7 },
-    SERVICE_BOT: { hp: 20, attackPower: 0, scanRange: 2 },
+  const statsByType: Record<string, { hp: number; attackPower: number; scanRange: number; attackRange: number }> = {
+    SCOUT_DRONE: { hp: 30, attackPower: 5, scanRange: 6, attackRange: 1 },
+    SHOCK_ENFORCER: { hp: 60, attackPower: 15, scanRange: 5, attackRange: 1 },
+    HUNTER_KILLER: { hp: 100, attackPower: 25, scanRange: 8, attackRange: 4 },
+    EXTERMINATOR: { hp: 200, attackPower: 40, scanRange: 7, attackRange: 5 },
+    SERVICE_BOT: { hp: 20, attackPower: 0, scanRange: 2, attackRange: 0 },
   };
 
   const key = String(type).toUpperCase();
-  const stats = statsByType[key] ?? { hp: 50, attackPower: 10, scanRange: 5 };
+  const stats = statsByType[key] ?? { hp: 50, attackPower: 10, scanRange: 5, attackRange: 1 };
   const path = (patrolPath ?? []).map(clonePosition);
   const targetPos = path.length > 0 ? clonePosition(path[0]) : null;
 
@@ -217,6 +217,7 @@ export function createRobot(type: RobotType, startPos: Position, patrolPath?: Po
     alertCooldown: 0,
     attackPower: stats.attackPower,
     scanRange: stats.scanRange,
+    attackRange: stats.attackRange ?? 1,
     stunnedTurns: 0,
   } as unknown as Robot;
 }

@@ -56,6 +56,7 @@ export function initGame(): GameEngineInstance {
 
   const GameEngineCtor = resolveGameEngine();
   const engine = new GameEngineCtor(canvas);
+  (window as any).game = engine;
   const soundFX = resolveSoundFX();
   let audioUnlocked = false;
 

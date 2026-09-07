@@ -19,6 +19,19 @@ function getTiles(map: SectorMap): TileType[][] | undefined {
   return (map as { tiles?: TileType[][] }).tiles;
 }
 
+export function key(x: number, y: number): string {
+  return `${x},${y}`;
+}
+
+export function parseKey(keyStr: string): Position | null {
+  const parts = keyStr.split(/[,:_]/);
+  if (parts.length < 2) return null;
+  const x = Number(parts[0]);
+  const y = Number(parts[1]);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return { x, y };
+}
+
 export function isWalkable(tile: TileType): boolean {
   const t = tile as any;
   return t === FLOOR || t === DOOR_OPEN || t === 1 || t === 4 || t === 9 || t === 10 || t === 16 || t === 'ELEVATOR' || t === 'CONVEYOR' || t === 'STEAM_VENT';

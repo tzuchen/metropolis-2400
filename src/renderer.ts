@@ -1,6 +1,6 @@
 // @ts-nocheck
 // eslint-disable
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, TerminalData, DialogueSession, NPC, GroundItem, MissionObjective, StoryLog, Hazard } from './types';
+import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, TerminalData, DialogueSession, NPC, GroundItem, MissionObjective, StoryLog, Hazard, LaserBeam } from './types';
 import type { TerminalSession } from './terminal';
 import * as MapModule from './map';
 import { drawTileSprite, drawPlayerSprite, drawRobotSprite, drawNPCSprite, drawItemSprite, drawHazardSprite } from './sprites';
@@ -62,7 +62,7 @@ export class GameRenderer {
     securityLevel: SecurityLevel,
     messages: GameMessage[],
     activeTerminal: TerminalSession | null,
-    laserBeams?: Array<{ from: Position; to: Position; color: string }>,
+    laserBeams?: Array<LaserBeam | { from: Position; to: Position; color: string }>,
     floatingTexts?: Array<{ x: number; y: number; text: string; color: string }>,
     npcs?: NPC[],
     activeDialogue?: DialogueSession | null,
@@ -237,14 +237,32 @@ export class GameRenderer {
     if (Array.isArray(laserBeams)) {
       laserBeams.forEach((beam) => {
         if (!beam || !beam.from || !beam.to) return;
-        this.drawLine(
-          beam.from.x * this.tileSize - camX + this.tileSize / 2,
-          beam.from.y * this.tileSize - camY + this.tileSize / 2,
-          beam.to.x * this.tileSize - camX + this.tileSize / 2,
-          beam.to.y * this.tileSize - camY + this.tileSize / 2,
-          beam.color || '#ff3b3b',
-          ctx
-        );
+        const b = beam as any;
+        const duration = typeof b.duration === 'number' ? b.duration : 320;
+        let alpha = 1;
+        if (typeof b.createdAt === 'number') {
+          const age = now - b.createdAt;
+          if (age > duration) return;
+          alpha = Math.max(0.1, 1 - age / duration);
+        }
+        const x1 = beam.from.x * this.tileSize - camX + this.tileSize / 2;
+        const y1 = beam.from.y * this.tileSize - camY + this.tileSize / 2;
+        const x2 = beam.to.x * this.tileSize - camX + this.tileSize / 2;
+        const y2 = beam.to.y * this.tileSize - camY + this.tileSize / 2;
+        const color = b.color || '#ff3b3b';
+        const beamType = String(b.beamType || 'LASER').toUpperCase();
+        ctx.save?.();
+        ctx.globalAlpha = alpha;
+        if (beamType === 'ELEC') {
+          this.drawElectricArc(x1, y1, x2, y2, color, ctx, now);
+        } else if (beamType === 'PLASMA') {
+          this.drawPlasmaBeam(x1, y1, x2, y2, color, ctx, now);
+        } else if (beamType === 'NEEDLE') {
+          this.drawNeedleTracer(x1, y1, x2, y2, color, ctx, now);
+        } else {
+          this.drawLaserBeam(x1, y1, x2, y2, color, ctx, now);
+        }
+        ctx.restore?.();
       });
     }
 
@@ -585,6 +603,131 @@ export class GameRenderer {
     ctx.moveTo?.(x1, y1);
     ctx.lineTo?.(x2, y2);
     ctx.stroke?.();
+    ctx.shadowBlur = 0;
+    ctx.restore?.();
+  }
+
+  drawLaserBeam(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0): void {
+    ctx.save?.();
+    ctx.strokeStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath?.();
+    ctx.moveTo?.(x1, y1);
+    ctx.lineTo?.(x2, y2);
+    ctx.stroke?.();
+    ctx.shadowBlur = 0;
+    ctx.restore?.();
+  }
+
+  drawElectricArc(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0): void {
+    ctx.save?.();
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.hypot(dx, dy) || 1;
+    const segments = 8;
+    const perpX = -dy / len;
+    const perpY = dx / len;
+
+    ctx.strokeStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 10;
+    ctx.lineWidth = 2;
+    ctx.beginPath?.();
+    ctx.moveTo?.(x1, y1);
+
+    for (let i = 1; i < segments; i++) {
+      const t = i / segments;
+      const jitter = (Math.sin(now * 0.05 + i * 7.3) * 0.5 + Math.sin(now * 0.03 + i * 3.1) * 0.5) * (len * 0.15);
+      const px = x1 + dx * t + perpX * jitter;
+      const py = y1 + dy * t + perpY * jitter;
+      ctx.lineTo?.(px, py);
+    }
+    ctx.lineTo?.(x2, y2);
+    ctx.stroke?.();
+
+    const sparkCount = 3;
+    for (let s = 0; s < sparkCount; s++) {
+      const t = 0.2 + (s / sparkCount) * 0.6;
+      const jitter = Math.sin(now * 0.04 + s * 5.7) * (len * 0.1);
+      const sx = x1 + dx * t + perpX * jitter;
+      const sy = y1 + dy * t + perpY * jitter;
+      const sparkSize = 2 + Math.random() * 2;
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 6;
+      ctx.beginPath?.();
+      ctx.arc?.(sx, sy, sparkSize, 0, Math.PI * 2);
+      ctx.fill?.();
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.restore?.();
+  }
+
+  drawPlasmaBeam(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0): void {
+    ctx.save?.();
+    const pulse = 0.8 + 0.2 * Math.sin(now * 0.01);
+
+    ctx.strokeStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 16;
+    ctx.lineWidth = 6 * pulse;
+    ctx.globalAlpha = 0.4;
+    ctx.beginPath?.();
+    ctx.moveTo?.(x1, y1);
+    ctx.lineTo?.(x2, y2);
+    ctx.stroke?.();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.lineWidth = 2.5;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath?.();
+    ctx.moveTo?.(x1, y1);
+    ctx.lineTo?.(x2, y2);
+    ctx.stroke?.();
+
+    const orbRadius = 6 + 3 * Math.sin(now * 0.012);
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 12;
+    ctx.globalAlpha = 0.8;
+    ctx.beginPath?.();
+    ctx.arc?.(x2, y2, orbRadius, 0, Math.PI * 2);
+    ctx.fill?.();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 4;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath?.();
+    ctx.arc?.(x2, y2, orbRadius * 0.4, 0, Math.PI * 2);
+    ctx.fill?.();
+
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    ctx.restore?.();
+  }
+
+  drawNeedleTracer(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0): void {
+    ctx.save?.();
+    ctx.strokeStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 4;
+    ctx.lineWidth = 1;
+    ctx.beginPath?.();
+    ctx.moveTo?.(x1, y1);
+    ctx.lineTo?.(x2, y2);
+    ctx.stroke?.();
+
+    ctx.fillStyle = color;
+    ctx.shadowBlur = 6;
+    ctx.beginPath?.();
+    ctx.arc?.(x2, y2, 2, 0, Math.PI * 2);
+    ctx.fill?.();
+
     ctx.shadowBlur = 0;
     ctx.restore?.();
   }

@@ -205,12 +205,24 @@ export function updateRobotAI(
       };
     }
 
-    if (distance <= 1) {
+    const effectiveAttackRange = Math.max(1, robot.attackRange ?? 1);
+    if (
+      distance <= effectiveAttackRange &&
+      (effectiveAttackRange === 1 || hasLineOfSight(map, robotPos, playerPos))
+    ) {
       robot.aiState = 'attack';
+      const weaponDesc =
+        robot.robotType === 'HUNTER_KILLER'
+          ? 'coherent laser blasters'
+          : robot.robotType === 'EXTERMINATOR'
+          ? 'heavy plasma annihilator cannon'
+          : robot.robotType === 'SHOCK_ENFORCER'
+          ? 'high-voltage stun baton'
+          : 'energy dart';
       return {
         action: 'attack',
         damage: robot.attackPower || 15,
-        message: robot.name + ' engages operative at close range!',
+        message: `${robot.name} attacks operative with ${weaponDesc}!`,
       };
     }
 

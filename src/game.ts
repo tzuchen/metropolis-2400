@@ -1,4 +1,4 @@
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard, Language } from './types';
+import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard, Language, LaserBeam } from './types';
 import { buildSector1Map, buildSector2Map, calculateFOV, disableForcefield, getTile, isWalkable, toggleDoor } from './map';
 import { hasSavedGame, saveGameState, loadGameState } from './saveLoad';
 import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise, installAugment, cycleWeapon } from './entities';
@@ -46,7 +46,7 @@ export class GameEngine {
   exploredTiles: Set<string>;
   activeTerminal: TerminalSession | null;
   activeDialogue: DialogueSession | null;
-  laserBeams: Array<{ from: Position; to: Position; color: string }>;
+  laserBeams: LaserBeam[];
   floatingTexts: Array<{ x: number; y: number; text: string; color: string; createdAt?: number }>;
   hazards: Hazard[] = [];
   isAugmentShopOpen: boolean = false;
@@ -1183,6 +1183,10 @@ export class GameEngine {
             from: { x: this.player.x, y: this.player.y },
             to: { x: hitRobot.x, y: hitRobot.y },
             color: isBackstab ? '#ffea00' : '#00f0ff',
+            createdAt: Date.now(),
+            duration: 350,
+            beamType: 'LASER',
+            width: 3,
           });
 
           const hitTileSize = (this.renderer as any)?.tileSize || 48;
@@ -1326,10 +1330,10 @@ export class GameEngine {
   tick(): void {
     const now = Date.now();
     this.floatingTexts = this.floatingTexts.filter((ft) => !ft.createdAt || now - ft.createdAt < 1500);
+    this.laserBeams = this.laserBeams.filter((b) => !b.createdAt || now - b.createdAt < (b.duration || 350));
     if (!this.player.isAlive) {
       this.updateFOV();
       this.render();
-      this.laserBeams = [];
       return;
     }
 
@@ -1357,16 +1361,51 @@ export class GameEngine {
         }
 
         this.player.hp = Math.max(0, this.player.hp - damage);
-        soundFX.hit();
-        this.pushFloatingText(this.player.x, this.player.y, '-' + damage, '#ff1744');
         const hitPlayerTileSize = (this.renderer as any)?.tileSize || 48;
-        (this.fx as any).spawnSparks(
-          this.player.x * hitPlayerTileSize + hitPlayerTileSize / 2,
-          this.player.y * hitPlayerTileSize + hitPlayerTileSize / 2,
-          '#ff1744',
-          10
-        );
-        (this.fx as any).triggerShake(6);
+        const hitPlayerX = this.player.x * hitPlayerTileSize + hitPlayerTileSize / 2;
+        const hitPlayerY = this.player.y * hitPlayerTileSize + hitPlayerTileSize / 2;
+        let enemyBeamType: 'LASER' | 'ELEC' | 'PLASMA' | 'NEEDLE' = 'NEEDLE';
+        let enemyBeamColor = '#ffea00';
+        let enemyBeamWidth = 2;
+
+        if (robot.robotType === 'HUNTER_KILLER') {
+          enemyBeamType = 'LASER';
+          enemyBeamColor = '#ff1744';
+          enemyBeamWidth = 3.5;
+          soundFX.laser();
+          (this.fx as any).spawnSparks(hitPlayerX, hitPlayerY, '#ff1744', 10);
+          (this.fx as any).triggerShake(5);
+        } else if (robot.robotType === 'SHOCK_ENFORCER') {
+          enemyBeamType = 'ELEC';
+          enemyBeamColor = '#00e5ff';
+          enemyBeamWidth = 3.5;
+          soundFX.hit();
+          (this.fx as any).spawnSparks(hitPlayerX, hitPlayerY, '#00e5ff', 10);
+          (this.fx as any).triggerShake(4);
+        } else if (robot.robotType === 'EXTERMINATOR' || isBossRobot(robot)) {
+          enemyBeamType = 'PLASMA';
+          enemyBeamColor = '#ff0055';
+          enemyBeamWidth = 6;
+          soundFX.explosion();
+          (this.fx as any).spawnExplosion(hitPlayerX, hitPlayerY, 18);
+          (this.fx as any).triggerShake(9);
+        } else {
+          soundFX.hit();
+          (this.fx as any).spawnSparks(hitPlayerX, hitPlayerY, '#ffea00', 10);
+          (this.fx as any).triggerShake(3);
+        }
+
+        this.laserBeams.push({
+          from: { x: robot.x, y: robot.y },
+          to: { x: this.player.x, y: this.player.y },
+          color: enemyBeamColor,
+          createdAt: now,
+          duration: 350,
+          beamType: enemyBeamType,
+          width: enemyBeamWidth,
+        });
+
+        this.pushFloatingText(this.player.x, this.player.y, '-' + damage, '#ff1744');
         if (result.message) {
           this.pushMessage(result.message, 'danger');
         }
@@ -1381,7 +1420,7 @@ export class GameEngine {
 
     this.updateFOV();
     this.render();
-    this.laserBeams = [];
+    this.laserBeams = this.laserBeams.filter((b) => !b.createdAt || now - b.createdAt < (b.duration || 350));
   }
 
   private useMedkit(): void {
@@ -1768,3 +1807,5 @@ export class GameEngine {
     return null;
   }
 }
+
+export default GameEngine;
