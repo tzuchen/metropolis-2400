@@ -46,6 +46,7 @@ export class GameRenderer {
   isOmniVisionActive: boolean = false;
   isFullMapActive: boolean = false;
   isBigMapOpen: boolean = false;
+  bigMapSelectedSector: string = 'current';
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -110,6 +111,8 @@ export class GameRenderer {
 
     const camX = px * this.tileSize - width / 2;
     const camY = py * this.tileSize - height / 2;
+
+    if ((this as any).fx?.applyScreenShake) (this as any).fx.applyScreenShake(ctx);
 
     const visible = visibleTiles ?? new Set<string>();
     const explored = exploredTiles ?? new Set<string>();
@@ -273,6 +276,21 @@ export class GameRenderer {
       });
     }
 
+    if ((this as any).activeWaypoint) {
+      const wp = (this as any).activeWaypoint;
+      const wx = wp.x * this.tileSize + this.tileSize / 2 - camX;
+      const wy = wp.y * this.tileSize + this.tileSize / 2 - camY;
+      const pulse = 0.6 + 0.4 * Math.sin(now * 0.008);
+      ctx.save?.();
+      ctx.strokeStyle = wp.color || '#ffea00';
+      ctx.lineWidth = 2;
+      ctx.beginPath?.();
+      ctx.arc?.(wx, wy, this.tileSize * 0.45 * pulse + 4, 0, Math.PI * 2);
+      ctx.stroke?.();
+      ctx.restore?.();
+    }
+    if ((this as any).fx?.render) (this as any).fx.render(ctx, camX, camY);
+
     // 10. 畫面周圍氛圍暗角 (Vignette & Scanline Overlay)
     this.drawScreenAtmosphere(width, height, ctx);
 
@@ -342,7 +360,8 @@ export class GameRenderer {
         ctx,
         now,
         this.isFullMapActive,
-        this.language
+        this.language,
+        this.bigMapSelectedSector || 'current'
       );
     }
 
@@ -639,9 +658,38 @@ export class GameRenderer {
     ctx.fillStyle = p?.isWeaponDrawn ? '#ff3855' : '#8899a6';
     ctx.fillText?.(weaponStatus + weaponName, 570, 18);
 
+    let hudCursorX = 700;
+    if ((this as any).activeWaypoint) {
+      const wp = (this as any).activeWaypoint;
+      const wpx = Number(wp?.x) || 0;
+      const wpy = Number(wp?.y) || 0;
+      const dx = wpx - px;
+      const dy = wpy - py;
+      const dist = Math.round(Math.hypot(dx, dy));
+      let arrow = '•';
+      if (dx === 0 && dy === 0) {
+        arrow = '✓';
+      } else {
+        const angle = Math.atan2(dy, dx);
+        const deg = ((angle * 180) / Math.PI + 360) % 360;
+        if (deg < 22.5 || deg >= 337.5) arrow = '→';
+        else if (deg < 67.5) arrow = '↘';
+        else if (deg < 112.5) arrow = '↓';
+        else if (deg < 157.5) arrow = '↙';
+        else if (deg < 202.5) arrow = '←';
+        else if (deg < 247.5) arrow = '↖';
+        else if (deg < 292.5) arrow = '↑';
+        else arrow = '↗';
+      }
+      const gpsText = `[ GPS: ${String(wp?.name ?? 'WAYPOINT')} ${dist}格 ${arrow} ]`;
+      ctx.fillStyle = '#ffea00';
+      ctx.fillText?.(gpsText, hudCursorX, 18);
+      hudCursorX += (ctx.measureText ? ctx.measureText(gpsText).width : gpsText.length * 6) + 14;
+    }
+
     if (p?.isDisguised) {
       ctx.fillStyle = '#b432ff';
-      ctx.fillText?.('[DISGUISED]', 700, 18);
+      ctx.fillText?.('[DISGUISED]', hudCursorX, 18);
     }
 
     if (Array.isArray(messages)) {

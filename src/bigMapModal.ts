@@ -1,4 +1,7 @@
 import type { SectorMap, Player, Robot, NPC, GroundItem, Language } from './types';
+import { drawGlobalAllSectorsMap } from './globalAtlas';
+import { buildSector1Map, buildSector2Map } from './map';
+import { buildSubSectorZeroMap } from './sewerMap';
 
 function normalizeTileKind(tile: any): string {
   if (typeof tile === 'string') return tile.toUpperCase();
@@ -37,11 +40,18 @@ export function drawBigMapModal(
   ctx: any,
   now: number,
   isFullMap: boolean,
-  language: Language
+  language: Language,
+  selectedSector: string = 'current'
 ): void {
   ctx.save?.();
   const isZh = language === 'zh';
   const fontStack = '"Noto Sans TC", "Microsoft JhengHei", monospace';
+
+  const activeMap: SectorMap =
+    selectedSector === 'sector-1' ? (buildSector1Map() as SectorMap) :
+    selectedSector === 'sector-2' ? (buildSector2Map() as SectorMap) :
+    selectedSector === 'sub-sector-0' ? (buildSubSectorZeroMap() as SectorMap) :
+    map;
 
   // 1. 大地圖外框尺寸
   const boxW = Math.min(width - 32, 880);
@@ -74,7 +84,12 @@ export function drawBigMapModal(
   ctx.fillRect?.(x + boxW - 3, y + boxH - cornerSize, 3, cornerSize);
 
   // 2. 頂部標題與分區資訊
-  const currentSectorId = (player as any).currentSectorId || 'sector-1';
+  const currentSectorId =
+    selectedSector === 'all'
+      ? 'all'
+      : selectedSector !== 'current'
+        ? selectedSector
+        : ((player as any).currentSectorId || 'sector-1');
   let sectorTitleZh = '第 01 分區 // 佐格都市街道與反抗軍暗巷';
   let sectorTitleEn = 'SECTOR 01 // METROPOLIS STREETS & REBEL ALLEY';
   if (currentSectorId === 'sector-2') {
@@ -83,6 +98,9 @@ export function drawBigMapModal(
   } else if (currentSectorId === 'sub-sector-0') {
     sectorTitleZh = '次分區 ZERO // 舊城地下水路與廢棄管網';
     sectorTitleEn = 'SUB-SECTOR ZERO // UNDERGROUND SEWER SYSTEM';
+  } else if (currentSectorId === 'all') {
+    sectorTitleZh = '全域總覽 // 三區宏觀衛星地圖';
+    sectorTitleEn = 'GLOBAL OVERVIEW // ALL SECTORS SATELLITE MAP';
   }
 
   ctx.fillStyle = '#00f0ff';
@@ -92,8 +110,8 @@ export function drawBigMapModal(
   ctx.fillText?.(isZh ? `// 戰術全域大地圖 : ${sectorTitleZh} //` : `// TACTICAL BIG MAP : ${sectorTitleEn} //`, x + 20, y + 14);
 
   // 頂部右側探查進度
-  const mw = Number((map as any).width) || 40;
-  const mh = Number((map as any).height) || 30;
+  const mw = Number((activeMap as any).width) || 40;
+  const mh = Number((activeMap as any).height) || 30;
   const totalTiles = mw * mh;
   const exploredCount = isFullMap ? totalTiles : (explored?.size || 0);
   const exploredPct = Math.min(100, Math.round((exploredCount / totalTiles) * 100));
@@ -116,6 +134,20 @@ export function drawBigMapModal(
   ctx.stroke?.();
 
   // 3. 地圖區域繪製
+  if (selectedSector === 'all') {
+    drawGlobalAllSectorsMap(ctx, x + 16, y + 42, boxW - 32, boxH - 76, player, language, now);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 13px ' + fontStack;
+    const closePulse = 0.7 + 0.3 * Math.sin(now * 0.008);
+    ctx.fillStyle = 'rgba(0, 240, 255, ' + closePulse + ')';
+    const bottomHelp = isZh
+      ? '按 [ S ] 切換分區檢視  |  [ G ] 全區宏觀總覽  |  [ 1-5 ] 設為 GPS 導航航點  |  [ 0 ] 清除  |  [ TAB / ESC ] 關閉'
+      : 'PRESS [ S ] CYCLE SECTOR  |  [ G ] GLOBAL ATLAS  |  [ 1-5 ] SET GPS WAYPOINT  |  [ 0 ] CLEAR  |  [ TAB / ESC ] CLOSE';
+    ctx.fillText?.(bottomHelp, x + boxW / 2, y + boxH - 16);
+    ctx.restore?.();
+    return;
+  }
   const sidebarW = 250;
   const mapAreaW = boxW - sidebarW - 36;
   const mapAreaH = boxH - 76;
@@ -133,7 +165,7 @@ export function drawBigMapModal(
   ctx.lineWidth = 1;
   ctx.strokeRect?.(mapStartX - 0.5, mapStartY - 0.5, mapRenderW + 1, mapRenderH + 1);
 
-  const tiles = (map as any).tiles;
+  const tiles = (activeMap as any).tiles;
   if (Array.isArray(tiles)) {
     for (let ty = 0; ty < mh; ty++) {
       const row = tiles[ty];

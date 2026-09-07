@@ -59,9 +59,11 @@ export class GameEngine {
   isOmniVisionActive: boolean = false;
   isFullMapActive: boolean = false;
   isBigMapOpen: boolean = false;
+  bigMapSelectedSector: string = 'current';
   currentResolutionIndex: number = 0;
   fx: FXManager = new FXManager();
   activeWaypoint: { x: number; y: number; name: string; color: string } | null = null;
+  endgameChoice: string | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -662,6 +664,7 @@ export class GameEngine {
     this.renderer.isOmniVisionActive = this.hasOmniVision();
     this.renderer.isFullMapActive = this.hasFullMap();
     this.renderer.isBigMapOpen = this.isBigMapOpen;
+    (this.renderer as any).bigMapSelectedSector = this.bigMapSelectedSector;
     (this.player as any).victory = this.victory;
     this.renderer.render(
       this.map,
@@ -692,6 +695,18 @@ export class GameEngine {
   }
 
   handleKeyDown(key: string): void {
+    if (this.activeBreachSession) {
+      if (key === 'Escape' || key === 'Esc') {
+        this.activeBreachSession = null;
+        soundFX.terminal();
+        this.render();
+      }
+      return;
+    }
+    if (this.activeTerminal) {
+      this.handleTerminalInput(key);
+      return;
+    }
     if (this.isBigMapOpen && key === '0' && !this.activeTerminal) {
       this.activeWaypoint = null;
       soundFX.terminal();
@@ -738,6 +753,20 @@ export class GameEngine {
       }
       if (key === 'v' || key === 'V') {
         this.toggleOmniVision();
+        return;
+      }
+      if (key === 's' || key === 'S') {
+        const sectors = ['current', 'sector-1', 'sector-2', 'sub-sector-0', 'all'];
+        const idx = sectors.indexOf(this.bigMapSelectedSector);
+        this.bigMapSelectedSector = sectors[(idx + 1) % sectors.length];
+        soundFX.terminal();
+        this.render();
+        return;
+      }
+      if (key === 'g' || key === 'G') {
+        this.bigMapSelectedSector = this.bigMapSelectedSector === 'all' ? 'current' : 'all';
+        soundFX.terminal();
+        this.render();
         return;
       }
       if (key >= '1' && key <= '5') {
@@ -913,97 +942,6 @@ export class GameEngine {
           soundFX.pickup();
         }
 
-        this.render();
-        return;
-      }
-
-      return;
-    }
-
-    // 活躍終端機模式 (Terminal Session)
-    if (this.activeTerminal) {
-      if (key === 'Escape' || key === 'Esc') {
-        this.activeTerminal = null;
-        this.terminalInputBuffer = '';
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-
-      if (key === 'Enter') {
-        soundFX.terminal();
-        const cmd = this.terminalInputBuffer;
-        this.terminalInputBuffer = '';
-        this.activeTerminal.input = '';
-        if (cmd.toUpperCase() === 'BREACH' || cmd.toUpperCase() === 'HACK') {
-          const terminalId =
-            (this.activeTerminal as any).terminalId ??
-            (this.activeTerminal as any).terminal?.id ??
-            (this.activeTerminal as any).id ??
-            'UNKNOWN';
-          this.activeBreachSession = createBreachSession(terminalId);
-          soundFX.terminal();
-          this.pushMessage(this.language === 'zh' ? '神經入侵協定啟動：正在載入賽博代碼矩陣...' : 'NEURAL BREACH: Initializing cyberspace matrix...', 'info');
-          this.render();
-          return;
-        }
-        const result: any = this.activeTerminal.executeCommand(cmd);
-
-        if (result?.disabledForcefield) {
-          disableForcefield(this.map, result.disabledForcefield);
-          this.securityLevel = 'CLEAR' as SecurityLevel;
-          this.victory = true;
-          soundFX.victory();
-          this.pushMessage('Checkpoint forcefield disabled. Resistance objective accomplished!', 'success');
-          this.pushFloatingText(this.player.x, this.player.y, 'VICTORY!', '#00ff88');
-
-          const ffObj = this.missionObjectives.find((o) => o.id === 'obj-forcefield');
-          if (ffObj) ffObj.completed = true;
-          const vaultObj = this.missionObjectives.find((o) => o.id === 'obj-vault');
-          if (vaultObj) vaultObj.completed = true;
-        }
-
-        if (result?.endgameChoice) {
-          (this.player as any).endgameChoice = result.endgameChoice;
-          this.victory = true;
-          soundFX.victory();
-          this.pushMessage('OPERATION PROMETHEUS: [' + result.endgameChoice + '] protocol executed.', 'success');
-          this.pushFloatingText(this.player.x, this.player.y, 'ENDGAME: ' + result.endgameChoice, '#00ff88');
-        }
-
-        if (result?.clearedAlert) {
-          this.securityLevel = 'CLEAR' as SecurityLevel;
-          soundFX.pickup();
-          this.pushMessage('Security alert cleared from terminal database.', 'success');
-        }
-
-        if (result?.energyGain) {
-          this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + result.energyGain);
-          soundFX.pickup();
-          this.pushFloatingText(this.player.x, this.player.y, '+' + result.energyGain + ' EN', '#00f0ff');
-          this.pushMessage('Extracted +' + result.energyGain + ' energy from terminal capacitors.', 'success');
-        }
-
-        if (result?.shouldExit) {
-          this.activeTerminal = null;
-        }
-
-        this.render();
-        return;
-      }
-
-      if (key === 'Backspace') {
-        soundFX.terminal();
-        this.terminalInputBuffer = this.terminalInputBuffer.slice(0, -1);
-        this.activeTerminal.input = this.terminalInputBuffer;
-        this.render();
-        return;
-      }
-
-      if (key.length === 1) {
-        soundFX.terminal();
-        this.terminalInputBuffer += key;
-        this.activeTerminal.input = this.terminalInputBuffer;
         this.render();
         return;
       }
@@ -1247,6 +1185,14 @@ export class GameEngine {
             color: isBackstab ? '#ffea00' : '#00f0ff',
           });
 
+          const hitTileSize = (this.renderer as any)?.tileSize || 48;
+          (this.fx as any).spawnSparks(
+            hitRobot.x * hitTileSize + hitTileSize / 2,
+            hitRobot.y * hitTileSize + hitTileSize / 2,
+            isBackstab ? '#ffea00' : '#00f0ff',
+            10
+          );
+
           if (isBackstab) {
             this.pushFloatingText(hitRobot.x, hitRobot.y, `CRIT ${damage}!`, '#ffea00');
             this.pushMessage(
@@ -1261,6 +1207,13 @@ export class GameEngine {
           if (hitRobot.hp <= 0) {
             hitRobot.isAlive = false;
             soundFX.explosion();
+            (this.fx as any).spawnExplosion(
+              hitRobot.x * hitTileSize + hitTileSize / 2,
+              hitRobot.y * hitTileSize + hitTileSize / 2,
+              22
+            );
+            (this.fx as any).triggerShake(8);
+            this.gainExp(45);
             this.player.credits += 50;
             this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + 20);
 
@@ -1406,6 +1359,14 @@ export class GameEngine {
         this.player.hp = Math.max(0, this.player.hp - damage);
         soundFX.hit();
         this.pushFloatingText(this.player.x, this.player.y, '-' + damage, '#ff1744');
+        const hitPlayerTileSize = (this.renderer as any)?.tileSize || 48;
+        (this.fx as any).spawnSparks(
+          this.player.x * hitPlayerTileSize + hitPlayerTileSize / 2,
+          this.player.y * hitPlayerTileSize + hitPlayerTileSize / 2,
+          '#ff1744',
+          10
+        );
+        (this.fx as any).triggerShake(6);
         if (result.message) {
           this.pushMessage(result.message, 'danger');
         }
@@ -1435,6 +1396,13 @@ export class GameEngine {
       soundFX.pickup();
       this.pushFloatingText(this.player.x, this.player.y, '+40 HP', '#00ff88');
       this.pushMessage('Injected Nanite Stimpack (+40 HP). Vital signs stabilized.', 'success');
+      const medTileSize = (this.renderer as any)?.tileSize || 48;
+      (this.fx as any).spawnSparks(
+        this.player.x * medTileSize + medTileSize / 2,
+        this.player.y * medTileSize + medTileSize / 2,
+        '#00ff88',
+        12
+      );
       this.tick();
     } else {
       this.pushMessage('No Nanite Stimpacks in inventory! Scavenge Sector 1 for medkits.', 'warning');
@@ -1454,6 +1422,13 @@ export class GameEngine {
       soundFX.pickup();
       this.pushFloatingText(this.player.x, this.player.y, '+50 EN', '#00f0ff');
       this.pushMessage('Connected Plasma Battery (+50 EN). Cyberware powered.', 'success');
+      const batteryTileSize = (this.renderer as any)?.tileSize || 48;
+      (this.fx as any).spawnSparks(
+        this.player.x * batteryTileSize + batteryTileSize / 2,
+        this.player.y * batteryTileSize + batteryTileSize / 2,
+        '#00f0ff',
+        12
+      );
       this.tick();
     } else {
       this.pushMessage('No Plasma Batteries remaining!', 'warning');
@@ -1465,6 +1440,12 @@ export class GameEngine {
     if ((this.player.consumables?.empGrenades ?? 0) > 0) {
       this.player.consumables!.empGrenades -= 1;
       soundFX.explosion();
+      const empTileSize = (this.renderer as any)?.tileSize || 48;
+      (this.fx as any).spawnEmpRing(
+        this.player.x * empTileSize + empTileSize / 2,
+        this.player.y * empTileSize + empTileSize / 2
+      );
+      (this.fx as any).triggerShake(6);
       const blastRadius = 4;
       let stunnedCount = 0;
 
@@ -1513,6 +1494,13 @@ export class GameEngine {
     canister.hp = 0;
     soundFX.explosion();
     this.pushFloatingText(canister.x, canister.y, 'PLASMA DETONATION!', '#ff6d00');
+    const canisterTileSize = (this.renderer as any)?.tileSize || 48;
+    (this.fx as any).spawnExplosion(
+      canister.x * canisterTileSize + canisterTileSize / 2,
+      canister.y * canisterTileSize + canisterTileSize / 2,
+      26
+    );
+    (this.fx as any).triggerShake(10);
 
     for (const r of this.robots) {
       if (!r.isAlive) continue;
@@ -1661,9 +1649,98 @@ export class GameEngine {
     this.laserBeams = [];
     this.terminalInputBuffer = '';
     this.victory = false;
+    this.endgameChoice = null;
     soundFX.pickup();
     this.updateFOV();
     this.render();
+  }
+
+  private handleTerminalInput(key: string): void {
+    if (!this.activeTerminal) {
+      return;
+    }
+
+    if (key === 'Escape' || key === 'Esc') {
+      this.activeTerminal = null;
+      this.terminalInputBuffer = '';
+      soundFX.terminal();
+      this.render();
+      return;
+    }
+
+    if (key === 'Backspace') {
+      this.terminalInputBuffer = this.terminalInputBuffer.slice(0, -1);
+      (this.activeTerminal as any).input = this.terminalInputBuffer;
+      this.render();
+      return;
+    }
+
+    if (key === 'Enter') {
+      const cmd = this.terminalInputBuffer || (this.activeTerminal as any)?.input || '';
+      this.terminalInputBuffer = '';
+      (this.activeTerminal as any).input = '';
+
+      const upperCmd = cmd.toUpperCase();
+      if (upperCmd === 'BREACH' || upperCmd === 'HACK') {
+        this.activeBreachSession = createBreachSession((this.activeTerminal as any)?.terminal?.id || 'CORE');
+        this.render();
+        return;
+      }
+
+      const result: any = this.activeTerminal.executeCommand(cmd);
+
+      if (result?.disabledForcefield) {
+        try {
+          disableForcefield(this.map, 'CHECKPOINT_FF');
+        } catch (err) {
+          void err;
+        }
+        const forcefieldObj = this.missionObjectives.find((o) => o.id === 'obj-forcefield');
+        if (forcefieldObj && !forcefieldObj.completed) {
+          forcefieldObj.completed = true;
+          this.pushMessage('MISSION UPDATE: Checkpoint 01 forcefield deactivated!', 'success');
+        }
+        this.pushMessage('CHECKPOINT_FF: Plasma barrier capacitors short-circuited. Barrier offline.', 'success');
+        soundFX.victory();
+      }
+
+      if (result?.endgameChoice) {
+        this.endgameChoice = result.endgameChoice;
+        (this.player as any).endgameChoice = result.endgameChoice;
+        this.victory = true;
+        soundFX.victory();
+        this.pushMessage('OPERATION PROMETHEUS: [' + result.endgameChoice + '] protocol executed.', 'success');
+        this.pushFloatingText(this.player.x, this.player.y, 'ENDGAME: ' + result.endgameChoice, '#00ff88');
+      }
+
+      if (result?.victory) {
+        this.victory = true;
+      }
+
+      if (result?.clearedAlert) {
+        this.securityLevel = 'CLEAR' as SecurityLevel;
+        this.pushMessage('Security alert cleared. All units returning to patrol.', 'info');
+      }
+
+      if (result?.energyGain) {
+        this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + result.energyGain);
+        this.pushFloatingText(this.player.x, this.player.y, `+${result.energyGain} EN`, '#00f0ff');
+        this.pushMessage(`Energy siphoned: +${result.energyGain} EN.`, 'success');
+      }
+
+      if (result?.shouldExit) {
+        this.activeTerminal = null;
+      }
+
+      this.render();
+      return;
+    }
+
+    if (key.length === 1 && key >= ' ' && key <= '~') {
+      this.terminalInputBuffer += key;
+      (this.activeTerminal as any).input = this.terminalInputBuffer;
+      this.render();
+    }
   }
 
   private findTerminalAt(x: number, y: number): any {

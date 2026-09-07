@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>METROPOLIS 2400 // GLOBAL WORLD ATLAS (全域地圖)</title>
+  <link rel="stylesheet" href="/src/style.css" />
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #02070f;
+      color: #00f0ff;
+      font-family: 'Noto Sans TC', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .map-header {
+      width: 1300px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #00f0ff;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      text-shadow: 0 0 10px rgba(0,240,255,0.7);
+    }
+    #world-canvas {
+      border: 2px solid #00f0ff;
+      background: #040c16;
+      box-shadow: 0 0 35px rgba(0,240,255,0.25);
+    }
+    .nav-hint {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #a0d8ef;
+    }
+  </style>
+</head>
+<body>
+  <div class="map-header">
+    <h2>// METROPOLIS 2400 // 全分區宏觀戰術衛星地圖 (GLOBAL ATLAS) //</h2>
+    <div>[ SECTOR 1 · SECTOR 2 · SUB-SECTOR ZERO ]</div>
+  </div>
+  <canvas id="world-canvas" width="1300" height="780"></canvas>
+  <div class="nav-hint">
+    [ 1 ] 主市區 (S1) · [ 2 ] 自動工廠群 (S2) · [ 3 ] 地下水路迷宮 (S0) · 點擊按鍵返回遊戲: <a href="/" style="color:#ffea00;">[ 返回主遊戲 ]</a>
+  </div>
+  <script type="module">
+    import { drawGlobalAllSectorsMap } from '/src/globalAtlas.ts';
+    const canvas = document.getElementById('world-canvas');
+    const ctx = canvas.getContext('2d');
+    const mockPlayer = { x: 4, y: 24, currentSectorId: 'sector-1' };
+    function render() {
+      ctx.fillStyle = '#02070f';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawGlobalAllSectorsMap(ctx, 16, 16, canvas.width - 32, canvas.height - 32, mockPlayer, 'zh', Date.now());
+      requestAnimationFrame(render);
+    }
+    render();
+  </script>
+</body>
+</html>

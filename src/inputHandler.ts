@@ -4,6 +4,11 @@ import { soundFX } from './audio';
 import { bgm } from './music';
 
 export function handleSpecialInput(game: any, key: string): boolean {
+  // 0. Terminal Input Mode (終端機命令列輸入模式)
+  if (game.activeTerminal) {
+    return false;
+  }
+
   // 1. Manual Modal (特工戰術手冊)
   if (game.isManualOpen) {
     if (['Escape', 'Esc', 'h', 'H', ' ', 'Space', 'Enter'].includes(key)) {
