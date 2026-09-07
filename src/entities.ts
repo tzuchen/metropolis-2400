@@ -189,10 +189,10 @@ export function createPlayer(startPos: Position): Player {
 
 export function createRobot(type: RobotType, startPos: Position, patrolPath?: Position[]): Robot {
   const statsByType: Record<string, { hp: number; attackPower: number; scanRange: number; attackRange: number }> = {
-    SCOUT_DRONE: { hp: 30, attackPower: 5, scanRange: 6, attackRange: 1 },
-    SHOCK_ENFORCER: { hp: 60, attackPower: 15, scanRange: 5, attackRange: 1 },
-    HUNTER_KILLER: { hp: 100, attackPower: 25, scanRange: 8, attackRange: 4 },
-    EXTERMINATOR: { hp: 200, attackPower: 40, scanRange: 7, attackRange: 5 },
+    SCOUT_DRONE: { hp: 55, attackPower: 12, scanRange: 7, attackRange: 3 },
+    SHOCK_ENFORCER: { hp: 120, attackPower: 22, scanRange: 6, attackRange: 2 },
+    HUNTER_KILLER: { hp: 180, attackPower: 32, scanRange: 9, attackRange: 5 },
+    EXTERMINATOR: { hp: 300, attackPower: 45, scanRange: 8, attackRange: 5 },
     SERVICE_BOT: { hp: 20, attackPower: 0, scanRange: 2, attackRange: 0 },
   };
 

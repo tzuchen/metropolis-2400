@@ -182,9 +182,12 @@ export function updateRobotAI(
   const robotPos: Position = { x: robot.x, y: robot.y };
   const playerPos: Position = { x: player.x, y: player.y };
   const distance = manhattanDistance(robotPos, playerPos);
-  const scanRange = Number(robot.scanRange) || 8;
+  const isGlobalAlert =
+    globalAlert === SecurityLevel.ALERT || globalAlert === SecurityLevel.LOCKDOWN;
+  const scanRange = (Number(robot.scanRange) || 8) + (isGlobalAlert ? 3 : 0);
 
   const canSeePlayer = distance <= scanRange && hasLineOfSight(map, robotPos, playerPos);
+  const inAlertProximity = isGlobalAlert && distance <= scanRange;
 
   const isCovertCivilian =
     player.isDisguised === true &&
@@ -192,12 +195,13 @@ export function updateRobotAI(
     globalAlert === SecurityLevel.CLEAR &&
     robot.aiState !== 'chase';
 
-  if (canSeePlayer && !isCovertCivilian) {
+  if ((canSeePlayer || inAlertProximity) && !isCovertCivilian) {
     robot.targetPos = { x: player.x, y: player.y };
     robot.aiState = 'chase';
+    (robot as any).pursuitTurns = 6;
 
     if (isScoutDrone(robot) && isBelowAlert(globalAlert) && robot.alertCooldown <= 0) {
-      robot.alertCooldown = 10;
+      robot.alertCooldown = 3;
       return {
         action: 'alarm',
         triggerAlert: SecurityLevel.ALERT,
@@ -240,6 +244,27 @@ export function updateRobotAI(
     return {
       action: 'chase',
       message: robot.name + ' path blocked during pursuit.',
+    };
+  }
+
+  // Pursuit persistence: keep chasing the last known position for a few turns
+  // after losing sight of the player before falling back to investigate/patrol.
+  if (!canSeePlayer && (robot as any).pursuitTurns > 0 && robot.targetPos) {
+    (robot as any).pursuitTurns -= 1;
+    robot.aiState = 'chase';
+    const step = findNextStep(map, robotPos, robot.targetPos);
+    if (step) {
+      robot.x = step.x;
+      robot.y = step.y;
+      return {
+        action: 'chase',
+        newPos: { x: robot.x, y: robot.y },
+        message: robot.name + ' pursuing target (lost sight).',
+      };
+    }
+    return {
+      action: 'chase',
+      message: robot.name + ' searching for lost target.',
     };
   }
 

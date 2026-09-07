@@ -1251,6 +1251,9 @@ export class GameEngine {
             this.pushMessage(hitRobot.name + ' destroyed! Salvaged scrap data & energy.', 'success');
           } else {
             soundFX.hit();
+            hitRobot.aiState = 'chase';
+            hitRobot.targetPos = { x: this.player.x, y: this.player.y };
+            (hitRobot as any).pursuitTurns = 8;
           }
 
           // 槍響聲學偵測與警戒連鎖 (Gunfire Acoustics)
@@ -1266,8 +1269,9 @@ export class GameEngine {
               if (!r.isAlive || r === hitRobot) continue;
               const d = Math.abs(r.x - this.player.x) + Math.abs(r.y - this.player.y);
               if (d <= 8 && r.aiState === 'patrol') {
-                r.aiState = 'investigate';
+                r.aiState = 'chase';
                 r.targetPos = { x: this.player.x, y: this.player.y };
+                (r as any).pursuitTurns = 6;
               }
             }
           } else {
