@@ -12,6 +12,7 @@ import { createBreachSession, moveBreachCursor, selectBreachCell, type BreachSes
 import { handleSpecialInput } from './inputHandler';
 import { bgm } from './music';
 import { setupSubSectorZero, getNextSectorId } from './sewerMap';
+import { FXManager } from './fx';
 
 export interface ResolutionPreset {
   width: number;
@@ -59,6 +60,8 @@ export class GameEngine {
   isFullMapActive: boolean = false;
   isBigMapOpen: boolean = false;
   currentResolutionIndex: number = 0;
+  fx: FXManager = new FXManager();
+  activeWaypoint: { x: number; y: number; name: string; color: string } | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -483,6 +486,83 @@ export class GameEngine {
     return preset;
   }
 
+  gainExp(amount: number): void {
+    const p = this.player as any;
+    if (typeof p.exp === 'undefined') p.exp = 0;
+    if (typeof p.level === 'undefined') p.level = 1;
+    if (typeof p.expToNext === 'undefined') p.expToNext = 100;
+    p.exp += amount;
+    let leveledUp = false;
+    while (p.exp >= p.expToNext) {
+      p.exp -= p.expToNext;
+      p.level += 1;
+      p.expToNext = Math.round(p.expToNext * 1.5);
+      p.maxHp = (p.maxHp || 100) + 10;
+      p.hp = p.maxHp;
+      p.maxEnergy = (p.maxEnergy || 100) + 5;
+      p.energy = p.maxEnergy;
+      leveledUp = true;
+    }
+    if (leveledUp) {
+      soundFX.upgrade();
+      this.pushFloatingText(this.player.x, this.player.y, 'LEVEL UP!', '#00ff88');
+      this.pushMessage(`LEVEL UP! Operative reached level ${p.level}. Stats increased!`, 'success');
+    } else {
+      this.pushFloatingText(this.player.x, this.player.y, `+${amount} XP`, '#00f0ff');
+    }
+    this.render();
+  }
+
+  performTacticalDash(): boolean {
+    if (!this.player.isAlive || this.player.energy < 10) {
+      soundFX.hit();
+      this.pushMessage(this.language === 'zh' ? '能量不足，無法發動戰術滑鏟！' : 'Insufficient energy for tactical dash!', 'warning');
+      return false;
+    }
+    const facing = (this.player as any).facing || 'right';
+    let dx = 0;
+    let dy = 0;
+    if (facing === 'right') dx = 1;
+    else if (facing === 'left') dx = -1;
+    else if (facing === 'up') dy = -1;
+    else if (facing === 'down') dy = 1;
+
+    let targetX = this.player.x + dx * 2;
+    let targetY = this.player.y + dy * 2;
+    let canMove = this.isWalkable(targetX, targetY) && !this.findRobotAt(targetX, targetY);
+
+    if (!canMove) {
+      targetX = this.player.x + dx;
+      targetY = this.player.y + dy;
+      canMove = this.isWalkable(targetX, targetY) && !this.findRobotAt(targetX, targetY);
+    }
+
+    if (!canMove) {
+      this.pushMessage(this.language === 'zh' ? '前方受阻，無法滑鏟！' : 'Path obstructed, cannot dash!', 'warning');
+      return false;
+    }
+
+    this.player.energy -= 10;
+    const tileSize = (this.renderer as any)?.tileSize || 48;
+    this.fx.spawnDashTrail(this.player.x * tileSize + tileSize / 2, this.player.y * tileSize + tileSize / 2, facing);
+    this.player.x = targetX;
+    this.player.y = targetY;
+    this.fx.spawnDashTrail(this.player.x * tileSize + tileSize / 2, this.player.y * tileSize + tileSize / 2, facing);
+    this.pushFloatingText(this.player.x, this.player.y, 'CYBER DASH! -10EN', '#00ffff');
+    soundFX.laser();
+    this.tick();
+    return true;
+  }
+
+  private isWalkable(x: number, y: number): boolean {
+    const tile = getTile(this.map, { x, y });
+    return tile !== undefined && isWalkable(tile);
+  }
+
+  private findRobotAt(x: number, y: number): Robot | null {
+    return this.robots.find((r) => r.isAlive && r.x === x && r.y === y) || null;
+  }
+
   updateFOV(): void {
     if (this.hasOmniVision()) {
       this.visibleTiles = new Set<string>();
@@ -563,6 +643,9 @@ export class GameEngine {
 
   render(): void {
     try {
+    this.fx.update(16);
+    (this.renderer as any).fx = this.fx;
+    (this.renderer as any).activeWaypoint = this.activeWaypoint;
     const bossNear = this.robots.some((r) => r.isAlive && r.robotType === 'EXTERMINATOR' && Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 9);
     if (bossNear) {
       bgm.setIntensity('boss');
@@ -609,6 +692,12 @@ export class GameEngine {
   }
 
   handleKeyDown(key: string): void {
+    if (this.isBigMapOpen && key === '0' && !this.activeTerminal) {
+      this.activeWaypoint = null;
+      soundFX.terminal();
+      this.render();
+      return;
+    }
     if ((key === '0' || key === 'F10') && !this.activeTerminal) {
       this.cycleResolution();
       return;
@@ -649,6 +738,25 @@ export class GameEngine {
       }
       if (key === 'v' || key === 'V') {
         this.toggleOmniVision();
+        return;
+      }
+      if (key >= '1' && key <= '5') {
+        const waypoints: Record<string, { x: number; y: number; name: string; color: string }> = {
+          '1': { x: 4, y: 24, name: 'Rebel Safehouse', color: '#00ff88' },
+          '2': { x: 20, y: 12, name: 'Cyber Park', color: '#00f0ff' },
+          '3': { x: 12, y: 22, name: 'Neon Market', color: '#ff7700' },
+          '4': { x: 28, y: 14, name: 'Checkpoint', color: '#ff2a4b' },
+          '5': { x: 36, y: 26, name: 'Elevator', color: '#ffea00' },
+        };
+        this.activeWaypoint = waypoints[key];
+        soundFX.pickup();
+        this.render();
+        return;
+      }
+      if (key === '0') {
+        this.activeWaypoint = null;
+        soundFX.terminal();
+        this.render();
         return;
       }
       return;
@@ -1041,6 +1149,9 @@ export class GameEngine {
     } else if (key === 'g' || key === 'G') {
       this.checkItemPickup();
       this.render();
+      return;
+    } else if (key === 'j' || key === 'J') {
+      this.performTacticalDash();
       return;
     } else if (key === ' ' || key === '.') {
       this.tick();
