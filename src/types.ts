@@ -7,6 +7,8 @@ export const SecurityLevel = {
 
 export type SecurityLevel = (typeof SecurityLevel)[keyof typeof SecurityLevel];
 
+export type Language = 'en' | 'zh';
+
 export const TileType = {
   EMPTY: 0,
   FLOOR: 1,
@@ -69,8 +71,10 @@ export interface Entity {
 export interface Item {
   id: string;
   name: string;
+  nameZh?: string;
   type: ItemType;
   description: string;
+  descriptionZh?: string;
   power: number;
   energyCost: number;
   equipped: boolean;
@@ -146,8 +150,10 @@ export interface SectorMap {
 
 export interface NPC extends Entity {
   role: string;
+  roleZh?: string;
   avatarColor?: string;
   dialogue: string[];
+  dialogueZh?: string[];
   currentDialogueIndex?: number;
   questReward?: { type: 'HEAL' | 'ENERGY' | 'CREDITS'; amount: number; message: string };
   rewardClaimed?: boolean;
@@ -173,16 +179,20 @@ export interface GroundItem {
 export interface MissionObjective {
   id: string;
   title: string;
+  titleZh?: string;
   description: string;
+  descriptionZh?: string;
   completed: boolean;
 }
 
 export interface StoryLog {
   id: string;
   title: string;
+  titleZh?: string;
   author: string;
   timestamp: string;
   content: string[];
+  contentZh?: string[];
   read: boolean;
 }
 

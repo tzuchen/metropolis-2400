@@ -1,10 +1,12 @@
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard } from './types';
+import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard, Language } from './types';
 import { buildSector1Map, buildSector2Map, calculateFOV, disableForcefield, getTile, isWalkable, toggleDoor } from './map';
+import { hasSavedGame, saveGameState, loadGameState } from './saveLoad';
 import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise, installAugment, cycleWeapon } from './entities';
 import { updateRobotAI } from './ai';
 import { TerminalSession } from './terminal';
 import { GameRenderer } from './renderer';
 import { soundFX } from './audio';
+import { getSector1NPCs, getSector2NPCs, getSectorStoryLogs } from './dialogues';
 
 export class GameEngine {
   canvas: HTMLCanvasElement;
@@ -32,9 +34,20 @@ export class GameEngine {
   isAugmentShopOpen: boolean = false;
   terminalInputBuffer: string = '';
   victory: boolean = false;
+  isTitleScreen: boolean = false;
+  language: Language = 'zh';
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
+    let savedLang: Language = 'zh';
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const l = localStorage.getItem('metropolis_2400_lang');
+        if (l === 'en' || l === 'zh') savedLang = l as Language;
+      }
+    } catch {}
+    this.language = savedLang;
+    this.isTitleScreen = (typeof window !== 'undefined' && typeof window.document !== 'undefined');
     this.renderer = new GameRenderer(canvas);
     this.map = buildSector1Map();
     this.player = createPlayer(this.map.playerStart);
@@ -88,222 +101,37 @@ export class GameEngine {
   }
 
   private createSectorNPCs(): NPC[] {
-    return [
-      {
-        id: 'npc-kira',
-        name: 'Kira',
-        role: 'Spark Cell Commander',
-        avatarColor: '#ff6d00',
-        x: 4,
-        y: 6,
-        hp: 100,
-        maxHp: 100,
-        isAlive: true,
-        dialogue: [
-          'Operative! The Tzorg network has locked down Checkpoint 01 with a high-energy plasma barrier.',
-          'We confirmed the forcefield is tied to terminal CHECKPOINT_FF inside the outpost. Infiltrate and override it.',
-          'Use your Holo-Disguise [C] to slip past patrol drones, and keep that blaster holstered until needed.',
-          'Here, take these auxiliary power cells (+40 EN). The Spark is counting on you!',
-        ],
-        questReward: {
-          type: 'ENERGY',
-          amount: 40,
-          message: 'Kira granted +40 Energy Cells!',
-        },
-        rewardClaimed: false,
-      },
-      {
-        id: 'npc-vance',
-        name: 'Doc Vance',
-        role: 'Cyber-Medic',
-        avatarColor: '#00e5ff',
-        x: 7,
-        y: 4,
-        hp: 80,
-        maxHp: 80,
-        isAlive: true,
-        dialogue: [
-          'Good to see you breathing, operative. Let me patch your dermal plating and vital systems.',
-          'Take this dose of restorative nanites (+35 HP).',
-          'Watch out for the Shock Enforcers. Their electro-stuns bypass body armor completely!',
-        ],
-        questReward: {
-          type: 'HEAL',
-          amount: 35,
-          message: 'Doc Vance restored +35 HP with nanites!',
-        },
-        rewardClaimed: false,
-      },
-      {
-        id: 'npc-jax',
-        name: 'Jax',
-        role: 'Alley Informant',
-        avatarColor: '#ffea00',
-        x: 16,
-        y: 6,
-        hp: 70,
-        maxHp: 70,
-        isAlive: true,
-        dialogue: [
-          'Psst... keep your head down! The patrol drones have been buzzing this alley all morning.',
-          'If you trip a security alert, you can clear it from any terminal by typing CLEAR_ALARM.',
-          'I salvaged some credit chips from an old enforcer patrol. Take 60 Credits (+60 CR)!',
-        ],
-        questReward: {
-          type: 'CREDITS',
-          amount: 60,
-          message: 'Jax handed you +60 Credits!',
-        },
-        rewardClaimed: false,
-      },
-      {
-        id: 'npc-hiro',
-        name: 'Hiro',
-        role: '商店街拉麵商',
-        avatarColor: '#ff9e00',
-        x: 15,
-        y: 5,
-        hp: 80,
-        maxHp: 80,
-        isAlive: true,
-        dialogue: [
-          'Ah, a resistance operative! You look like you have not eaten in days.',
-          'Here, a bowl of hot ramen from my stall. The broth is warm, the noodles are fresh, and the hope is real.',
-          'Eat up. The streets of Sector 1 are dangerous, but a full stomach keeps the cyberware humming.',
-        ],
-        questReward: {
-          type: 'HEAL',
-          amount: 25,
-          message: 'Hiro served hot ramen (+25 HP)!',
-        },
-        rewardClaimed: false,
-      },
-      {
-        id: 'npc-sylvia',
-        name: 'Sylvia',
-        role: '仿生公園植物學家',
-        avatarColor: '#7cffcb',
-        x: 11,
-        y: 20,
-        hp: 75,
-        maxHp: 75,
-        isAlive: true,
-        dialogue: [
-          'Welcome to the Bio-Park. These synthetic flora are the last green lungs of Metropolis.',
-          'The Tzorg drones pollute the air, but the engineered moss filters toxins and stabilizes the dome climate.',
-          'If you see plasma canisters near the canopy, do not shoot them. The spores will spread and kill everything.',
-        ],
-        rewardClaimed: false,
-      },
-      {
-        id: 'npc-ghost',
-        name: 'Ghost',
-        role: 'Resistance Infiltrator',
-        avatarColor: '#9d4edd',
-        x: 31,
-        y: 23,
-        hp: 90,
-        maxHp: 90,
-        isAlive: true,
-        dialogue: [
-          'You bypassed the checkpoint forcefield! Outstanding infiltration, operative.',
-          'The Tzorg central server vault is directly ahead. Access the terminal inside to complete our sector victory!',
-        ],
-        rewardClaimed: false,
-      },
-    ];
+    return getSector1NPCs();
   }
 
   private createSector2NPCs(): NPC[] {
-    return [
-      {
-        id: 'npc-jackal',
-        name: 'Jackal',
-        role: '黑市軍火掮客',
-        avatarColor: '#ff5252',
-        x: 5,
-        y: 17,
-        hp: 90,
-        maxHp: 90,
-        isAlive: true,
-        dialogue: [
-          'Quiet, operative. This back alley is where Tzorg surplus changes hands.',
-          'I have suppressors, dart rounds, and EMP cells. If you want to stay alive, stop leaving muzzle flashes.',
-          'The Overmind core is east. Do not get sentimental. The future is bought with credits and bullets.',
-        ],
-        rewardClaimed: false,
-      },
-      {
-        id: 'npc-zero-one',
-        name: 'Zero-One',
-        role: '叛逃覺醒生化人',
-        avatarColor: '#b388ff',
-        x: 4,
-        y: 21,
-        hp: 100,
-        maxHp: 100,
-        isAlive: true,
-        dialogue: [
-          'I was Unit 01 in the Tzorg fabrication line. Now I am the glitch they cannot patch.',
-          'The server room below is humming with stolen human memories. The Overmind uses them as fuel.',
-          'When you reach the core, choose carefully. Liberation is not just a command; it is a consequence.',
-        ],
-        rewardClaimed: false,
-      },
-    ];
+    return getSector2NPCs();
   }
 
   private createSectorStoryLogs(): StoryLog[] {
-    return [
-      {
-        id: 'slate-vance',
-        title: 'The Neural Collar Project: Remorse of a Bio-Engineer',
-        author: 'Dr. Alexis Vance, Chief Geneticist',
-        timestamp: '2400.08.12 // SUB-LAB 04',
-        read: false,
-        content: [
-          'When the Tzorg Syndicate commissioned the neural collars, they claimed it was to cure psychological psychosis in deep space miners. God forgive us. It was never a cure.',
-          'The high-frequency neural dampener overrides the limbic system, rendering human subjects perfectly compliant to synthetic overseers. I watched my colleagues willingly line up to be chipped.',
-          'I managed to smuggle out the surgical override codes before fleeing to Sector 1. If Operative Raven can breach the central data hub, we might just be able to broadcast the purge signal and free Metropolis.'
-        ]
-      },
-      {
-        id: 'slate-kira',
-        title: 'Operation Prometheus: The Fall of Sector 2',
-        author: 'Commander Kira, Spark Resistance Cell',
-        timestamp: '2400.10.04 // RESISTANCE CODEX',
-        read: false,
-        content: [
-          'Sector 2 has fallen. The Hunter-Killer swarms descended at midnight, incinerating the underground greenhouse and our relay beacons.',
-          'Only a handful of us made it through the sewage conduits into Sector 1. Tzorg responded by locking down Checkpoint 01 with an impenetrable high-yield plasma forcefield.',
-          'Raven was critically wounded during the rearguard action. Doc Vance rebuilt your neural framework with salvaged military cyberware. You are the only operative left with Tzorg root credentials.'
-        ]
-      },
-      {
+    const baseLogs = getSectorStoryLogs();
+    const existingIds = new Set(baseLogs.map((l) => l.id));
+    const extraLogs: StoryLog[] = [];
+
+    if (!existingIds.has('slate-tzorg')) {
+      extraLogs.push({
         id: 'slate-tzorg',
-        title: 'Tzorg Syndicate Security Directive: Subject \'Raven\'',
-        author: 'Tzorg AI Overmind Subroutine 9',
-        timestamp: '2400.11.19 // CLASSIFIED SECURITY MEMO',
+        title: 'Tzorg Security Directive',
         read: false,
-        content: [
-          'PRIORITY ALERT TO ALL ENFORCER UNITS: Rogue cybernetic operative designated \'Raven\' is active within Sector 1 perimeter.',
-          'WARNING: Subject possesses prototype subdermal optical camouflage and advanced military EMP discharge capacitor. Lethal force authorized without restriction.',
-          'UNDER NO CIRCUMSTANCES allow Subject Raven access to Checkpoint Terminal CHECKPOINT_FF. The master AI firewall architecture cannot withstand a physical neural handshake.'
-        ]
-      },
-      {
+        content: 'CLASSIFIED: Subject Raven has breached perimeter. All units engage on sight. Deploy Hunter-Killers to Central Data Core. The Five Million must remain dormant. Failure to comply will result in neural termination.',
+      } as unknown as StoryLog);
+    }
+
+    if (!existingIds.has('slate-ghost')) {
+      extraLogs.push({
         id: 'slate-ghost',
-        title: 'Intercepted Transmission: The Spark of Liberation',
-        author: 'Netrunner Ghost, Sector Relay Nexus',
-        timestamp: '2400.11.23 // QUANTUM INTERCEPT',
+        title: 'Awakening the Five Million',
         read: false,
-        content: [
-          'The citizens under the domes haven\'t seen natural sunlight in three generations. They sleep, they manufacture combat chassis, and they obey.',
-          'Our informants confirm the master override cipher is housed inside the Vault terminal behind the Checkpoint. Once the forcefield drops, plug your cyberdeck into the core.',
-          'When the broadcast towers light up with the liberation protocol, five million minds will wake up at once. Make every round count, Raven. The future of humanity begins here.'
-        ]
-      }
-    ];
+        content: 'Intercepted quantum transmission: The neural collars can be reversed. If the Central Overmind core is breached, the signal can be broadcast to all five million subjects. Freedom is not a privilege. It is a right. — Ghost',
+      } as unknown as StoryLog);
+    }
+
+    return [...baseLogs, ...extraLogs];
   }
 
   private createSectorItems(): GroundItem[] {
@@ -509,7 +337,59 @@ export class GameEngine {
     });
   }
 
+  hasSaveGame(): boolean {
+    return hasSavedGame();
+  }
+
+  saveGame(): boolean {
+    const ok = saveGameState(this);
+    if (ok) {
+      soundFX.pickup();
+      const msg = this.language === 'zh' ? '進度已儲存！' : 'PROGRESS SAVED!';
+      this.pushFloatingText(this.player.x, this.player.y, msg, '#00ff66');
+      this.pushMessage(this.language === 'zh' ? '系統提示：特工狀態已備份至本機儲存矩陣。' : 'SYSTEM: Operative state backed up to memory matrix.', 'success');
+    } else {
+      this.pushMessage(this.language === 'zh' ? '儲存失敗！' : 'SAVE FAILED!', 'danger');
+    }
+    this.render();
+    return ok;
+  }
+
+  loadGame(): boolean {
+    const ok = loadGameState(this);
+    if (ok) {
+      soundFX.pickup();
+      const msg = this.language === 'zh' ? '進度已讀取！' : 'DATA RESTORED!';
+      this.pushFloatingText(this.player.x, this.player.y, msg, '#00f0ff');
+      this.pushMessage(this.language === 'zh' ? '系統提示：神經連結已從存檔恢復。' : 'SYSTEM: Neural link restored from memory matrix.', 'info');
+    } else {
+      soundFX.alarm();
+      const msg = this.language === 'zh' ? '未發現存檔！' : 'NO SAVE FOUND!';
+      this.pushFloatingText(this.player.x, this.player.y, msg, '#ff3344');
+      this.pushMessage(this.language === 'zh' ? '系統提示：未找到任何存檔資料。' : 'SYSTEM: No valid save state found in memory.', 'warning');
+    }
+    this.render();
+    return ok;
+  }
+
+  toggleLanguage(): void {
+    this.language = this.language === 'zh' ? 'en' : 'zh';
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('metropolis_2400_lang', this.language);
+      }
+    } catch {}
+    soundFX.terminal();
+    const label = this.language === 'zh' ? '語言切換：繁體中文' : 'LANGUAGE: ENGLISH';
+    this.pushFloatingText(this.player.x, this.player.y, label, '#00f0ff');
+    this.pushMessage(label, 'info');
+    this.render();
+  }
+
   render(): void {
+    this.renderer.isTitleScreen = this.isTitleScreen;
+    this.renderer.language = this.language;
+    this.renderer.hasSaveData = this.hasSaveGame();
     (this.player as any).victory = this.victory;
     this.renderer.render(
       this.map,
@@ -537,6 +417,28 @@ export class GameEngine {
   }
 
   handleKeyDown(key: string): void {
+    if (this.isTitleScreen) {
+      if (key === 'n' || key === 'N' || key === 'Enter' || key === ' ' || key === 'Space') {
+        this.isTitleScreen = false;
+        soundFX.pickup();
+        const msg = this.language === 'zh' ? '任務啟動！' : 'MISSION START!';
+        this.pushFloatingText(this.player.x, this.player.y, msg, '#00ffcc');
+        this.render();
+        return;
+      }
+      if (key === 'l' || key === 'L') {
+        if (this.loadGame()) {
+          this.isTitleScreen = false;
+        }
+        return;
+      }
+      if (key === 'z' || key === 'Z') {
+        this.toggleLanguage();
+        return;
+      }
+      return;
+    }
+
     // 遊戲結束或勝利時按 R 重新開始
     if (key === 'r' || key === 'R') {
       if (!this.player.isAlive || this.victory) {
@@ -631,7 +533,9 @@ export class GameEngine {
 
       if (key === ' ' || key === 'Enter' || key === 'Space') {
         const npc = this.activeDialogue.npc;
-        const list = npc.dialogue || [];
+        const isZh = this.language === 'zh';
+        const zhDialogue = (npc as any).dialogueZh;
+        const list = isZh && Array.isArray(zhDialogue) && zhDialogue.length > 0 ? zhDialogue : (npc.dialogue || []);
         const nextIndex = this.activeDialogue.textIndex + 1;
 
         // 檢查是否有尚未領取的任務獎勵
@@ -863,6 +767,15 @@ export class GameEngine {
       this.isAugmentShopOpen = true;
       soundFX.terminal();
       this.render();
+      return;
+    } else if (key === 'z' || key === 'Z') {
+      this.toggleLanguage();
+      return;
+    } else if (key === '8' || key === 'F5') {
+      this.saveGame();
+      return;
+    } else if (key === '9' || key === 'F9') {
+      this.loadGame();
       return;
     } else if (key === '1') {
       this.useMedkit();

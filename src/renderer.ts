@@ -4,8 +4,11 @@ import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, TerminalData
 import type { TerminalSession } from './terminal';
 import * as MapModule from './map';
 import { drawTileSprite, drawPlayerSprite, drawRobotSprite, drawNPCSprite, drawItemSprite, drawHazardSprite } from './sprites';
+import { drawTitleScreen } from './titleScreen';
+import { wrapText } from './textWrap';
 
 export type Position = { x: number; y: number };
+export type Language = 'zh' | 'en';
 
 // 街景霓虹看板標識定義 (基於地圖 Tile 座標)
 interface StreetSign {
@@ -30,6 +33,9 @@ export class GameRenderer {
   ctx: CanvasRenderingContext2D;
   tileSize: number = 48;
   lastPlayerPos: Position = { x: 5, y: 5 };
+  isTitleScreen: boolean = false;
+  language: Language = 'zh';
+  hasSaveData: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -64,6 +70,12 @@ export class GameRenderer {
     const ctx = this.ctx as any;
 
     ctx.save?.();
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (this.isTitleScreen) {
+      this.drawTitleScreen(width, height, ctx, now, this.hasSaveData, this.language);
+      ctx.restore?.();
+      return;
+    }
     // 深黑色賽博街道基底背景
     ctx.fillStyle = '#050a0f';
     ctx.fillRect?.(0, 0, width, height);
@@ -85,7 +97,6 @@ export class GameRenderer {
 
     const camX = px * this.tileSize - width / 2;
     const camY = py * this.tileSize - height / 2;
-    const now = performance.now();
 
     const visible = visibleTiles ?? new Set<string>();
     const explored = exploredTiles ?? new Set<string>();
@@ -337,6 +348,10 @@ export class GameRenderer {
     if (Number.isNaN(x) || Number.isNaN(y)) return null;
 
     return { x, y };
+  }
+
+  drawTitleScreen(width: number, height: number, ctx: any, now: number, hasSaveData: boolean, language: Language): void {
+    drawTitleScreen(width, height, ctx, now, hasSaveData, language);
   }
 
   drawTile(
@@ -676,10 +691,10 @@ export class GameRenderer {
     const empCount = p?.consumables?.empGrenades ?? 0;
 
     ctx.fillStyle = 'rgba(7, 13, 20, 0.85)';
-    ctx.fillRect?.(0, height - 26, 490, 26);
+    ctx.fillRect?.(0, height - 26, 680, 26);
     ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
     ctx.lineWidth = 1;
-    ctx.strokeRect?.(0, height - 26, 490, 1);
+    ctx.strokeRect?.(0, height - 26, 680, 1);
 
     ctx.font = 'bold 11px monospace';
     ctx.textBaseline = 'middle';
@@ -695,6 +710,12 @@ export class GameRenderer {
     ctx.fillText?.('[M] MISSIONS', 320, height - 13);
     ctx.fillStyle = '#ffb700';
     ctx.fillText?.('[L] ARCHIVE', 410, height - 13);
+    ctx.fillStyle = '#00f0ff';
+    ctx.fillText?.('[8] SAVE', 495, height - 13);
+    ctx.fillStyle = '#b388ff';
+    ctx.fillText?.('[9] LOAD', 555, height - 13);
+    ctx.fillStyle = '#ffea00';
+    ctx.fillText?.('[Z] ' + (this.language === 'zh' ? '中' : 'EN'), 615, height - 13);
 
     ctx.restore?.();
   }
@@ -774,7 +795,9 @@ export class GameRenderer {
   ): void {
     const npc = dialogue.npc;
     const textIndex = dialogue.textIndex || 0;
-    const dialogueList = Array.isArray(npc.dialogue) ? npc.dialogue : ['...'];
+    const isZh = this.language === 'zh';
+    const currentRole = (isZh && npc.roleZh) ? npc.roleZh : npc.role;
+    const dialogueList = isZh && Array.isArray(npc.dialogueZh) && npc.dialogueZh.length > 0 ? npc.dialogueZh : (Array.isArray(npc.dialogue) ? npc.dialogue : ['...']);
     const currentText = dialogueList[textIndex] || '...';
     const isLastLine = textIndex >= dialogueList.length - 1;
 
@@ -800,7 +823,7 @@ export class GameRenderer {
     ctx.fillStyle = themeColor;
     ctx.font = 'bold 13px monospace';
     ctx.textBaseline = 'top';
-    const title = '[ ' + npc.name.toUpperCase() + ' // ' + npc.role.toUpperCase() + ' ]';
+    const title = '[ ' + npc.name.toUpperCase() + ' // ' + String(currentRole ?? '').toUpperCase() + ' ]';
     ctx.fillText?.(title, x + 18, y + 14);
 
     ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
@@ -815,26 +838,16 @@ export class GameRenderer {
     ctx.font = '13px monospace';
     ctx.shadowBlur = 0;
 
-    const words = currentText.split(' ');
-    let line = '';
-    let lineY = y + 46;
     const maxLineW = boxW - 40;
-
-    for (let i = 0; i < words.length; i++) {
-      const testLine = line + words[i] + ' ';
-      const metrics = ctx.measureText ? ctx.measureText(testLine) : { width: testLine.length * 8 };
-      if (metrics.width > maxLineW && i > 0) {
-        ctx.fillText?.(line, x + 20, lineY);
-        line = words[i] + ' ';
-        lineY += 18;
-      } else {
-        line = testLine;
-      }
-    }
-    ctx.fillText?.(line, x + 20, lineY);
+    const wrappedLines = wrapText(currentText, maxLineW, (s) => (ctx.measureText ? ctx.measureText(s).width : s.length * 8));
+    wrappedLines.forEach((line, index) => {
+      ctx.fillText?.(line, x + 20, y + 46 + index * 18);
+    });
 
     // 底部按鍵提示
-    const promptText = isLastLine ? '[ SPACE / ENTER ] CLOSE DIALOGUE    [ ESC ] LEAVE' : '[ SPACE / ENTER ] NEXT (▼)    [ ESC ] LEAVE';
+    const promptText = isLastLine
+      ? (isZh ? '[ 空格 / ENTER ] 關閉對話    [ ESC ] 離開' : '[ SPACE / ENTER ] CLOSE DIALOGUE    [ ESC ] LEAVE')
+      : (isZh ? '[ 空格 / ENTER ] 下一句 (▼)    [ ESC ] 離開' : '[ SPACE / ENTER ] NEXT (▼)    [ ESC ] LEAVE');
     const pulse = 0.7 + 0.3 * Math.sin(now * 0.008);
     ctx.fillStyle = 'rgba(0, 255, 170, ' + pulse + ')';
     ctx.font = 'bold 11px monospace';
@@ -1105,9 +1118,11 @@ export class GameRenderer {
     ctx.textAlign = 'left';
     ctx.fillText?.('// TZORG INTELLIGENCE ARCHIVE // CLASSIFIED RECORD //', x + 24, y + 18);
 
+    const isZh = this.language === 'zh';
+    const logTitle = isZh && log.titleZh ? log.titleZh : log.title;
     ctx.fillStyle = '#ffea00';
     ctx.font = 'bold 13px monospace';
-    ctx.fillText?.('► ' + log.title.toUpperCase(), x + 24, y + 38);
+    ctx.fillText?.('► ' + logTitle.toUpperCase(), x + 24, y + 38);
 
     ctx.fillStyle = '#8aa0b2';
     ctx.font = '10px monospace';
@@ -1125,22 +1140,14 @@ export class GameRenderer {
     let lineY = y + 84;
     const maxLineW = boxW - 48;
 
-    log.content.forEach((paragraph) => {
-      const words = paragraph.split(' ');
-      let line = '  ';
-      for (let i = 0; i < words.length; i++) {
-        const testLine = line + words[i] + ' ';
-        const metrics = ctx.measureText ? ctx.measureText(testLine) : { width: testLine.length * 8 };
-        if (metrics.width > maxLineW && i > 0) {
-          ctx.fillText?.(line, x + 24, lineY);
-          line = '  ' + words[i] + ' ';
-          lineY += 17;
-        } else {
-          line = testLine;
-        }
-      }
-      ctx.fillText?.(line, x + 24, lineY);
-      lineY += 22;
+    const paragraphs = isZh && Array.isArray(log.contentZh) && log.contentZh.length > 0 ? log.contentZh : (Array.isArray(log.content) ? log.content : [String(log.content)]);
+    paragraphs.forEach((paragraph) => {
+      const lines = wrapText(paragraph, maxLineW, (s) => (ctx.measureText ? ctx.measureText(s).width : s.length * 8));
+      lines.forEach((l) => {
+        ctx.fillText?.('  ' + l, x + 24, lineY);
+        lineY += 18;
+      });
+      lineY += 6;
     });
 
     const pulse = 0.7 + 0.3 * Math.sin(now * 0.008);
