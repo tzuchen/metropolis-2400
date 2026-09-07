@@ -160,13 +160,13 @@ export class MusicSynthesizer {
     const now = this.ctx.currentTime;
     if (level === 'exploration') {
       this.filterNode.frequency.setTargetAtTime(550, now, 0.4);
-      this.masterGain.gain.setTargetAtTime(0.24, now, 0.3);
+      this.masterGain.gain.setTargetAtTime(0.22, now, 0.3);
     } else if (level === 'combat') {
-      this.filterNode.frequency.setTargetAtTime(1100, now, 0.2);
-      this.masterGain.gain.setTargetAtTime(0.32, now, 0.2);
+      this.filterNode.frequency.setTargetAtTime(1500, now, 0.2);
+      this.masterGain.gain.setTargetAtTime(0.35, now, 0.2);
     } else if (level === 'boss') {
-      this.filterNode.frequency.setTargetAtTime(1600, now, 0.1);
-      this.masterGain.gain.setTargetAtTime(0.36, now, 0.2);
+      this.filterNode.frequency.setTargetAtTime(2400, now, 0.1);
+      this.masterGain.gain.setTargetAtTime(0.40, now, 0.2);
     }
 
     // 重啟琶音器以匹配戰鬥節奏
@@ -182,16 +182,102 @@ export class MusicSynthesizer {
     }
 
     // 依據強度切換琶音節奏速度 (毫秒)
-    const intervalMs = this.intensity === 'boss' ? 140 : this.intensity === 'combat' ? 175 : 280;
+    const intervalMs = this.intensity === 'boss' ? 120 : this.intensity === 'combat' ? 150 : 280;
 
     this.arpTimer = setInterval(() => {
       this.tickArp();
     }, intervalMs);
   }
 
+  private playKick(ctx: AudioContext, now: number, isBoss: boolean): void {
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(160, now);
+      osc.frequency.exponentialRampToValueAtTime(35, now + 0.1);
+
+      const peak = isBoss ? 0.8 : 0.6;
+      gain.gain.setValueAtTime(peak, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain!);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } catch (e) {
+      console.warn('Kick synthesis error', e);
+    }
+  }
+
+  private playSnare(ctx: AudioContext, now: number, isBoss: boolean): void {
+    try {
+      const bufferSize = ctx.sampleRate * 0.2;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = isBoss ? 3000 : 2000;
+      filter.Q.value = 1.0;
+
+      const gain = ctx.createGain();
+      const peak = isBoss ? 0.5 : 0.3;
+      gain.gain.setValueAtTime(peak, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain!);
+      noise.start(now);
+      noise.stop(now + 0.2);
+    } catch (e) {
+      console.warn('Snare synthesis error', e);
+    }
+  }
+
+  private playHiHat(ctx: AudioContext, now: number): void {
+    try {
+      const bufferSize = ctx.sampleRate * 0.05;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 6000;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain!);
+      noise.start(now);
+      noise.stop(now + 0.05);
+    } catch (e) {
+      console.warn('HiHat synthesis error', e);
+    }
+  }
+
   private tickArp(): void {
     if (!this.ctx || !this.isPlaying || !this.masterGain) return;
     const now = this.ctx.currentTime;
+    const isBoss = this.intensity === 'boss';
+    const isCombat = this.intensity === 'combat';
 
     // 換根音 (每 16 拍切換和弦)
     if (this.arpStep % 16 === 0) {
@@ -202,19 +288,69 @@ export class MusicSynthesizer {
       this.padOsc2?.frequency.setTargetAtTime(root * 4 + 2.5, now, 0.2);
     }
 
+    // 戰鬥打擊節奏網格
+    if (isCombat || isBoss) {
+      const step = this.arpStep % 16;
+      
+      // Kick: 4-on-the-floor (0, 4, 8, 12)
+      if (step === 0 || step === 4 || step === 8 || step === 12) {
+        this.playKick(this.ctx, now, isBoss);
+      }
+
+      // Snare: Backbeat (4, 12)
+      if (step === 4 || step === 12) {
+        this.playSnare(this.ctx, now, isBoss);
+      }
+
+      // Hi-Hat: Off-beats (2, 6, 10, 14)
+      if (step === 2 || step === 6 || step === 10 || step === 14) {
+        this.playHiHat(this.ctx, now);
+        if (isBoss) {
+          // Boss mode: Double hi-hat or extra intensity
+          this.playHiHat(this.ctx, now + 0.05);
+        }
+      }
+
+      // Bass Pluck: Every 2 beats (0, 2, 4, 6...)
+      if (step % 2 === 0) {
+        try {
+          const bassOsc = this.ctx.createOscillator();
+          const bassGain = this.ctx.createGain();
+          const root = this.bassRoots[this.chordIndex];
+          
+          bassOsc.type = 'sawtooth';
+          bassOsc.frequency.setValueAtTime(root, now);
+          
+          bassGain.gain.setValueAtTime(0.3, now);
+          bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+          bassOsc.connect(bassGain);
+          bassGain.connect(this.masterGain);
+          bassOsc.start(now);
+          bassOsc.stop(now + 0.1);
+        } catch (e) {
+          console.warn('Bass pluck error', e);
+        }
+      }
+    }
+
     // 挑選琶音音符
     const notePattern = [0, 2, 4, 3, 1, 5, 2, 4];
     const scaleIdx = notePattern[this.arpStep % notePattern.length];
     const freq = this.arpScale[scaleIdx];
 
     const osc = this.ctx.createOscillator();
-    osc.type = this.intensity === 'boss' ? 'sawtooth' : 'triangle';
+    // Combat/Boss use sawtooth, Exploration uses triangle
+    osc.type = (isCombat || isBoss) ? 'sawtooth' : 'triangle';
     osc.frequency.setValueAtTime(freq, now);
 
     const gain = this.ctx.createGain();
-    const peakGain = this.intensity === 'exploration' ? 0.04 : 0.08;
+    // Boss has higher volume
+    const peakGain = isBoss ? 0.12 : isCombat ? 0.08 : 0.04;
     gain.gain.setValueAtTime(peakGain, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + (this.intensity === 'exploration' ? 0.22 : 0.14));
+    
+    const decayTime = isBoss ? 0.1 : isCombat ? 0.14 : 0.22;
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + decayTime);
 
     osc.connect(gain);
     gain.connect(this.masterGain);
