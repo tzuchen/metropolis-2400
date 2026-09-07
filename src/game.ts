@@ -7,9 +7,11 @@ import { TerminalSession } from './terminal';
 import { GameRenderer } from './renderer';
 import { soundFX } from './audio';
 import { getSector1NPCs, getSector2NPCs, getSectorStoryLogs } from './dialogues';
-import { createBossExterminator } from './boss';
+import { createBossExterminator, isBossRobot, applyBossDamage } from './boss';
 import { createBreachSession, moveBreachCursor, selectBreachCell, type BreachSession } from './breachProtocol';
 import { handleSpecialInput } from './inputHandler';
+import { bgm } from './music';
+import { setupSubSectorZero, getNextSectorId } from './sewerMap';
 
 export class GameEngine {
   canvas: HTMLCanvasElement;
@@ -273,10 +275,27 @@ export class GameEngine {
   }
 
   switchSector(targetSectorId: string): void {
+    const prevMapId = this.map?.id;
+    if (targetSectorId === 'sub-sector-0') {
+      setupSubSectorZero(this);
+      if (prevMapId === 'sector-2') {
+        this.player.x = 35;
+        this.player.y = 22;
+      } else {
+        this.player.x = 4;
+        this.player.y = 5;
+      }
+      return;
+    }
     if (targetSectorId === 'sector-2') {
       this.map = buildSector2Map();
-      this.player.x = 3;
-      this.player.y = 5;
+      if (prevMapId === 'sub-sector-0') {
+        this.player.x = 3;
+        this.player.y = 25;
+      } else {
+        this.player.x = 3;
+        this.player.y = 5;
+      }
       (this.player as any).currentSectorId = 'sector-2';
       this.robots = [
         createRobot('SCOUT_DRONE' as RobotType, { x: 12, y: 5 }, [{ x: 12, y: 5 }, { x: 20, y: 5 }]),
@@ -297,8 +316,13 @@ export class GameEngine {
       this.pushMessage('TRANSIT COMPLETE: Arrived at Sector 2 (Fab-Plex). Central Overmind core located to East!', 'warning');
     } else if (targetSectorId === 'sector-1') {
       this.map = buildSector1Map();
-      this.player.x = 37;
-      this.player.y = 25;
+      if (prevMapId === 'sub-sector-0') {
+        this.player.x = 4;
+        this.player.y = 21;
+      } else {
+        this.player.x = 37;
+        this.player.y = 25;
+      }
       (this.player as any).currentSectorId = 'sector-1';
       this.robots = this.createSectorRobots();
       this.hazards = this.createSectorHazards();
@@ -393,6 +417,14 @@ export class GameEngine {
   }
 
   render(): void {
+    const bossNear = this.robots.some((r) => r.isAlive && r.robotType === 'EXTERMINATOR' && Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 9);
+    if (bossNear) {
+      bgm.setIntensity('boss');
+    } else if (this.securityLevel === 'ALERT' || this.securityLevel === 'LOCKDOWN') {
+      bgm.setIntensity('combat');
+    } else {
+      bgm.setIntensity('exploration');
+    }
     this.renderer.isTitleScreen = this.isTitleScreen;
     this.renderer.language = this.language;
     this.renderer.hasSaveData = this.hasSaveGame();
@@ -568,6 +600,26 @@ export class GameEngine {
           if (safehouseObj && !safehouseObj.completed) {
             safehouseObj.completed = true;
             this.pushMessage('MISSION UPDATE: Safehouse Recon objective complete!', 'success');
+          }
+        }
+
+        if (npc.id === 'npc-hiro' && nextIndex >= list.length - 1) {
+          const inventory = (this.player as any).inventory;
+          if (Array.isArray(inventory)) {
+            const recipeIndex = inventory.findIndex((it: any) => it?.id === 'item-ramen-recipe');
+            if (recipeIndex !== -1) {
+              inventory.splice(recipeIndex, 1);
+              this.player.maxHp += 50;
+              this.player.hp = this.player.maxHp;
+              soundFX.pickup();
+              this.pushFloatingText(this.player.x, this.player.y, 'MAX HP +50!', '#00ff88');
+              this.pushMessage(
+                isZh
+                  ? 'Hiro: 多謝你幫我找回拉麵食譜！我的最大生命值提升了！'
+                  : 'Hiro: Thanks for recovering my ramen recipe! My max HP increased!',
+                'success'
+              );
+            }
           }
         }
 
@@ -888,7 +940,17 @@ export class GameEngine {
           } else {
             soundFX.laser();
           }
-          hitRobot.hp -= damage;
+          if (isBossRobot(hitRobot)) {
+            applyBossDamage(hitRobot, damage, this);
+          } else {
+            hitRobot.hp -= damage;
+            if (hitRobot.hp <= 0) {
+              hitRobot.isAlive = false;
+              soundFX.hit();
+              this.pushFloatingText(hitRobot.x, hitRobot.y, 'DESTROYED', '#ff3855');
+              this.pushMessage(hitRobot.name + ' destroyed!', 'success');
+            }
+          }
           this.laserBeams.push({
             from: { x: this.player.x, y: this.player.y },
             to: { x: hitRobot.x, y: hitRobot.y },
@@ -996,7 +1058,7 @@ export class GameEngine {
 
         const standingTile = getTile(this.map, { x: nx, y: ny });
         if (Number(standingTile) === 9 || String(standingTile).toUpperCase() === 'ELEVATOR') {
-          const nextSec = this.map.id === 'sector-1' ? 'sector-2' : 'sector-1';
+          const nextSec = getNextSectorId(this.map.id || '', nx, ny);
           this.switchSector(nextSec);
           this.render();
           return;

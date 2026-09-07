@@ -1,4 +1,5 @@
-import type { TileType, Position, SectorMap, TerminalData, SecurityLevel } from './types';
+import { TileType } from './types';
+import type { Position, SectorMap, TerminalData, SecurityLevel } from './types';
 
 const FLOOR: TileType = 'FLOOR' as unknown as TileType;
 const WALL: TileType = 'WALL' as unknown as TileType;
@@ -247,6 +248,7 @@ export function buildSector1Map(): SectorMap {
     setWall(tiles, 36, y);
   }
   setDoor(tiles, 35, 18, true);
+  tiles[22][4] = TileType.ELEVATOR;
 
   const checkpointForcefieldPositions: Position[] = [];
   for (let y = 4; y <= 10; y += 1) {
@@ -359,6 +361,7 @@ export function buildSector2Map(): SectorMap {
   tiles[20][4] = 16 as any;
   tiles[24][3] = 16 as any;
   tiles[18][5] = 17 as any;
+  tiles[25][2] = 9 as any; // ELEVATOR / Sewer ladder to Sub-Sector Zero
   // 中央機房高密度伺服器機櫃
   tiles[6][10] = 15 as any;
   tiles[6][12] = 15 as any;

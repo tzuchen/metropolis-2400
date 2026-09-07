@@ -223,4 +223,4 @@ export interface Hazard {
   exploded: boolean;
 }
 
-export type EndgameChoice = 'OVERLOAD' | 'SUBVERSION' | 'EVACUATION' | null;
+export type EndgameChoice = 'OVERLOAD' | 'SUBVERSION' | 'EVACUATION' | 'AWAKEN' | null;

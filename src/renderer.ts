@@ -708,10 +708,10 @@ export class GameRenderer {
     const empCount = p?.consumables?.empGrenades ?? 0;
 
     ctx.fillStyle = 'rgba(7, 13, 20, 0.85)';
-    ctx.fillRect?.(0, height - 26, 680, 26);
+    ctx.fillRect?.(0, height - 26, 740, 26);
     ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
     ctx.lineWidth = 1;
-    ctx.strokeRect?.(0, height - 26, 680, 1);
+    ctx.strokeRect?.(0, height - 26, 740, 1);
 
     ctx.font = 'bold 11px monospace';
     ctx.textBaseline = 'middle';
@@ -733,6 +733,8 @@ export class GameRenderer {
     ctx.fillText?.('[9] LOAD', 555, height - 13);
     ctx.fillStyle = '#ffea00';
     ctx.fillText?.('[Z] ' + (this.language === 'zh' ? '中' : 'EN'), 615, height - 13);
+    ctx.fillStyle = '#00ffaa';
+    ctx.fillText?.('[B] BGM', 665, height - 13);
 
     ctx.restore?.();
   }
@@ -1293,6 +1295,15 @@ export class GameRenderer {
       poem = 'We left the neon streets to the machines, but carried the spark.\nSomewhere beyond the grid, new cells are forming.\nThe fight does not end — it only changes address.';
       accentColor = '#ffea00';
       shadowColor = '#ffaa00';
+    } else if (endgameChoice === 'AWAKEN') {
+      const isZh = this.language === 'zh';
+      title = isZh ? '★ 全民大覺醒 (THE GREAT AWAKENING) ★' : '★ THE GREAT AWAKENING ★';
+      subtitle = isZh ? '五百萬人神經項圈解除 // 大都會全面光復' : 'FIVE MILLION CITIZENS LIBERATED // TOTAL RESTORATION';
+      poem = isZh
+        ? '逆向廣播脈衝刺破了三代人的永夜巨蛋。\n工廠停擺、合成項圈解鎖，五百萬沉睡的神智迎來曙光。\n這不是代碼的終點，而是人類新生的拂曉。'
+        : 'The inverse pulse shattered three generations of synthetic sleep.\nCollars dropped, factories ceased, and five million souls opened their eyes.\nNot an end of code, but the golden dawn of humankind.';
+      accentColor = '#00ff88';
+      shadowColor = '#00ffaa';
     }
 
     const pulse = 0.8 + 0.2 * Math.sin(now * 0.005);

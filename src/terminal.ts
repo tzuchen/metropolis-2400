@@ -7,7 +7,7 @@ export interface TerminalCommandResult {
   unlockedDoor?: string;
   clearedAlert?: boolean;
   energyGain?: number;
-  endgameChoice?: 'OVERLOAD' | 'SUBVERSION' | 'EVACUATION';
+  endgameChoice?: 'OVERLOAD' | 'SUBVERSION' | 'EVACUATION' | 'AWAKEN';
 }
 
 export class TerminalSession {
@@ -81,13 +81,15 @@ export class TerminalSession {
     if (c === 'help') {
       result = {
         output:
-          'COMMANDS: HELP, STATUS, LOGS, OVERRIDE, CLEAR_ALARM, SIPHON, SCAN, OVERLOAD, SUBVERSION, EVACUATION, CLEAR, EXIT\n' +
+          'COMMANDS: HELP, STATUS, LOGS, OVERRIDE, CLEAR_ALARM, SIPHON, SCAN, OVERLOAD, SUBVERSION, EVACUATION, BREACH, AWAKEN, CLEAR, EXIT\n' +
           '- STATUS     : Check terminal status & subsystems\n' +
           '- LOGS       : Read decrypted intelligence data\n' +
           '- OVERRIDE   : Bypass forcefields (or HACK)\n' +
           '- CLEAR_ALARM: Reset sector security alert to CLEAR\n' +
           '- SIPHON     : Drain power cells (+30 Energy)\n' +
           '- SCAN       : Scan sector security perimeter\n' +
+          '- BREACH     : Breach the Tzorg dome (Core Terminal)\n' +
+          '- AWAKEN     : Trigger the true ending (Core Terminal)\n' +
           '- CLEAR      : Clear screen\n' +
           '- EXIT       : Disconnect session (or Esc)',
       };
@@ -184,6 +186,19 @@ export class TerminalSession {
             'UNDERGROUND ARK EVACUATION LAUNCHED: 地下方舟撤離 - Resistance personnel are extracting.\n' +
             'The subterranean ark is departing the sector.',
           endgameChoice: 'EVACUATION',
+          shouldExit: true,
+        };
+      } else {
+        result = { output: 'ACCESS DENIED: Requires Core Terminal' };
+      }
+    } else if (c === 'awaken') {
+      if (this.isCoreTerminal()) {
+        result = {
+          output:
+            'OPERATION PROMETHEUS TRUE VICTORY: 【五百萬人的全民大覺醒】\n' +
+            'Quantum cipher verified. Broadcast towers radiating inverse neural pulse across the metropolis dome.\n' +
+            'Every human consciousness is unshackled. The Tzorg reign has ended in true liberation.',
+          endgameChoice: 'AWAKEN',
           shouldExit: true,
         };
       } else {

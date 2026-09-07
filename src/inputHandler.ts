@@ -1,6 +1,7 @@
 import { createBreachSession, moveBreachCursor, selectBreachCell } from './breachProtocol';
 import { disableForcefield } from './map';
 import { soundFX } from './audio';
+import { bgm } from './music';
 
 export function handleSpecialInput(game: any, key: string): boolean {
   // 1. Manual Modal (特工戰術手冊)
@@ -38,6 +39,16 @@ export function handleSpecialInput(game: any, key: string): boolean {
     }
     if (key === 'z' || key === 'Z') {
       game.toggleLanguage();
+      return true;
+    }
+    if (key === 'b' || key === 'B') {
+      const on = bgm.toggle();
+      const msg = on
+        ? (game.language === 'zh' ? '合成器音樂：已開啟' : 'SYNTH BGM: ONLINE')
+        : (game.language === 'zh' ? '合成器音樂：已靜音' : 'SYNTH BGM: MUTED');
+      game.pushFloatingText(game.player.x, game.player.y, msg, on ? '#00ffaa' : '#888888');
+      game.pushMessage(msg, 'info');
+      game.render();
       return true;
     }
     return true;
@@ -120,6 +131,18 @@ export function handleSpecialInput(game: any, key: string): boolean {
   if (key === 'h' || key === 'H') {
     game.isManualOpen = true;
     soundFX.terminal();
+    game.render();
+    return true;
+  }
+
+  // 5. In-game BGM Toggle Key
+  if (key === 'b' || key === 'B') {
+    const on = bgm.toggle();
+    const msg = on
+      ? (game.language === 'zh' ? '合成器音樂：已開啟' : 'SYNTH BGM: ONLINE')
+      : (game.language === 'zh' ? '合成器音樂：已靜音' : 'SYNTH BGM: MUTED');
+    game.pushFloatingText(game.player.x, game.player.y, msg, on ? '#00ffaa' : '#888888');
+    game.pushMessage(msg, 'info');
     game.render();
     return true;
   }
