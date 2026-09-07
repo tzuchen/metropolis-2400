@@ -10,6 +10,7 @@ import { drawManualModal } from './manualModal';
 import { drawBreachModal, type BreachSession } from './breachProtocol';
 import { drawMiniRadar } from './radar';
 import { drawBigMapModal } from './bigMapModal';
+import { getFont, getTitleFont, CJK_FONT_STACK } from './uiFont';
 
 export type Position = { x: number; y: number };
 export type Language = 'zh' | 'en';
@@ -659,7 +660,8 @@ export class GameRenderer {
 
         ctx.fillStyle =
           index === recent.length - 1 ? msgColor : 'rgba(200, 220, 235, 0.45)';
-        ctx.fillText?.(text, width - 12, height - 36 + index * 14);
+        ctx.font = getFont(12, this.language === 'zh', true);
+        ctx.fillText?.(text, width - 12, height - 36 + index * 16);
       });
 
       ctx.textAlign = 'left';
@@ -811,7 +813,7 @@ export class GameRenderer {
 
     // 說話者標題
     ctx.fillStyle = themeColor;
-    ctx.font = 'bold 13px monospace';
+    ctx.font = getTitleFont(14, isZh);
     ctx.textBaseline = 'top';
     const title = '[ ' + npc.name.toUpperCase() + ' // ' + String(currentRole ?? '').toUpperCase() + ' ]';
     ctx.fillText?.(title, x + 18, y + 14);
@@ -825,13 +827,14 @@ export class GameRenderer {
 
     // 對話內容 (折行渲染)
     ctx.fillStyle = '#e8f8ff';
-    ctx.font = '13px monospace';
+    ctx.font = getFont(14, isZh);
     ctx.shadowBlur = 0;
 
     const maxLineW = boxW - 40;
+    const lineSpacing = isZh ? 22 : 18;
     const wrappedLines = wrapText(currentText, maxLineW, (s) => (ctx.measureText ? ctx.measureText(s).width : s.length * 8));
     wrappedLines.forEach((line, index) => {
-      ctx.fillText?.(line, x + 20, y + 46 + index * 18);
+      ctx.fillText?.(line, x + 20, y + 46 + index * lineSpacing);
     });
 
     // 底部按鍵提示
@@ -840,7 +843,7 @@ export class GameRenderer {
       : (isZh ? '[ 空格 / ENTER ] 下一句 (▼)    [ ESC ] 離開' : '[ SPACE / ENTER ] NEXT (▼)    [ ESC ] LEAVE');
     const pulse = 0.7 + 0.3 * Math.sin(now * 0.008);
     ctx.fillStyle = 'rgba(0, 255, 170, ' + pulse + ')';
-    ctx.font = 'bold 11px monospace';
+    ctx.font = getTitleFont(11, isZh);
     ctx.textAlign = 'right';
     ctx.fillText?.(promptText, x + boxW - 20, y + boxH - 16);
 
@@ -871,13 +874,13 @@ export class GameRenderer {
     ctx.strokeRect?.(x + 1, y + 1, boxW - 2, boxH - 2);
 
     ctx.fillStyle = '#ffaa00';
-    ctx.font = 'bold 14px monospace';
+    ctx.font = getTitleFont(14, this.language === 'zh');
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
     ctx.fillText?.('// RESISTANCE TACTICAL INVENTORY & CYBERDECK //', x + 20, y + 16);
 
     ctx.fillStyle = '#8899a6';
-    ctx.font = '11px monospace';
+    ctx.font = getFont(11, this.language === 'zh');
     ctx.fillText?.('HOTKEYS: [1] USE MEDKIT  |  [2] USE BATTERY  |  [3] THROW EMP  |  [I / ESC] CLOSE', x + 20, y + 36);
 
     ctx.strokeStyle = 'rgba(255, 170, 0, 0.3)';
@@ -891,7 +894,7 @@ export class GameRenderer {
 
     // 左欄：已配備戰術裝備
     ctx.fillStyle = '#00e5ff';
-    ctx.font = 'bold 12px monospace';
+    ctx.font = getTitleFont(13, this.language === 'zh');
     ctx.fillText?.('► EQUIPPED CYBERWARE & WEAPONS', x + 20, y + 68);
 
     const gear = [
@@ -909,22 +912,22 @@ export class GameRenderer {
       ctx.strokeRect?.(x + 20, gy, colW, 46);
 
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px monospace';
+      ctx.font = getTitleFont(12, this.language === 'zh');
       ctx.fillText?.(g.name, x + 28, gy + 8);
 
       ctx.fillStyle = '#00f0ff';
-      ctx.font = '10px monospace';
+      ctx.font = getFont(11, this.language === 'zh');
       ctx.fillText?.(g.stat, x + 28, gy + 22);
 
       ctx.fillStyle = '#7a8e99';
-      ctx.font = '9px monospace';
+      ctx.font = getFont(11, this.language === 'zh');
       ctx.fillText?.(g.desc, x + 28, gy + 34);
     });
 
     // 右欄：野戰補給品與消耗性戰術物品
     const rx = x + 30 + colW;
     ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 12px monospace';
+    ctx.font = getTitleFont(13, this.language === 'zh');
     ctx.fillText?.('► FIELD CONSUMABLES & TACTICAL ITEMS', rx, y + 68);
 
     const p = player as any;
@@ -947,11 +950,11 @@ export class GameRenderer {
       ctx.strokeRect?.(rx, iy, colW, 46);
 
       ctx.fillStyle = it.color;
-      ctx.font = 'bold 12px monospace';
+      ctx.font = getTitleFont(12, this.language === 'zh');
       ctx.fillText?.(`${it.key} ${it.name} (x${it.count})`, rx + 10, iy + 8);
 
       ctx.fillStyle = '#a0b4b8';
-      ctx.font = '10px monospace';
+      ctx.font = getFont(11, this.language === 'zh');
       ctx.fillText?.(it.effect, rx + 10, iy + 26);
     });
 
@@ -964,7 +967,7 @@ export class GameRenderer {
     ];
     const augList = p?.augments ?? {};
     ctx.fillStyle = '#c77dff';
-    ctx.font = 'bold 12px monospace';
+    ctx.font = getTitleFont(13, this.language === 'zh');
     ctx.fillText?.('► INSTALLED AUGMENTATIONS', rx, y + 320);
     installedAugments.forEach((aug, i) => {
       const ay = y + 338 + i * 18;
@@ -976,7 +979,7 @@ export class GameRenderer {
 
     // 底部提示
     ctx.fillStyle = '#ffaa00';
-    ctx.font = 'bold 11px monospace';
+    ctx.font = getTitleFont(11, this.language === 'zh');
     ctx.textAlign = 'center';
     ctx.fillText?.('PRESS [ 1 ], [ 2 ], [ 3 ] TO QUICK-USE  |  PRESS [ I ] OR [ ESC ] TO RESUME TACTICAL VIEW', x + boxW / 2, y + boxH - 18);
 
@@ -1008,7 +1011,7 @@ export class GameRenderer {
     ctx.strokeRect?.(x + 1, y + 1, boxW - 2, boxH - 2);
 
     ctx.fillStyle = '#00e5ff';
-    ctx.font = 'bold 14px monospace';
+    ctx.font = getTitleFont(14, this.language === 'zh');
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
     ctx.fillText?.('// RESISTANCE MISSION INTEL & DIRECTIVES //', x + 20, y + 16);
@@ -1040,16 +1043,16 @@ export class GameRenderer {
       ctx.fillText?.(isDone ? '[✓] COMPLETE' : '[ ] ACTIVE', x + 30, oy + 10);
 
       ctx.fillStyle = isDone ? '#ffffff' : '#d0e5f2';
-      ctx.font = 'bold 12px monospace';
+      ctx.font = getTitleFont(12, this.language === 'zh');
       ctx.fillText?.(obj.title, x + 150, oy + 10);
 
       ctx.fillStyle = '#8aa0aa';
-      ctx.font = '10px monospace';
+      ctx.font = getFont(11, this.language === 'zh');
       ctx.fillText?.(obj.description, x + 30, oy + 30);
     });
 
     ctx.fillStyle = '#00e5ff';
-    ctx.font = 'bold 11px monospace';
+    ctx.font = getTitleFont(11, this.language === 'zh');
     ctx.textAlign = 'center';
     ctx.fillText?.('PRESS [ M ] OR [ ESC ] TO CLOSE MISSION INTEL', x + boxW / 2, y + boxH - 18);
 
@@ -1111,7 +1114,7 @@ export class GameRenderer {
     const isZh = this.language === 'zh';
     const logTitle = isZh && log.titleZh ? log.titleZh : log.title;
     ctx.fillStyle = '#ffea00';
-    ctx.font = 'bold 13px monospace';
+    ctx.font = getTitleFont(14, isZh);
     ctx.fillText?.('► ' + logTitle.toUpperCase(), x + 24, y + 38);
 
     ctx.fillStyle = '#8aa0b2';
@@ -1126,7 +1129,7 @@ export class GameRenderer {
     ctx.stroke?.();
 
     ctx.fillStyle = '#e4f4fc';
-    ctx.font = '12px monospace';
+    ctx.font = getFont(14, isZh);
     let lineY = y + 84;
     const maxLineW = boxW - 48;
 
@@ -1135,14 +1138,14 @@ export class GameRenderer {
       const lines = wrapText(paragraph, maxLineW, (s) => (ctx.measureText ? ctx.measureText(s).width : s.length * 8));
       lines.forEach((l) => {
         ctx.fillText?.('  ' + l, x + 24, lineY);
-        lineY += 18;
+        lineY += isZh ? 22 : 18;
       });
       lineY += 6;
     });
 
     const pulse = 0.7 + 0.3 * Math.sin(now * 0.008);
     ctx.fillStyle = `rgba(0, 229, 255, ${pulse})`;
-    ctx.font = 'bold 11px monospace';
+    ctx.font = getTitleFont(12, isZh);
     ctx.textAlign = 'center';
     ctx.fillText?.('PRESS [ SPACE ] OR [ ENTER ] OR [ ESC ] TO CLOSE ARCHIVAL RECORD', x + boxW / 2, y + boxH - 18);
 

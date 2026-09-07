@@ -41,6 +41,7 @@ export function drawBigMapModal(
 ): void {
   ctx.save?.();
   const isZh = language === 'zh';
+  const fontStack = '"Noto Sans TC", "Microsoft JhengHei", monospace';
 
   // 1. 大地圖外框尺寸
   const boxW = Math.min(width - 32, 880);
@@ -285,12 +286,12 @@ export function drawBigMapModal(
 
   // 當前特工狀態
   ctx.fillStyle = '#00f0ff';
-  ctx.font = 'bold 12px monospace';
+  ctx.font = `bold 14px ${fontStack}`;
   ctx.fillText?.(isZh ? '【特工即時定位】' : '[OPERATIVE TELEMETRY]', sideX + 12, sideCurY);
   sideCurY += 18;
 
   ctx.fillStyle = '#c8e2f0';
-  ctx.font = '11px monospace';
+  ctx.font = `13px ${fontStack}`;
   ctx.fillText?.(isZh ? `當前座標 : [ X: ${player.x}, Y: ${player.y} ]` : `COORDINATES : [ X: ${player.x}, Y: ${player.y} ]`, sideX + 12, sideCurY);
   sideCurY += 16;
   ctx.fillText?.(isZh ? `生命 / 能量 : ${player.hp} HP / ${player.energy} EN` : `HEALTH/NRG : ${player.hp} HP / ${player.energy} EN`, sideX + 12, sideCurY);
@@ -298,7 +299,7 @@ export function drawBigMapModal(
 
   // 分區重要地標列表
   ctx.fillStyle = '#ffb700';
-  ctx.font = 'bold 12px monospace';
+  ctx.font = `bold 14px ${fontStack}`;
   ctx.fillText?.(isZh ? '【重要分區地標】' : '[DISTRICT BLUEPRINT]', sideX + 12, sideCurY);
   sideCurY += 18;
 
@@ -328,7 +329,7 @@ export function drawBigMapModal(
   }
 
   pois.forEach((poi) => {
-    ctx.font = '11px monospace';
+    ctx.font = `13px ${fontStack}`;
     ctx.fillStyle = poi.color;
     ctx.fillText?.(`• ${isZh ? poi.nameZh : poi.nameEn}`, sideX + 12, sideCurY);
     ctx.fillStyle = '#7a9eaf';
@@ -342,7 +343,7 @@ export function drawBigMapModal(
 
   // 戰術圖例 (Tactical Map Legend)
   ctx.fillStyle = '#00ffaa';
-  ctx.font = 'bold 12px monospace';
+  ctx.font = `bold 14px ${fontStack}`;
   ctx.fillText?.(isZh ? '【戰術圖例說明】' : '[MAP LEGEND]', sideX + 12, sideCurY);
   sideCurY += 18;
 
@@ -357,10 +358,10 @@ export function drawBigMapModal(
   ];
 
   legends.forEach((leg) => {
-    ctx.font = 'bold 11px monospace';
+    ctx.font = `bold 13px ${fontStack}`;
     ctx.fillStyle = leg.color;
     ctx.fillText?.(leg.sym, sideX + 14, sideCurY);
-    ctx.font = '11px monospace';
+    ctx.font = `13px ${fontStack}`;
     ctx.fillStyle = '#a0c4d8';
     ctx.fillText?.(isZh ? leg.labelZh : leg.labelEn, sideX + 32, sideCurY);
     sideCurY += 16;
@@ -375,7 +376,7 @@ export function drawBigMapModal(
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = 'bold 11px monospace';
+  ctx.font = `bold 13px ${fontStack}`;
   const closePulse = 0.7 + 0.3 * Math.sin(now * 0.008);
   ctx.fillStyle = `rgba(0, 240, 255, ${closePulse})`;
   const bottomHelp = isZh

@@ -10,6 +10,7 @@ export function drawTitleScreen(
 ): void {
   ctx.save?.();
   const isZh = language === 'zh';
+  const fontStack = '"Noto Sans TC", "Microsoft JhengHei", monospace';
 
   // 1. 深黑色賽博網格背景
   ctx.fillStyle = '#020509';
@@ -51,7 +52,7 @@ export function drawTitleScreen(
   ctx.fillStyle = '#ff0077';
   ctx.shadowColor = '#ff0077';
   ctx.shadowBlur = 8;
-  ctx.font = 'bold 15px monospace';
+  ctx.font = isZh ? `bold 17px ${fontStack}` : 'bold 17px monospace';
   const subTitle = isZh ? '// 佐格反抗軍終端協定 //' : '// TZORG RESISTANCE PROTOCOL //';
   ctx.fillText?.(subTitle, width / 2, height * 0.20 + 40);
 
@@ -125,19 +126,19 @@ export function drawTitleScreen(
   items.forEach((item, idx) => {
     const iy = my + 30 + idx * 44;
     ctx.textAlign = 'left';
-    ctx.font = 'bold 13px monospace';
+    ctx.font = isZh ? `bold 15px ${fontStack}` : 'bold 15px monospace';
     ctx.fillStyle = item.color;
     ctx.fillText?.(item.key, mx + 24, iy);
 
     ctx.textAlign = 'right';
-    ctx.font = '13px monospace';
+    ctx.font = isZh ? `15px ${fontStack}` : '15px monospace';
     ctx.fillStyle = item.color;
     ctx.fillText?.(item.label, mx + menuW - 24, iy);
   });
 
   // 5. 底部系統狀態列
   ctx.fillStyle = '#4a607a';
-  ctx.font = '11px monospace';
+  ctx.font = isZh ? `13px ${fontStack}` : '13px monospace';
   ctx.textAlign = 'center';
   ctx.fillText?.(
     isZh

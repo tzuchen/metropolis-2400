@@ -9,6 +9,8 @@ export function drawManualModal(
 ): void {
   ctx.save?.();
   const isZh = language === 'zh';
+  const fontStack = '"Noto Sans TC", "Microsoft JhengHei", monospace';
+  const font = isZh ? fontStack : 'monospace';
 
   const boxW = Math.min(width - 40, 740);
   const boxH = Math.min(height - 60, 480);
@@ -28,7 +30,7 @@ export function drawManualModal(
 
   // 標題
   ctx.fillStyle = '#00f0ff';
-  ctx.font = 'bold 15px monospace';
+  ctx.font = `bold 14px ${font}`;
   ctx.textBaseline = 'top';
   ctx.textAlign = 'left';
   const title = isZh
@@ -129,14 +131,14 @@ export function drawManualModal(
   let secY = y + 48;
   sections.forEach((sec) => {
     ctx.fillStyle = sec.color;
-    ctx.font = 'bold 12px monospace';
+    ctx.font = `bold 14px ${font}`;
     ctx.shadowColor = sec.color;
     ctx.shadowBlur = 4;
     ctx.fillText?.(sec.title, x + 24, secY);
     ctx.shadowBlur = 0;
 
     ctx.fillStyle = '#d0e4f2';
-    ctx.font = '11px monospace';
+    ctx.font = `13px ${font}`;
     sec.items.forEach((item, idx) => {
       ctx.fillText?.('• ' + item, x + 32, secY + 18 + idx * 16);
     });
@@ -147,7 +149,7 @@ export function drawManualModal(
   // 底部關閉提示
   const pulse = 0.7 + 0.3 * Math.sin(now * 0.008);
   ctx.fillStyle = `rgba(0, 240, 255, ${pulse})`;
-  ctx.font = 'bold 12px monospace';
+  ctx.font = `bold 13px ${font}`;
   ctx.textAlign = 'center';
   ctx.fillText?.(
     isZh ? '按 [ H ] 或 [ ESC ] 或 [ 空格鍵 ] 關閉特工手冊' : 'PRESS [ H ] OR [ ESC ] OR [ SPACE ] TO CLOSE MANUAL',
