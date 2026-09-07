@@ -60,7 +60,7 @@ export function initGame(): GameEngineInstance {
   let audioUnlocked = false;
 
   window.addEventListener('keydown', (event: KeyboardEvent) => {
-    const blockedKeys = [' ', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+    const blockedKeys = [' ', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'];
 
     if (blockedKeys.includes(event.key) || event.code === 'Space') {
       event.preventDefault();

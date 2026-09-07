@@ -9,6 +9,7 @@ import { wrapText } from './textWrap';
 import { drawManualModal } from './manualModal';
 import { drawBreachModal, type BreachSession } from './breachProtocol';
 import { drawMiniRadar } from './radar';
+import { drawBigMapModal } from './bigMapModal';
 
 export type Position = { x: number; y: number };
 export type Language = 'zh' | 'en';
@@ -43,6 +44,7 @@ export class GameRenderer {
   activeBreachSession: BreachSession | null = null;
   isOmniVisionActive: boolean = false;
   isFullMapActive: boolean = false;
+  isBigMapOpen: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -322,6 +324,25 @@ export class GameRenderer {
     // 14.11 操作手冊畫面 (Manual Modal)
     if (this.isManualOpen) {
       this.drawManualModal(width, height, ctx, now, this.language);
+    }
+
+    // 14.12 戰術全域大地圖 (Tactical Big Map Modal)
+    if (this.isBigMapOpen) {
+      drawBigMapModal(
+        width,
+        height,
+        map,
+        player,
+        robots,
+        npcs,
+        groundItems,
+        visibleTiles,
+        exploredTiles,
+        ctx,
+        now,
+        this.isFullMapActive,
+        this.language
+      );
     }
 
     // 15. 死亡／勝利畫面橫幅 (Game Over / Victory Banner)
@@ -683,6 +704,8 @@ export class GameRenderer {
     ctx.fillText?.('[X] MAP', 770, height - 13);
     ctx.fillStyle = '#00f0ff';
     ctx.fillText?.('[0] RES', 825, height - 13);
+    ctx.fillStyle = '#00ffcc';
+    ctx.fillText?.('[TAB] MAP', 880, height - 13);
 
     ctx.restore?.();
   }

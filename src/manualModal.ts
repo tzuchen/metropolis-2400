@@ -53,7 +53,8 @@ export function drawManualModal(
             '[ W A S D / 方向鍵 ]：八向移動與探索街道。',
             '[ 空格鍵 / SPACE ]：原地待命一回合（避開巡邏路徑）。',
             '[ E ]：手動開關門鎖。  [ T ]：居民對話 / 終端機接入。',
-            '[ 8 / F5 ]：即時存檔。  [ 9 / F9 ]：即時讀檔。  [ Z ]：中英切換。',
+            '[ TAB ]：開啟/關閉全域戰術大地圖。  [ 8 / F5 ]：即時存檔。  [ 9 / F9 ]：即時讀檔。',
+            '[ Z ]：中英切換。',
           ],
         },
         {
@@ -92,7 +93,8 @@ export function drawManualModal(
             '[ W A S D / Arrow Keys ] : Move and navigate sector street grid.',
             '[ SPACE ] : Wait a turn in position (allow patrols to pass).',
             '[ E ] : Toggle door state.  [ T ] : Interact with NPCs / Terminals.',
-            '[ 8 / F5 ] : Quick Save.  [ 9 / F9 ] : Quick Load.  [ Z ] : Toggle EN/ZH.',
+            '[ TAB ] : Open/Close Tactical Big Map.  [ 8 / F5 ] : Quick Save.  [ 9 / F9 ] : Quick Load.',
+            '[ Z ] : Toggle EN/ZH.',
           ],
         },
         {

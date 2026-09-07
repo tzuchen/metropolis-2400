@@ -57,6 +57,7 @@ export class GameEngine {
   activeBreachSession: BreachSession | null = null;
   isOmniVisionActive: boolean = false;
   isFullMapActive: boolean = false;
+  isBigMapOpen: boolean = false;
   currentResolutionIndex: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -577,6 +578,7 @@ export class GameEngine {
     this.renderer.activeBreachSession = this.activeBreachSession;
     this.renderer.isOmniVisionActive = this.hasOmniVision();
     this.renderer.isFullMapActive = this.hasFullMap();
+    this.renderer.isBigMapOpen = this.isBigMapOpen;
     (this.player as any).victory = this.victory;
     this.renderer.render(
       this.map,
@@ -629,6 +631,24 @@ export class GameEngine {
       }
       if (key === 'z' || key === 'Z') {
         this.toggleLanguage();
+        return;
+      }
+      return;
+    }
+
+    if (this.isBigMapOpen) {
+      if (key === 'Escape' || key === 'Esc' || key === 'Tab' || key === 'tab' || key === ' ' || key === 'Space' || key === 'Enter' || key === 'k' || key === 'K') {
+        this.isBigMapOpen = false;
+        soundFX.terminal();
+        this.render();
+        return;
+      }
+      if (key === 'x' || key === 'X') {
+        this.toggleFullMap();
+        return;
+      }
+      if (key === 'v' || key === 'V') {
+        this.toggleOmniVision();
         return;
       }
       return;
@@ -977,6 +997,11 @@ export class GameEngine {
       return;
     } else if (key === 'i' || key === 'I') {
       this.isInventoryOpen = true;
+      soundFX.terminal();
+      this.render();
+      return;
+    } else if (key === 'Tab' || key === 'tab' || key === 'k' || key === 'K') {
+      this.isBigMapOpen = true;
       soundFX.terminal();
       this.render();
       return;
