@@ -350,14 +350,14 @@ export class GameRenderer {
       this.drawMissionLogModal(missionObjectives ?? [], width, height, ctx, now);
     }
 
-    // 14.7 故事數據檔案閱讀器 (Data Slate Story Viewer)
-    if (activeStoryLog) {
-      this.drawStoryLogModal(activeStoryLog, width, height, ctx, now);
-    }
-
-    // 14.8 反抗軍資料庫視窗 (Story Archive Modal)
+    // 14.7 反抗軍資料庫視窗 (Story Archive Modal)
     if (isStoryArchiveOpen) {
       this.drawStoryArchiveModal(storyLogs ?? [], width, height, ctx, now);
+    }
+
+    // 14.8 故事數據檔案閱讀器 (Data Slate Story Viewer)
+    if (activeStoryLog) {
+      this.drawStoryLogModal(activeStoryLog, width, height, ctx, now);
     }
 
     // 14.9 義體改裝診所 (Augmentation Clinic Modal)
@@ -1503,40 +1503,49 @@ export class GameRenderer {
     const boxH = Math.min(height - 60, 440);
     const x = (width - boxW) / 2;
     const y = (height - boxH) / 2;
+    const isZh = this.language === 'zh';
+    const isUnlocked = log.read !== false;
 
     ctx.fillStyle = 'rgba(2, 8, 14, 0.97)';
     ctx.fillRect?.(x, y, boxW, boxH);
 
-    ctx.strokeStyle = '#00e5ff';
-    ctx.shadowColor = '#00e5ff';
+    const borderColor = isUnlocked ? '#00e5ff' : '#ff5533';
+    ctx.strokeStyle = borderColor;
+    ctx.shadowColor = borderColor;
     ctx.shadowBlur = 12;
     ctx.lineWidth = 2;
     ctx.strokeRect?.(x + 1, y + 1, boxW - 2, boxH - 2);
 
-    ctx.fillStyle = '#00e5ff';
+    ctx.fillStyle = borderColor;
     ctx.font = 'bold 13px monospace';
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
-    ctx.fillText?.('// TZORG INTELLIGENCE ARCHIVE // CLASSIFIED RECORD //', x + 24, y + 18);
+    const headerText = isUnlocked
+      ? '// TZORG INTELLIGENCE ARCHIVE // CLASSIFIED RECORD //'
+      : '// TZORG ENCRYPTION // ACCESS RESTRICTED //';
+    ctx.fillText?.(headerText, x + 24, y + 18);
 
-    const isZh = this.language === 'zh';
     const logTitle = isZh && log.titleZh ? log.titleZh : log.title;
-    ctx.fillStyle = '#ffea00';
+    const titlePrefix = isUnlocked ? '► ' : '🔒 ';
+    const titleColor = isUnlocked ? '#ffea00' : '#ff7755';
+    const contentColor = isUnlocked ? '#e4f4fc' : '#ffccaa';
+
+    ctx.fillStyle = titleColor;
     ctx.font = getTitleFont(14, isZh);
-    ctx.fillText?.('► ' + logTitle.toUpperCase(), x + 24, y + 38);
+    ctx.fillText?.(titlePrefix + logTitle.toUpperCase(), x + 24, y + 38);
 
     ctx.fillStyle = '#8aa0b2';
     ctx.font = '10px monospace';
     ctx.fillText?.(`OPERATIVE: RAVEN  |  SOURCE: ${log.author}  |  TIMESTAMP: ${log.timestamp}`, x + 24, y + 56);
 
-    ctx.strokeStyle = 'rgba(0, 229, 255, 0.35)';
+    ctx.strokeStyle = isUnlocked ? 'rgba(0, 229, 255, 0.35)' : 'rgba(255, 119, 85, 0.35)';
     ctx.lineWidth = 1;
     ctx.beginPath?.();
     ctx.moveTo?.(x + 24, y + 72);
     ctx.lineTo?.(x + boxW - 24, y + 72);
     ctx.stroke?.();
 
-    ctx.fillStyle = '#e4f4fc';
+    ctx.fillStyle = contentColor;
     ctx.font = getFont(14, isZh);
     let lineY = y + 84;
     const maxLineW = boxW - 48;
@@ -1552,7 +1561,7 @@ export class GameRenderer {
     });
 
     const pulse = 0.7 + 0.3 * Math.sin(now * 0.008);
-    ctx.fillStyle = `rgba(0, 229, 255, ${pulse})`;
+    ctx.fillStyle = `rgba(${isUnlocked ? '0, 229, 255' : '255, 85, 51'}, ${pulse})`;
     ctx.font = getTitleFont(12, isZh);
     ctx.textAlign = 'center';
     const footerText = isZh
@@ -1610,24 +1619,33 @@ export class GameRenderer {
     ctx.lineTo?.(x + boxW - 20, y + 54);
     ctx.stroke?.();
 
+    const selectedIndex = (this as any).storyArchiveSelectedIndex ?? 0;
+
     logs.forEach((log, i) => {
       const ly = y + 66 + i * 80;
       const isFound = log.read;
+      const isSelected = selectedIndex === i;
 
       ctx.fillStyle = isFound ? 'rgba(15, 28, 38, 0.7)' : 'rgba(10, 15, 20, 0.5)';
       ctx.fillRect?.(x + 20, ly, boxW - 40, 70);
 
-      ctx.strokeStyle = isFound ? '#00e5ff' : '#334455';
+      if (isSelected) {
+        ctx.strokeStyle = '#ffea00';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#ffea00';
+        ctx.shadowBlur = 8;
+      } else {
+        ctx.strokeStyle = isFound ? '#00e5ff' : '#334455';
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+      }
       ctx.strokeRect?.(x + 20, ly, boxW - 40, 70);
 
       ctx.fillStyle = isFound ? '#00e5ff' : '#667788';
       ctx.font = getTitleFont(12, isZh);
       const logTitle = isZh && log.titleZh ? log.titleZh : log.title;
-      const slateLabel = isFound
-        ? `[ ${isZh ? '數據板' : 'SLATE'} 0${i + 1} ] ${logTitle}`
-        : isZh
-          ? `[ 數據板 0${i + 1} ] // 加密數據損毀未尋獲 //`
-          : `[ SLATE 0${i + 1} ] // ENCRYPTED DATA CORRUPTED //`;
+      const prefix = isSelected ? '► ' : '  ';
+      const slateLabel = `${prefix}[ ${i + 1} ] [ ${isZh ? '數據板' : 'SLATE'} 0${i + 1} ] ${isFound ? logTitle : (isZh ? '// 🔒 加密鎖定（按此查閱線索）//' : '// 🔒 ENCRYPTED (PRESS TO VIEW INTEL) //')}`;
       ctx.fillText?.(slateLabel, x + 30, ly + 10);
 
       ctx.fillStyle = isFound ? '#ffea00' : '#445566';
@@ -1655,8 +1673,8 @@ export class GameRenderer {
     ctx.font = getTitleFont(11, isZh);
     ctx.textAlign = 'center';
     const footerText = isZh
-      ? '按 [ L ] 或 [ ESC ] 關閉檔案庫  |  按 [ Z ] 切換中英文'
-      : 'PRESS [ L ] OR [ ESC ] TO RETURN TO TACTICAL VIEW  |  [ Z ] SWITCH LANGUAGE';
+      ? '按 [ 1-4 ] 或 [ ↑/↓ ] 選擇按 [ ENTER ] 閱讀  |  支援滑鼠點擊卡片  |  按 [ Z ] 切換語言  |  [ L / ESC ] 關閉'
+      : 'PRESS [ 1-4 ] OR [ UP/DOWN + ENTER ] TO READ  |  CLICK TO OPEN  |  [ Z ] SWITCH LANG  |  [ L / ESC ] CLOSE';
     ctx.fillText?.(footerText, x + boxW / 2, y + boxH - 18);
 
     ctx.shadowBlur = 0;

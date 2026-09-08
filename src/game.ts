@@ -74,6 +74,7 @@ export class GameEngine {
   private broadcastQueue: string[] = [];
   private lastSectorId: string = '';
   private lastLandmarkKey: string = '';
+  storyArchiveSelectedIndex: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -116,6 +117,36 @@ export class GameEngine {
     this.updateFOV();
     this.render();
     this.startAnimationLoop();
+    this.setupPointerEvents();
+  }
+
+  private setupPointerEvents(): void {
+    if (typeof window === 'undefined' || !this.canvas || typeof this.canvas.addEventListener !== 'function') return;
+    this.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
+      if (!this.isStoryArchiveOpen) return;
+      const rect = this.canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const logs = this.storyLogs;
+      if (!logs || logs.length === 0) return;
+
+      const boxW = Math.min(this.canvas.width - 40, 720);
+      const boxH = Math.min(this.canvas.height - 60, 440);
+      const startX = (this.canvas.width - boxW) / 2;
+      const startY = (this.canvas.height - boxH) / 2;
+
+      for (let i = 0; i < logs.length; i++) {
+        const cardX = startX + 20;
+        const cardY = startY + 66 + i * 80;
+        const cardW = boxW - 40;
+        const cardH = 70;
+        if (x >= cardX && x <= cardX + cardW && y >= cardY && y <= cardY + cardH) {
+          this.storyArchiveSelectedIndex = i;
+          this.openStoryLog(logs[i]);
+          return;
+        }
+      }
+    });
   }
 
   private getBroadcastMessages(): string[] {
@@ -861,6 +892,7 @@ export class GameEngine {
     this.renderer.isFullMapActive = this.hasFullMap();
     this.renderer.isBigMapOpen = this.isBigMapOpen;
     (this.renderer as any).bigMapSelectedSector = this.bigMapSelectedSector;
+    (this.renderer as any).storyArchiveSelectedIndex = this.storyArchiveSelectedIndex;
     (this.player as any).victory = this.victory;
     this.renderer.render(
       this.map,
@@ -1026,13 +1058,29 @@ export class GameEngine {
         this.toggleLanguage();
         return;
       }
-      const num = parseInt(key, 10);
+      let cleanKey = key.replace(/^(Digit|Numpad)/, '');
+      const num = parseInt(cleanKey, 10);
       if (!isNaN(num) && num >= 1 && num <= this.storyLogs.length) {
-        const selected = this.storyLogs[num - 1];
-        if (selected && selected.read) {
-          this.activeStoryLog = selected;
-          soundFX.terminal();
-          this.render();
+        this.storyArchiveSelectedIndex = num - 1;
+        this.openStoryLog(this.storyLogs[num - 1]);
+        return;
+      }
+      if (['ArrowUp', 'w', 'W'].includes(key)) {
+        this.storyArchiveSelectedIndex = (this.storyArchiveSelectedIndex - 1 + this.storyLogs.length) % this.storyLogs.length;
+        soundFX.terminal();
+        this.render();
+        return;
+      }
+      if (['ArrowDown', 's', 'S'].includes(key)) {
+        this.storyArchiveSelectedIndex = (this.storyArchiveSelectedIndex + 1) % this.storyLogs.length;
+        soundFX.terminal();
+        this.render();
+        return;
+      }
+      if (['Enter', ' ', 'Space'].includes(key)) {
+        const log = this.storyLogs[this.storyArchiveSelectedIndex];
+        if (log) {
+          this.openStoryLog(log);
           return;
         }
       }
@@ -2023,6 +2071,62 @@ export class GameEngine {
       if (scavengeObj && !scavengeObj.completed) {
         scavengeObj.completed = true;
         this.pushMessage('MISSION UPDATE: Tactical Stockpile objective complete!', 'success');
+      }
+    }
+  }
+
+  openStoryLog(selected: StoryLog): void {
+    if (selected && selected.read) {
+      this.activeStoryLog = selected;
+      soundFX.terminal();
+      this.render();
+      return;
+    }
+    if (selected && !selected.read) {
+      const isZh = this.language === 'zh';
+      const locationHints: Record<string, { x: number; y: number; zh: string; en: string }> = {
+        'slate-vance': {
+          x: 4, y: 18,
+          zh: '西側廢棄生化實驗室 (x: 4, y: 18)',
+          en: 'Western abandoned bio-lab (x: 4, y: 18)',
+        },
+        'slate-kira': {
+          x: 3, y: 23,
+          zh: '反抗軍安全屋內部暗格 (x: 3, y: 23)',
+          en: 'Hidden compartment inside Rebel Safehouse (x: 3, y: 23)',
+        },
+        'slate-tzorg': {
+          x: 23, y: 7,
+          zh: '檢查哨外圍巡邏哨兵殘骸 (x: 23, y: 7)',
+          en: 'Wreckage of patrol sentry outside checkpoint (x: 23, y: 7)',
+        },
+        'slate-ghost': {
+          x: 32, y: 19,
+          zh: '通訊中繼天線節點 (x: 32, y: 19)',
+          en: 'Comm relay antenna node (x: 32, y: 19)',
+        },
+      };
+      const hint = locationHints[selected.id];
+      if (hint) {
+        this.activeStoryLog = {
+          ...selected,
+          read: false,
+          content: [
+            '// ACCESS DENIED: PHYSICAL DISK NOT RECOVERED //',
+            'RECON INTEL LOCATION:',
+            `> ${hint.en}`,
+            'Stand on the glowing data slate on the map and press [G] to recover and decrypt.'
+          ],
+          contentZh: [
+            '// 存取拒絕：實體記憶磁碟尚未回收 //',
+            '偵察情報位置線索：',
+            `> ${hint.zh}`,
+            '請特工在地圖上找到散發光芒的數據板，站在上方按 [G] 即可拾取並完全解密。'
+          ]
+        } as unknown as StoryLog;
+        soundFX.terminal();
+        this.render();
+        return;
       }
     }
   }
