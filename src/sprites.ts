@@ -321,23 +321,48 @@ export function drawTileSprite(
       ctx.fillRect(x + size - borderW, y + s + 3, borderW, 3);
     }
 
+    // 取得網格座標 gy 以決定流向
+    const gy = Math.round(y / size);
+    const isWestbound = gy === 14;
+
     // 動態滾動黃黑齒軌
     const offset = Math.floor((time * 0.04) % 8);
     ctx.fillStyle = '#222d38';
-    for (let tx = -8 + offset; tx < size; tx += 8) {
-      ctx.fillRect(x + tx, y + 4, 4, size - 8);
+    if (isWestbound) {
+      // 向西流動：齒軌往左移動
+      for (let tx = size - offset; tx > -8; tx -= 8) {
+        ctx.fillRect(x + tx, y + 4, 4, size - 8);
+      }
+    } else {
+      // 向東流動：齒軌往右移動
+      for (let tx = -8 + offset; tx < size; tx += 8) {
+        ctx.fillRect(x + tx, y + 4, 4, size - 8);
+      }
     }
 
     // 動態滾動箭頭條紋
     const arrowOffset = Math.floor((time * 0.06) % 12);
     ctx.fillStyle = '#ffaa00';
-    for (let ay = -12 + arrowOffset; ay < size; ay += 12) {
-      ctx.beginPath();
-      ctx.moveTo(x + size / 2 - 4, y + ay + 6);
-      ctx.lineTo(x + size / 2 + 4, y + ay + 6);
-      ctx.lineTo(x + size / 2, y + ay);
-      ctx.closePath();
-      ctx.fill();
+    if (isWestbound) {
+      // 向西流動：向左箭頭 (< < <) 並向左滾動
+      for (let ax = size - arrowOffset; ax > -12; ax -= 12) {
+        ctx.beginPath();
+        ctx.moveTo(x + ax + 4, y + size / 2 - 4);
+        ctx.lineTo(x + ax + 4, y + size / 2 + 4);
+        ctx.lineTo(x + ax - 4, y + size / 2);
+        ctx.closePath();
+        ctx.fill();
+      }
+    } else {
+      // 向東流動：向右箭頭 (> > >) 並向右滾動
+      for (let ax = -12 + arrowOffset; ax < size; ax += 12) {
+        ctx.beginPath();
+        ctx.moveTo(x + ax - 4, y + size / 2 - 4);
+        ctx.lineTo(x + ax - 4, y + size / 2 + 4);
+        ctx.lineTo(x + ax + 4, y + size / 2);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
   } else if (kind === 'TURRET') {
     // 自動防衛砲塔 (Automated Laser Turret)

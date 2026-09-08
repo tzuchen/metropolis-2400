@@ -115,4 +115,37 @@ const npcsBackS1 = (engine as any).npcs;
 assert(npcsBackS1.some((n: any) => n.id === 'npc-hiro'), 'Switching back to Sector 1 restores Sector 1 NPCs');
 console.log('✅ Sector switching back and forth maintains correct NPCs!');
 
+// 5. Industrial Conveyor Belt Transport verification
+engine.switchSector('sector-2');
+const player = (engine as any).player;
+
+// Test upper conveyor belt (y=8, eastbound)
+player.x = 10;
+player.y = 8;
+engine.tick();
+assert(player.x === 11 && player.y === 8, 'Player on upper conveyor (y=8) should move east to x=11');
+assert(player.facing === 'right', 'Player on upper conveyor should face right');
+
+// Test lower conveyor belt (y=14, westbound)
+player.x = 10;
+player.y = 14;
+engine.tick();
+assert(player.x === 9 && player.y === 14, 'Player on lower conveyor (y=14) should move west to x=9');
+assert(player.facing === 'left', 'Player on lower conveyor should face left');
+
+// Test robot on upper conveyor belt
+player.x = 5;
+player.y = 5;
+const robot = (engine as any).robots[0];
+if (robot) {
+  robot.x = 12;
+  robot.y = 8;
+  robot.isAlive = true;
+  engine.processConveyors();
+  assert(robot.x === 13 && robot.y === 8, 'Robot on upper conveyor (y=8) should move east to x=13');
+} else {
+  console.log('⚠️ No robots found in Sector 2, skipping robot conveyor test');
+}
+console.log('✅ Industrial Conveyor Belt Transport verified (Eastbound & Westbound)!');
+
 console.log('🎉 All themed district and sector verification tests passed successfully!');

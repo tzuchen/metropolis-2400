@@ -1363,6 +1363,9 @@ export class GameEngine {
       return;
     }
 
+    // Process conveyor belt transport
+    this.processConveyors();
+
     for (const robot of this.robots) {
       if (!robot.isAlive) {
         continue;
@@ -1821,6 +1824,84 @@ export class GameEngine {
       this.terminalInputBuffer += key;
       (this.activeTerminal as any).input = this.terminalInputBuffer;
       this.render();
+    }
+  }
+
+  private getConveyorDirection(x: number, y: number): { dx: number; dy: number } {
+    // Sector 2 conveyor rules
+    if (y === 8) {
+      return { dx: 1, dy: 0 }; // East (upper production line)
+    } else if (y === 14) {
+      return { dx: -1, dy: 0 }; // West (lower return line)
+    }
+    return { dx: 1, dy: 0 }; // Default East
+  }
+
+  private isConveyorTile(x: number, y: number): boolean {
+    const tile = getTile(this.map, { x, y });
+    if (tile === undefined) return false;
+    // Check for CONVEYOR tile type (value 10 or string 'CONVEYOR')
+    if (Number(tile) === 10) return true;
+    if (String(tile).toUpperCase() === 'CONVEYOR') return true;
+    return false;
+  }
+
+  processConveyors(): void {
+    // Process player conveyor movement
+    if (this.player.isAlive && this.isConveyorTile(this.player.x, this.player.y)) {
+      const { dx, dy } = this.getConveyorDirection(this.player.x, this.player.y);
+      const targetX = this.player.x + dx;
+      const targetY = this.player.y + dy;
+
+      // Check if target is walkable and no robot blocking
+      const targetTile = getTile(this.map, { x: targetX, y: targetY });
+      const targetWalkable = targetTile !== undefined && isWalkable(targetTile);
+      const blockingRobot = this.robots.find((r) => r.isAlive && r.x === targetX && r.y === targetY);
+
+      if (targetWalkable && !blockingRobot) {
+        this.player.x = targetX;
+        this.player.y = targetY;
+
+        // Update facing
+        if (dx === 1) (this.player as any).facing = 'right';
+        else if (dx === -1) (this.player as any).facing = 'left';
+        else if (dy === 1) (this.player as any).facing = 'down';
+        else if (dy === -1) (this.player as any).facing = 'up';
+
+        // Trigger item pickup
+        this.checkItemPickup();
+
+        // Play sound and show feedback
+        soundFX.step();
+        const directionText = dx === 1 ? '»» CONVEYOR »»' : dx === -1 ? '«« CONVEYOR ««' : 'CONVEYOR';
+        this.pushFloatingText(this.player.x, this.player.y, directionText, '#00f0ff');
+        this.pushMessage('Conveyor belt transport: Operative moved to new position.', 'info');
+      }
+    }
+
+    // Process robot conveyor movement
+    for (const robot of this.robots) {
+      if (!robot.isAlive) continue;
+      if (!this.isConveyorTile(robot.x, robot.y)) continue;
+
+      const { dx, dy } = this.getConveyorDirection(robot.x, robot.y);
+      const targetX = robot.x + dx;
+      const targetY = robot.y + dy;
+
+      // Check if target is walkable and no blocking entities
+      const targetTile = getTile(this.map, { x: targetX, y: targetY });
+      const targetWalkable = targetTile !== undefined && isWalkable(targetTile);
+
+      // Check if player is blocking
+      const playerBlocking = this.player.isAlive && this.player.x === targetX && this.player.y === targetY;
+
+      // Check if another robot is blocking
+      const robotBlocking = this.robots.find((r) => r.isAlive && r !== robot && r.x === targetX && r.y === targetY);
+
+      if (targetWalkable && !playerBlocking && !robotBlocking) {
+        robot.x = targetX;
+        robot.y = targetY;
+      }
     }
   }
 
