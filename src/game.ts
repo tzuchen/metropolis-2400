@@ -1,7 +1,7 @@
 import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard, Language, LaserBeam } from './types';
 import { buildSector1Map, buildSector2Map, calculateFOV, disableForcefield, getTile, isWalkable, toggleDoor } from './map';
 import { hasSavedGame, saveGameState, loadGameState } from './saveLoad';
-import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise, installAugment, cycleWeapon } from './entities';
+import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise, installAugment, cycleWeapon, createQuantumAnnihilator } from './entities';
 import { updateRobotAI } from './ai';
 import { TerminalSession } from './terminal';
 import { GameRenderer } from './renderer';
@@ -303,6 +303,12 @@ export class GameEngine {
         description: 'Bypass Hunter-Killer defense grid and reach Sector 1 Extraction Nexus.',
         completed: false,
       },
+      {
+        id: 'obj-superweapon',
+        title: 'Project Singularity: Quantum Annihilator',
+        description: 'Collect Quantum Core from Sylvia and Matrix Chip from Sewers, then forge weapon with Zero-One in Sector 2.',
+        completed: false,
+      },
     ];
   }
 
@@ -387,7 +393,7 @@ export class GameEngine {
     }
   }
 
-  private pushFloatingText(x: number, y: number, text: string, color: string): void {
+  pushFloatingText(x: number, y: number, text: string, color: string): void {
     const item = { x, y, text, color, createdAt: Date.now() };
     this.floatingTexts.push(item);
     if (this.floatingTexts.length > 8) {
@@ -912,6 +918,16 @@ export class GameEngine {
           } else if (r.type === 'CREDITS') {
             this.player.credits += r.amount;
             this.pushFloatingText(npc.x, npc.y, '+' + r.amount + ' CR', '#ffea00');
+          } else if (r.type === 'ITEM') {
+            let inventory = (this.player as any).inventory;
+            if (!Array.isArray(inventory)) {
+              inventory = [];
+              (this.player as any).inventory = inventory;
+            }
+            if (!inventory.some((it: any) => it?.id === r.item.id)) {
+              inventory.push(r.item);
+            }
+            this.pushFloatingText(npc.x, npc.y, r.item.name, '#00f0ff');
           }
           soundFX.pickup();
           this.pushMessage(r.message, 'success');
@@ -937,6 +953,48 @@ export class GameEngine {
                 isZh
                   ? 'Hiro: 多謝你幫我找回拉麵食譜！我的最大生命值提升了！'
                   : 'Hiro: Thanks for recovering my ramen recipe! My max HP increased!',
+                'success'
+              );
+            }
+          }
+        }
+
+        if (npc.id === 'npc-zero-one' && nextIndex >= list.length - 1) {
+          const inventory = (this.player as any).inventory;
+          if (Array.isArray(inventory)) {
+            const hasCore = inventory.some((it: any) => it?.id === 'item-quantum-core');
+            const hasChip = inventory.some((it: any) => it?.id === 'item-matrix-chip');
+            const hasWeapon = inventory.some((it: any) => it?.id === 'quantum-annihilator');
+            
+            if (hasCore && hasChip && !hasWeapon) {
+              (this.player as any).inventory = inventory.filter((it: any) => it?.id !== 'item-quantum-core' && it?.id !== 'item-matrix-chip');
+
+              const superWeapon = createQuantumAnnihilator();
+              (this.player as any).inventory.push(superWeapon);
+              
+              let weapons = (this.player as any).weapons;
+              if (!Array.isArray(weapons)) {
+                weapons = [];
+                (this.player as any).weapons = weapons;
+              }
+              weapons.push(superWeapon);
+              this.player.equippedWeapon = superWeapon;
+
+              this.player.credits += 100;
+              this.gainExp(150);
+
+              const superObj = this.missionObjectives.find((o) => o.id === 'obj-superweapon');
+              if (superObj && !superObj.completed) {
+                superObj.completed = true;
+                this.pushMessage('MISSION UPDATE: Project Singularity objective complete!', 'success');
+              }
+
+              soundFX.victory();
+              this.pushFloatingText(this.player.x, this.player.y, 'QUANTUM ANNIHILATOR FORGED!', '#b388ff');
+              this.pushMessage(
+                isZh
+                  ? 'Zero-One: 量子殲滅重砲組裝完成！這將改變戰局。'
+                  : 'Zero-One: Quantum Annihilator forged! This will change the game.',
                 'success'
               );
             }
@@ -1188,25 +1246,47 @@ export class GameEngine {
               this.pushMessage(hitRobot.name + ' destroyed!', 'success');
             }
           }
+          let beamColor = isBackstab ? '#ffea00' : '#00f0ff';
+          let beamType: 'LASER' | 'ELEC' | 'PLASMA' | 'NEEDLE' | 'QUANTUM' = 'LASER';
+          let beamWidth = 3;
+          let sparkColor = isBackstab ? '#ffea00' : '#00f0ff';
+          let sparkCount = 10;
+          let shakeIntensity = 0;
+
+          if (weaponId === 'QUANTUM_ANNIHILATOR') {
+            beamType = 'QUANTUM';
+            beamColor = '#b388ff';
+            beamWidth = 6;
+            sparkColor = '#b388ff';
+            sparkCount = 25;
+            shakeIntensity = 10;
+          }
+
           this.laserBeams.push({
             from: { x: this.player.x, y: this.player.y },
             to: { x: hitRobot.x, y: hitRobot.y },
-            color: isBackstab ? '#ffea00' : '#00f0ff',
+            color: beamColor,
             createdAt: Date.now(),
             duration: 350,
-            beamType: 'LASER',
-            width: 3,
+            beamType: beamType,
+            width: beamWidth,
           });
 
           const hitTileSize = (this.renderer as any)?.tileSize || 48;
           (this.fx as any).spawnSparks(
             hitRobot.x * hitTileSize + hitTileSize / 2,
             hitRobot.y * hitTileSize + hitTileSize / 2,
-            isBackstab ? '#ffea00' : '#00f0ff',
-            10
+            sparkColor,
+            sparkCount
           );
+          if (shakeIntensity > 0) {
+            (this.fx as any).triggerShake(shakeIntensity);
+          }
 
-          if (isBackstab) {
+          if (weaponId === 'QUANTUM_ANNIHILATOR') {
+            this.pushFloatingText(hitRobot.x, hitRobot.y, 'QUANTUM ANNIHILATION!', '#b388ff');
+            this.pushMessage(`QUANTUM ANNIHILATOR: Dealt ${damage} damage to ${hitRobot.name}!`, 'success');
+          } else if (isBackstab) {
             this.pushFloatingText(hitRobot.x, hitRobot.y, `CRIT ${damage}!`, '#ffea00');
             this.pushMessage(
               `AMBUSH CRITICAL OVERRIDE: Dealt ${damage} damage to ${hitRobot.name}!`,

@@ -73,6 +73,7 @@ export interface Item {
   name: string;
   nameZh?: string;
   type: ItemType;
+  itemType?: string;
   description: string;
   descriptionZh?: string;
   power: number;
@@ -82,6 +83,7 @@ export interface Item {
   weaponId?: string;
   isSuppressed?: boolean;
   range?: number;
+  iconColor?: string;
 }
 
 export interface Player extends Entity {
@@ -149,6 +151,8 @@ export interface SectorMap {
   targetSectorId?: string;
 }
 
+export type QuestReward = { type: 'HEAL' | 'ENERGY' | 'CREDITS'; amount: number; message: string; item?: any; } | { type: 'ITEM'; amount?: number; message: string; item: any; };
+
 export interface NPC extends Entity {
   role: string;
   roleZh?: string;
@@ -156,7 +160,7 @@ export interface NPC extends Entity {
   dialogue: string[];
   dialogueZh?: string[];
   currentDialogueIndex?: number;
-  questReward?: { type: 'HEAL' | 'ENERGY' | 'CREDITS'; amount: number; message: string };
+  questReward?: QuestReward;
   rewardClaimed?: boolean;
 }
 

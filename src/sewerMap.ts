@@ -122,6 +122,15 @@ export function setupSubSectorZero(game: any): void {
       description: game.language === 'zh' ? 'Hiro 朝思暮想的合成鮮味高湯配方。交給 Hiro 可獲得最大生命提升！' : 'Hiro secret umami recipe.',
       iconColor: '#ffaa00',
     },
+    {
+      id: 'item-matrix-chip',
+      name: game.language === 'zh' ? '主機矩陣覆寫晶片' : 'Tzorg Matrix Override Chip',
+      itemType: 'KEYCARD',
+      x: 15,
+      y: 14,
+      description: game.language === 'zh' ? '佐格軍用級解密晶片。能與量子約束核心合成為【量子殲滅重砲】。' : 'Military-grade decrypter chip. Component for Quantum Annihilator.',
+      iconColor: '#00f0ff',
+    },
   ];
   game.npcs = [];
   game.visibleTiles.clear();

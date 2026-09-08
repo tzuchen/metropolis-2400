@@ -40,9 +40,25 @@ export function applyBossDamage(boss: Robot, rawDamage: number, game: any): numb
   const b = boss as any;
   let finalDamage = rawDamage;
 
+  const isQuantum = (game?.player?.equippedWeapon as any)?.weaponId === 'QUANTUM_ANNIHILATOR';
+
   // 二階段護盾減傷 35%
   if (b.phase2Overclock) {
-    finalDamage = Math.max(1, Math.round(rawDamage * 0.65));
+    if (isQuantum) {
+      finalDamage = rawDamage;
+      game?.pushFloatingText?.(boss.x, boss.y, 'SHIELD BYPASS!', '#b388ff');
+      const bypassMsg = game?.language === 'zh'
+        ? '⚡ 量子殲滅重砲穿透二階段過載護盾！'
+        : '⚡ QUANTUM_ANNIHILATOR bypassed Phase 2 Overclocked Shield!';
+      game?.pushMessage?.(bypassMsg, 'info');
+    } else {
+      finalDamage = Math.max(1, Math.round(rawDamage * 0.65));
+    }
+  }
+
+  // 量子殲滅重砲電磁震盪癱瘓
+  if (isQuantum) {
+    boss.stunnedTurns = Math.max(boss.stunnedTurns ?? 0, 1);
   }
 
   const remainingHp = boss.hp - finalDamage;
@@ -125,6 +141,6 @@ export function handleBossDeath(boss: Robot, game: any): void {
   const victoryMsg = isZh
     ? '🎉 首領擊破！佐格滅絕者原型機已被殲滅，傳奇戰利品【主腦根密鑰】已掉落！(+200 CR)'
     : '🎉 BOSS ELIMINATED! EXTERMINATOR-PRIME destroyed. Master Root Cipher dropped! (+200 CR)';
-  game.pushFloatingText(boss.x, boss.y, 'BOSS ELIMINATED!', '#00ff88');
-  game.pushMessage(victoryMsg, 'success');
+  game?.pushFloatingText?.(boss.x, boss.y, 'BOSS ELIMINATED!', '#00ff88');
+  game?.pushMessage?.(victoryMsg, 'success');
 }

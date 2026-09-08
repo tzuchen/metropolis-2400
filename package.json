@@ -7,7 +7,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "tsc --noEmit && npx tsx scripts/verify-game.ts && npx tsx scripts/verify-ai.ts && npx tsx scripts/verify-depth.ts && npx tsx scripts/verify-story.ts && npx tsx scripts/verify-augments.ts && npx tsx scripts/verify-weapons.ts && npx tsx scripts/verify-elevator-endgame.ts && npx tsx scripts/verify-districts.ts && npx tsx scripts/verify-title-save-translation.ts && npx tsx scripts/verify-breach-boss-manual.ts && npx tsx scripts/verify-bgm-boss-sewers.ts && npx tsx scripts/verify-vision-and-minimap.ts && npx tsx scripts/verify-resolution.ts && npx tsx scripts/verify-big-map.ts && npx tsx scripts/verify-combat-fx-dash-gps.ts && npx tsx scripts/verify-enemy-weapon-fx.ts && npx tsx scripts/verify-robot-durability-ai.ts && npx tsx scripts/verify-stealth-disguise-bgm.ts"
+    "test": "tsc --noEmit && npx tsx scripts/verify-game.ts && npx tsx scripts/verify-ai.ts && npx tsx scripts/verify-depth.ts && npx tsx scripts/verify-story.ts && npx tsx scripts/verify-augments.ts && npx tsx scripts/verify-weapons.ts && npx tsx scripts/verify-elevator-endgame.ts && npx tsx scripts/verify-districts.ts && npx tsx scripts/verify-title-save-translation.ts && npx tsx scripts/verify-breach-boss-manual.ts && npx tsx scripts/verify-bgm-boss-sewers.ts && npx tsx scripts/verify-vision-and-minimap.ts && npx tsx scripts/verify-resolution.ts && npx tsx scripts/verify-big-map.ts && npx tsx scripts/verify-combat-fx-dash-gps.ts && npx tsx scripts/verify-enemy-weapon-fx.ts && npx tsx scripts/verify-robot-durability-ai.ts && npx tsx scripts/verify-stealth-disguise-bgm.ts && npx tsx scripts/verify-superweapon-quest.ts"
   },
   "devDependencies": {
     "typescript": "^5.9.0",

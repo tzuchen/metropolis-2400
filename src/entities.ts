@@ -275,6 +275,24 @@ export function consumeEnergy(player: Player, amount: number): boolean {
   return true;
 }
 
+export function createQuantumAnnihilator(): Item {
+  const item = createItem(
+    'quantum-annihilator',
+    'Quantum Annihilator',
+    WEAPON_TYPE,
+    {
+      power: 220,
+      energyCost: 15,
+      equipped: true,
+      description: 'Experimental anti-matter cannon. Direct hit bypasses Exterminator shield overclocks.',
+    }
+  );
+  (item as any).weaponId = 'QUANTUM_ANNIHILATOR';
+  (item as any).range = 7;
+  (item as any).isSuppressed = false;
+  return item;
+}
+
 export function installAugment(player: Player, augmentId: string): boolean {
   const p = player as unknown as {
     credits: number;

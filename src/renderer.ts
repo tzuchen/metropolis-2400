@@ -259,6 +259,8 @@ export class GameRenderer {
           this.drawPlasmaBeam(x1, y1, x2, y2, color, ctx, now);
         } else if (beamType === 'NEEDLE') {
           this.drawNeedleTracer(x1, y1, x2, y2, color, ctx, now);
+        } else if (beamType === 'QUANTUM') {
+          this.drawQuantumBeam(x1, y1, x2, y2, color, ctx, now);
         } else {
           this.drawLaserBeam(x1, y1, x2, y2, color, ctx, now);
         }
@@ -728,6 +730,46 @@ export class GameRenderer {
     ctx.arc?.(x2, y2, 2, 0, Math.PI * 2);
     ctx.fill?.();
 
+    ctx.shadowBlur = 0;
+    ctx.restore?.();
+  }
+
+  drawQuantumBeam(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0): void {
+    ctx.save?.();
+    const pulse = 0.8 + 0.2 * Math.sin(now * 0.015);
+
+    // 外層紫色高能反物質光束
+    ctx.strokeStyle = '#b388ff';
+    ctx.shadowColor = '#b388ff';
+    ctx.shadowBlur = 14;
+    ctx.lineWidth = 6 * pulse;
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath?.();
+    ctx.moveTo?.(x1, y1);
+    ctx.lineTo?.(x2, y2);
+    ctx.stroke?.();
+
+    // 內層白青色凝聚核心
+    ctx.strokeStyle = '#00ffff';
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 8;
+    ctx.lineWidth = 2.5;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath?.();
+    ctx.moveTo?.(x1, y1);
+    ctx.lineTo?.(x2, y2);
+    ctx.stroke?.();
+
+    // 核心白點
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 4;
+    ctx.globalAlpha = 1;
+    ctx.beginPath?.();
+    ctx.arc?.(x2, y2, 3, 0, Math.PI * 2);
+    ctx.fill?.();
+
+    ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
     ctx.restore?.();
   }
