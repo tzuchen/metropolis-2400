@@ -240,6 +240,11 @@ export class GameRenderer {
     // 7. 繪製主角 (帶有風衣、目鏡、武器與護盾)
     this.drawPlayer(player, camX, camY, ctx, now);
 
+    // 7.5 繪製戰術瞄準雷射與鎖定框 (Laser Sight & Lock-on Reticle)
+    if ((player as any).isWeaponDrawn) {
+      this.drawLaserSightAndLockOn(player, robots, camX, camY, ctx, now);
+    }
+
     // 8. 繪製雷射彈道光束
     if (Array.isArray(laserBeams)) {
       laserBeams.forEach((beam) => {
@@ -963,6 +968,133 @@ export class GameRenderer {
     ctx.restore?.();
   }
 
+  drawLaserSightAndLockOn(player: Player, robots: Robot[], camX: number, camY: number, ctx: any, now: number): void {
+    const p = player as any;
+    const px = Number(p?.x) || 0;
+    const py = Number(p?.y) || 0;
+    const facing = p?.facing || 'right';
+    const weapon = p?.equippedWeapon;
+    if (!weapon) return;
+
+    const range = Number(weapon.range) || 5;
+    const dmg = Number(weapon.power ?? weapon.damage ?? 0) || 0;
+    const isQuantum = String(weapon.name || '').toUpperCase().includes('QUANTUM');
+    const laserColor = isQuantum ? '#b388ff' : '#ff3855';
+
+    // Determine direction vector
+    let dx = 0, dy = 0;
+    if (facing === 'right') dx = 1;
+    else if (facing === 'left') dx = -1;
+    else if (facing === 'down') dy = 1;
+    else if (facing === 'up') dy = -1;
+
+    // Calculate end point of laser
+    const endX = px + dx * range;
+    const endY = py + dy * range;
+
+    // Draw laser line
+    ctx.save?.();
+    ctx.strokeStyle = laserColor;
+    ctx.shadowColor = laserColor;
+    ctx.shadowBlur = 8;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath?.();
+    ctx.moveTo?.(px * this.tileSize - camX + this.tileSize / 2, py * this.tileSize - camY + this.tileSize / 2);
+    ctx.lineTo?.(endX * this.tileSize - camX + this.tileSize / 2, endY * this.tileSize - camY + this.tileSize / 2);
+    ctx.stroke?.();
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    ctx.restore?.();
+
+    // Check for robots in the line of fire
+    let lockedRobot: Robot | null = null;
+    let lockedDist = Infinity;
+
+    if (Array.isArray(robots)) {
+      robots.forEach((robot) => {
+        if (!robot || robot.isAlive === false) return;
+        const rx = Number(robot.x);
+        const ry = Number(robot.y);
+        if (Number.isNaN(rx) || Number.isNaN(ry)) return;
+
+        // Check if robot is in the line of fire
+        if (dx !== 0 && dy === 0) {
+          if (ry === py && ((dx > 0 && rx > px && rx <= endX) || (dx < 0 && rx < px && rx >= endX))) {
+            const dist = Math.abs(rx - px);
+            if (dist < lockedDist) {
+              lockedDist = dist;
+              lockedRobot = robot;
+            }
+          }
+        } else if (dy !== 0 && dx === 0) {
+          if (rx === px && ((dy > 0 && ry > py && ry <= endY) || (dy < 0 && ry < py && ry >= endY))) {
+            const dist = Math.abs(ry - py);
+            if (dist < lockedDist) {
+              lockedDist = dist;
+              lockedRobot = robot;
+            }
+          }
+        }
+      });
+    }
+
+    // Draw lock-on reticle if robot found
+    if (lockedRobot) {
+      const rx = Number(lockedRobot.x);
+      const ry = Number(lockedRobot.y);
+      const sx = rx * this.tileSize - camX;
+      const sy = ry * this.tileSize - camY;
+      const pulse = 0.8 + 0.2 * Math.sin(now * 0.01);
+
+      ctx.save?.();
+      ctx.strokeStyle = laserColor;
+      ctx.shadowColor = laserColor;
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = pulse;
+
+      // Draw corner brackets
+      const size = this.tileSize * 0.6;
+      const offset = this.tileSize * 0.2;
+      // Top-left
+      ctx.beginPath?.();
+      ctx.moveTo?.(sx + offset, sy + offset + size);
+      ctx.lineTo?.(sx + offset, sy + offset);
+      ctx.lineTo?.(sx + offset + size, sy + offset);
+      ctx.stroke?.();
+      // Top-right
+      ctx.beginPath?.();
+      ctx.moveTo?.(sx + this.tileSize - offset - size, sy + offset);
+      ctx.lineTo?.(sx + this.tileSize - offset, sy + offset);
+      ctx.lineTo?.(sx + this.tileSize - offset, sy + offset + size);
+      ctx.stroke?.();
+      // Bottom-left
+      ctx.beginPath?.();
+      ctx.moveTo?.(sx + offset, sy + this.tileSize - offset - size);
+      ctx.lineTo?.(sx + offset, sy + this.tileSize - offset);
+      ctx.lineTo?.(sx + offset + size, sy + this.tileSize - offset);
+      ctx.stroke?.();
+      // Bottom-right
+      ctx.beginPath?.();
+      ctx.moveTo?.(sx + this.tileSize - offset - size, sy + this.tileSize - offset);
+      ctx.lineTo?.(sx + this.tileSize - offset, sy + this.tileSize - offset);
+      ctx.lineTo?.(sx + this.tileSize - offset, sy + this.tileSize - offset - size);
+      ctx.stroke?.();
+
+      // Draw lock text
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = laserColor;
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      const lockText = this.language === 'zh' ? `[鎖定: ${dmg} 傷害]` : `[LOCKED: ${dmg} DMG]`;
+      ctx.fillText?.(lockText, sx + this.tileSize / 2, sy - 8);
+
+      ctx.shadowBlur = 0;
+      ctx.restore?.();
+    }
+  }
+
   drawHud(
     width: number,
     height: number,
@@ -1013,10 +1145,24 @@ export class GameRenderer {
     ctx.fillStyle = '#ffb700';
     ctx.fillText?.('CR: ' + credits, 480, 18);
 
-    const weaponStatus = p?.isWeaponDrawn ? 'WEAPON: ARMED' : 'WEAPON: HOLSTER';
-    const weaponName = p?.equippedWeapon?.name ? ' [Q: ' + p.equippedWeapon.name + ']' : '';
-    ctx.fillStyle = p?.isWeaponDrawn ? '#ff3855' : '#8899a6';
-    ctx.fillText?.(weaponStatus + weaponName, 570, 18);
+    const weaponName = p?.equippedWeapon?.name || 'None';
+    const weaponDmg = Number(p?.equippedWeapon?.power ?? p?.equippedWeapon?.damage ?? 0) || 0;
+    const isQuantum = String(weaponName).toUpperCase().includes('QUANTUM');
+    let weaponStatusText: string;
+    let weaponColor: string;
+    if (p?.isWeaponDrawn) {
+      weaponStatusText = this.language === 'zh'
+        ? `WEAPON: [ARMED - 按空白鍵開火] [Q: ${weaponName} (${weaponDmg} DMG)]`
+        : `WEAPON: [ARMED - SPACE to fire] [Q: ${weaponName} (${weaponDmg} DMG)]`;
+      weaponColor = isQuantum ? '#b388ff' : '#ff3855';
+    } else {
+      weaponStatusText = this.language === 'zh'
+        ? `WEAPON: [F] HOLSTERED [Q: ${weaponName}]`
+        : `WEAPON: [F] HOLSTERED [Q: ${weaponName}]`;
+      weaponColor = '#8899a6';
+    }
+    ctx.fillStyle = weaponColor;
+    ctx.fillText?.(weaponStatusText, 570, 18);
 
     let hudCursorX = 700;
     if ((this as any).activeWaypoint) {
@@ -1116,6 +1262,10 @@ export class GameRenderer {
     ctx.fillText?.('[0] RES', 825, height - 13);
     ctx.fillStyle = '#00ffcc';
     ctx.fillText?.('[TAB] MAP', 880, height - 13);
+    ctx.fillStyle = '#ff3855';
+    ctx.fillText?.('[F] DRAW', 940, height - 13);
+    ctx.fillStyle = '#b388ff';
+    ctx.fillText?.('[Q] SWAP', 1000, height - 13);
 
     ctx.restore?.();
   }
@@ -1289,7 +1439,10 @@ export class GameRenderer {
 
     ctx.fillStyle = '#8899a6';
     ctx.font = getFont(11, this.language === 'zh');
-    ctx.fillText?.('HOTKEYS: [1] USE MEDKIT  |  [2] USE BATTERY  |  [3] THROW EMP  |  [I / ESC] CLOSE', x + 20, y + 36);
+    const hotkeyText = this.language === 'zh'
+      ? 'HOTKEYS: [Q] 切換武器 | [F] 拔槍/收槍 | [1] 醫療包 | [2] 電池 | [3] EMP | [I/ESC] 關閉'
+      : 'HOTKEYS: [Q] SWAP WEAPON | [F] DRAW/HOLSTER | [1] MEDKIT | [2] BATTERY | [3] EMP | [I/ESC] CLOSE';
+    ctx.fillText?.(hotkeyText, x + 20, y + 36);
 
     ctx.strokeStyle = 'rgba(255, 170, 0, 0.3)';
     ctx.lineWidth = 1;
@@ -1305,32 +1458,78 @@ export class GameRenderer {
     ctx.font = getTitleFont(13, this.language === 'zh');
     ctx.fillText?.('► EQUIPPED CYBERWARE & WEAPONS', x + 20, y + 68);
 
+    const p = player as any;
+    const equippedWeapon = p?.equippedWeapon;
+    const isZh = this.language === 'zh';
+
+    // Dynamically build weapon display
+    let weaponName = 'None';
+    let weaponStat = 'ATK: 0 DMG';
+    let weaponDesc = 'No weapon equipped.';
+    let weaponColor = '#8899a6';
+
+    if (equippedWeapon) {
+      weaponName = equippedWeapon.name || 'Unknown Weapon';
+      const dmg = Number(equippedWeapon.power ?? equippedWeapon.damage ?? 0) || 0;
+      const en = equippedWeapon.energyCost || 0;
+      const range = equippedWeapon.range || 0;
+      const isQuantum = String(weaponName).toUpperCase().includes('QUANTUM');
+
+      if (isQuantum) {
+        weaponName = isZh ? '量子殲滅重砲 [★ 最強神兵]' : 'Quantum Annihilator [★ ULTIMATE]';
+        weaponStat = `ATK: ${dmg} DMG (${en} EN) | 射程 ${range} | 破盾穿透`;
+        weaponDesc = isZh ? '反物質加農砲，一擊必殺，穿透所有護盾。' : 'Antimatter cannon, one-shot kill, pierces all shields.';
+        weaponColor = '#b388ff';
+      } else {
+        weaponStat = `ATK: ${dmg} DMG (${en} EN) | 射程 ${range}`;
+        weaponDesc = equippedWeapon.description || 'Standard tactical weapon.';
+        weaponColor = '#ff3855';
+      }
+    }
+
     const gear = [
-      { name: 'Laser Blaster Mk-II', stat: 'ATK: 35 DMG (5 EN)', desc: 'High-density coherent pulse rifle. Silent backstabs deal 3x dmg.' },
-      { name: 'Nanite Mesh Shield', stat: 'DEF: 50% ABSORB (4 EN)', desc: 'Kinetic & energy deflection barrier activated upon impact.' },
-      { name: 'Holo-Disguise Matrix', stat: 'STEALTH: 1 EN/turn', desc: 'Projects civilian signature. Deactivates if weapon drawn.' },
-      { name: 'Neural Cyberdeck v2.4', stat: 'HACK: CLEARANCE LV-2', desc: 'Direct-link terminal hacking apparatus for security hubs.' },
+      { name: weaponName, stat: weaponStat, desc: weaponDesc, color: weaponColor },
+      { name: 'Nanite Mesh Shield', stat: 'DEF: 50% ABSORB (4 EN)', desc: 'Kinetic & energy deflection barrier activated upon impact.', color: '#00f0ff' },
+      { name: 'Holo-Disguise Matrix', stat: 'STEALTH: 1 EN/turn', desc: 'Projects civilian signature. Deactivates if weapon drawn.', color: '#00e5ff' },
+      { name: 'Neural Cyberdeck v2.4', stat: 'HACK: CLEARANCE LV-2', desc: 'Direct-link terminal hacking apparatus for security hubs.', color: '#c77dff' },
     ];
 
     gear.forEach((g, i) => {
       const gy = y + 92 + i * 54;
       ctx.fillStyle = 'rgba(15, 25, 35, 0.8)';
       ctx.fillRect?.(x + 20, gy, colW, 46);
-      ctx.strokeStyle = '#005577';
+      ctx.strokeStyle = g.color || '#005577';
       ctx.strokeRect?.(x + 20, gy, colW, 46);
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = getTitleFont(12, this.language === 'zh');
+      ctx.fillStyle = g.color || '#ffffff';
+      ctx.font = getTitleFont(12, isZh);
       ctx.fillText?.(g.name, x + 28, gy + 8);
 
       ctx.fillStyle = '#00f0ff';
-      ctx.font = getFont(11, this.language === 'zh');
+      ctx.font = getFont(11, isZh);
       ctx.fillText?.(g.stat, x + 28, gy + 22);
 
       ctx.fillStyle = '#7a8e99';
-      ctx.font = getFont(11, this.language === 'zh');
+      ctx.font = getFont(11, isZh);
       ctx.fillText?.(g.desc, x + 28, gy + 34);
     });
+
+    // List all owned weapons
+    const weapons = p?.weapons || [];
+    if (Array.isArray(weapons) && weapons.length > 0) {
+      ctx.fillStyle = '#ffea00';
+      ctx.font = getTitleFont(12, isZh);
+      ctx.fillText?.('► OWNED WEAPONS', x + 20, y + 320);
+
+      weapons.forEach((w, i) => {
+        const wy = y + 338 + i * 18;
+        const isEquipped = equippedWeapon && w.id === equippedWeapon.id;
+        ctx.fillStyle = isEquipped ? '#00ff88' : '#8899a6';
+        ctx.font = '10px monospace';
+        const equipTag = isEquipped ? (isZh ? ' [已裝備]' : ' [EQUIPPED]') : '';
+        ctx.fillText?.(`${w.name || 'Unknown'}${equipTag}`, x + 28, wy);
+      });
+    }
 
     // 右欄：野戰補給品與消耗性戰術物品
     const rx = x + 30 + colW;
@@ -1338,7 +1537,6 @@ export class GameRenderer {
     ctx.font = getTitleFont(13, this.language === 'zh');
     ctx.fillText?.('► FIELD CONSUMABLES & TACTICAL ITEMS', rx, y + 68);
 
-    const p = player as any;
     const medkits = p?.consumables?.medkits ?? 0;
     const batteries = p?.consumables?.batteries ?? 0;
     const emps = p?.consumables?.empGrenades ?? 0;

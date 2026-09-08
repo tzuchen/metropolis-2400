@@ -1122,6 +1122,25 @@ export class GameEngine {
         this.useEMPGrenade();
         return;
       }
+      if (key === 'q' || key === 'Q') {
+        const weapon = cycleWeapon(this.player);
+        soundFX.terminal();
+        const isSup = (weapon as any).isSuppressed;
+        this.pushFloatingText(this.player.x, this.player.y, weapon.name, isSup ? '#00ff88' : '#00f0ff');
+        this.pushMessage('ARMAMENT SWITCH: Equipped [' + weapon.name + '] (' + weapon.power + ' DMG, ' + weapon.energyCost + ' EN' + (isSup ? ' | SUPPRESSED' : '') + ').', 'info');
+        this.render();
+        return;
+      }
+      if (key === 'f' || key === 'F') {
+        const drawn = toggleWeaponDraw(this.player);
+        soundFX.laser();
+        this.pushMessage(
+          drawn ? 'Blaster drawn! Security will treat operative as hostile.' : 'Blaster holstered.',
+          drawn ? 'warning' : 'info'
+        );
+        this.render();
+        return;
+      }
       return;
     }
 
@@ -1231,7 +1250,7 @@ export class GameEngine {
           }
         }
 
-        if (npc.id === 'npc-zero-one' && nextIndex >= list.length - 1) {
+        if (npc.id === 'npc-zero-one') {
           const inventory = (this.player as any).inventory;
           if (Array.isArray(inventory)) {
             const hasCore = inventory.some((it: any) => it?.id === 'item-quantum-core');
@@ -1308,10 +1327,19 @@ export class GameEngine {
     } else if (key === 'f' || key === 'F') {
       const drawn = toggleWeaponDraw(this.player);
       soundFX.laser();
-      this.pushMessage(
-        drawn ? 'Blaster drawn! Security will treat operative as hostile.' : 'Blaster holstered.',
-        drawn ? 'warning' : 'info'
-      );
+      if (drawn) {
+        this.pushMessage(
+          this.language === 'zh' 
+            ? '已拔槍！按 [空白鍵] 或 [方向鍵] 開火，[Q] 切換武器。' 
+            : 'Blaster drawn! Press [SPACE] or [ARROWS] to fire, [Q] to switch weapon.',
+          'warning'
+        );
+      } else {
+        this.pushMessage(
+          this.language === 'zh' ? '已收槍。' : 'Blaster holstered.',
+          'info'
+        );
+      }
       this.tick();
       return;
     } else if (key === 'q' || key === 'Q') {
@@ -1433,7 +1461,11 @@ export class GameEngine {
     } else if (key === 'j' || key === 'J') {
       this.performTacticalDash();
       return;
-    } else if (key === ' ' || key === '.') {
+    } else if (key === ' ' || key === 'Enter' || key === '.') {
+      if (this.player.isWeaponDrawn) {
+        this.fireEquippedWeapon();
+        return;
+      }
       this.tick();
       return;
     }
@@ -1460,6 +1492,7 @@ export class GameEngine {
 
       // 檢查是否拔槍射擊 (遠程或近戰雷射射擊)
       if (this.player.isWeaponDrawn) {
+        // Check if there is a target in the direction
         let hitRobot: Robot | null = null;
         let hitCanister: Hazard | null = null;
         const maxRange = (this.player.equippedWeapon as any)?.range ?? 5;
@@ -1483,187 +1516,17 @@ export class GameEngine {
           }
         }
 
-        if (hitRobot) {
-          const weapon = this.player.equippedWeapon;
-          const energyCost = weapon?.energyCost ?? 5;
-          if (this.player.energy < energyCost) {
-            soundFX.hit();
-            this.pushMessage('Energy depleted! Blaster power cells exhausted.', 'danger');
-            this.render();
-            return;
-          }
-
-          // 戰術背刺與奇襲判定 (Ambush / Silent Backstab)
-          const isBackstab =
-            this.player.isDisguised ||
-            hitRobot.aiState === 'patrol' ||
-            (hitRobot.stunnedTurns ?? 0) > 0;
-
-          const baseDamage = weapon?.power ?? 35;
-          const damage = isBackstab ? Math.round(baseDamage * 3) : baseDamage;
-
-          this.player.energy -= energyCost;
-          const weaponId = (weapon as any)?.weaponId;
-          if (weaponId === 'DART_GUN') {
-            soundFX.dart();
-          } else if (weaponId === 'SCATTER_SHOTGUN') {
-            soundFX.shotgun();
-          } else {
-            soundFX.laser();
-          }
-          if (isBossRobot(hitRobot)) {
-            applyBossDamage(hitRobot, damage, this);
-          } else {
-            hitRobot.hp -= damage;
-            if (hitRobot.hp <= 0) {
-              hitRobot.isAlive = false;
-              soundFX.hit();
-              this.pushFloatingText(hitRobot.x, hitRobot.y, 'DESTROYED', '#ff3855');
-              this.pushMessage(hitRobot.name + ' destroyed!', 'success');
-            }
-          }
-          let beamColor = isBackstab ? '#ffea00' : '#00f0ff';
-          let beamType: 'LASER' | 'ELEC' | 'PLASMA' | 'NEEDLE' | 'QUANTUM' = 'LASER';
-          let beamWidth = 3;
-          let sparkColor = isBackstab ? '#ffea00' : '#00f0ff';
-          let sparkCount = 10;
-          let shakeIntensity = 0;
-
-          if (weaponId === 'QUANTUM_ANNIHILATOR') {
-            beamType = 'QUANTUM';
-            beamColor = '#b388ff';
-            beamWidth = 6;
-            sparkColor = '#b388ff';
-            sparkCount = 25;
-            shakeIntensity = 10;
-          }
-
-          this.laserBeams.push({
-            from: { x: this.player.x, y: this.player.y },
-            to: { x: hitRobot.x, y: hitRobot.y },
-            color: beamColor,
-            createdAt: Date.now(),
-            duration: 350,
-            beamType: beamType,
-            width: beamWidth,
-          });
-
-          const hitTileSize = (this.renderer as any)?.tileSize || 48;
-          (this.fx as any).spawnSparks(
-            hitRobot.x * hitTileSize + hitTileSize / 2,
-            hitRobot.y * hitTileSize + hitTileSize / 2,
-            sparkColor,
-            sparkCount
-          );
-          if (shakeIntensity > 0) {
-            (this.fx as any).triggerShake(shakeIntensity);
-          }
-
-          if (weaponId === 'QUANTUM_ANNIHILATOR') {
-            this.pushFloatingText(hitRobot.x, hitRobot.y, 'QUANTUM ANNIHILATION!', '#b388ff');
-            this.pushMessage(`QUANTUM ANNIHILATOR: Dealt ${damage} damage to ${hitRobot.name}!`, 'success');
-          } else if (isBackstab) {
-            this.pushFloatingText(hitRobot.x, hitRobot.y, `CRIT ${damage}!`, '#ffea00');
-            this.pushMessage(
-              `AMBUSH CRITICAL OVERRIDE: Dealt ${damage} damage to ${hitRobot.name}!`,
-              'success'
-            );
-          } else {
-            this.pushFloatingText(hitRobot.x, hitRobot.y, '-' + damage, '#ff3855');
-            this.pushMessage('Fired laser at ' + hitRobot.name + ' for ' + damage + ' dmg!', 'danger');
-          }
-
-          if (hitRobot.hp <= 0) {
-            hitRobot.isAlive = false;
-            soundFX.explosion();
-            (this.fx as any).spawnExplosion(
-              hitRobot.x * hitTileSize + hitTileSize / 2,
-              hitRobot.y * hitTileSize + hitTileSize / 2,
-              22
-            );
-            (this.fx as any).triggerShake(8);
-            this.gainExp(45);
-            this.player.credits += 50;
-            this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + 20);
-
-            // 隨機掉落殘骸補給物資 (Loot Drop from robot)
-            const dropRoll = Math.random();
-            if (dropRoll < 0.4) {
-              this.groundItems.push({
-                id: `drop-${Date.now()}`,
-                name: 'Plasma Battery',
-                itemType: 'BATTERY',
-                x: hitRobot.x,
-                y: hitRobot.y,
-                description: 'Salvaged power capacitor from destroyed chassis.',
-                amount: 1,
-                iconColor: '#00f0ff',
-              });
-            } else if (dropRoll < 0.7) {
-              this.groundItems.push({
-                id: `drop-${Date.now()}`,
-                name: 'Credit Chip',
-                itemType: 'CREDIT_CHIP',
-                x: hitRobot.x,
-                y: hitRobot.y,
-                description: 'Tzorg encoded currency token.',
-                amount: 45,
-                iconColor: '#ffea00',
-              });
-            }
-
-            this.pushFloatingText(hitRobot.x, hitRobot.y, '+50 CR', '#ffaa00');
-            this.pushMessage(hitRobot.name + ' destroyed! Salvaged scrap data & energy.', 'success');
-
-            // 檢查附近是否已無追擊者，若是則解除警報
-            const anyNearbyChasing = this.robots.some(
-              (r) =>
-                r.isAlive &&
-                r !== hitRobot &&
-                ((r as any).aiState === 'chase' || (r as any).aiState === 'attack' || ((r as any).pursuitTurns ?? 0) > 0) &&
-                Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 14
-            );
-            if (!anyNearbyChasing && this.securityLevel === 'ALERT') {
-              this.securityLevel = 'CLEAR' as SecurityLevel;
-              this.pushMessage('All nearby hostiles eliminated. Area secure.', 'info');
-            }
-          } else {
-            soundFX.hit();
-            hitRobot.aiState = 'chase';
-            hitRobot.targetPos = { x: this.player.x, y: this.player.y };
-            (hitRobot as any).pursuitTurns = 8;
-          }
-
-          // 槍響聲學偵測與警戒連鎖 (Gunfire Acoustics)
-          const isSuppressed = (weapon as any)?.isSuppressed === true;
-          if (isSuppressed) {
-            this.pushMessage('Suppressed shot fired! No acoustic signature detected.', 'info');
-          } else if (!isBackstab) {
-            this.securityLevel = 'ALERT' as SecurityLevel;
-            soundFX.alarm();
-
-            // 槍響震波：通知半徑 8 格內未發現主角的巡邏機器人前來調查
-            for (const r of this.robots) {
-              if (!r.isAlive || r === hitRobot) continue;
-              const d = Math.abs(r.x - this.player.x) + Math.abs(r.y - this.player.y);
-              if (d <= 8 && r.aiState === 'patrol') {
-                r.aiState = 'chase';
-                r.targetPos = { x: this.player.x, y: this.player.y };
-                (r as any).pursuitTurns = 6;
-              }
-            }
-          } else {
-            this.pushMessage('Silent takedown executed! Acoustic suppression maintained.', 'info');
-          }
-
-          this.tick();
+        if (hitRobot || hitCanister) {
+          this.fireEquippedWeapon({ dx, dy });
           return;
         }
-
-        if (hitCanister) {
-          this.detonateCanister(hitCanister);
-          this.tick();
-          return;
+        
+        // No target in range, check if wall is blocking movement
+        const tile = getTile(this.map, { x: nx, y: ny });
+        if (tile && !isWalkable(tile)) {
+           // Fire at the wall
+           this.fireEquippedWeapon({ dx, dy });
+           return;
         }
       }
 
@@ -2390,14 +2253,20 @@ export class GameEngine {
           '先瞄準中央主腦的護盾發生器。擊碎它，核心就暴露了。',
         ];
       } else {
+        const hasCore = Array.isArray(inventory) && inventory.some((it: any) => it?.id === 'item-quantum-core');
+        const hasChip = Array.isArray(inventory) && inventory.some((it: any) => it?.id === 'item-matrix-chip');
+        
+        const coreStatus = hasCore ? '[ACQUIRED]' : '[MISSING - Obtain from Sylvia in Sector 1]';
+        const chipStatus = hasChip ? '[ACQUIRED]' : '[MISSING - Recover from Sub-Sector 0 Sewers]';
+        
         zeroOne.dialogue = [
           'Raven, I\'m Zero-One. I\'m the only engineer who can forge the Quantum Annihilator.',
-          'Bring me the Quantum Core from Sylvia and the Matrix Chip from the sewers.',
+          `Component Status: Quantum Core ${coreStatus} | Matrix Chip ${chipStatus}.`,
           'Once I have both, I\'ll forge a weapon that can break Tzorg\'s second-stage shields.',
         ];
         (zeroOne as any).dialogueZh = [
           '雷文，我是 Zero-One。我是唯一能鍛造量子殲滅重砲的工程師。',
-          '把西爾維婭的量子核心和下水道的矩陣晶片帶給我。',
+          `組件狀態：量子約束核心 ${coreStatus} | 主機矩陣晶片 ${chipStatus}。`,
           '一旦兩者齊備，我就能鍛造出能擊碎佐格第二階段護盾的武器。',
         ];
       }
@@ -2625,6 +2494,276 @@ export class GameEngine {
         robot.y = targetY;
       }
     }
+  }
+
+  fireEquippedWeapon(direction?: { dx: number; dy: number }): boolean {
+    let dx = 0;
+    let dy = 0;
+    if (direction) {
+      dx = direction.dx;
+      dy = direction.dy;
+    } else {
+      const facing = (this.player as any).facing || 'right';
+      if (facing === 'right') dx = 1;
+      else if (facing === 'left') dx = -1;
+      else if (facing === 'up') dy = -1;
+      else if (facing === 'down') dy = 1;
+    }
+
+    const weapon = this.player.equippedWeapon;
+    if (!weapon) return false;
+
+    const energyCost = weapon.energyCost ?? 5;
+    if (this.player.energy < energyCost) {
+      soundFX.hit();
+      this.pushMessage('Energy depleted! Blaster power cells exhausted.', 'danger');
+      this.render();
+      return false;
+    }
+
+    this.player.energy -= energyCost;
+    
+    const weaponId = (weapon as any)?.weaponId;
+    const isQuantum = weaponId === 'QUANTUM_ANNIHILATOR';
+    
+    let hitRobot: Robot | null = null;
+    let hitCanister: Hazard | null = null;
+    let hitWall = false;
+    let hitX = this.player.x + dx;
+    let hitY = this.player.y + dy;
+    
+    const maxRange = isQuantum ? 7 : (weapon.range ?? 5);
+    
+    for (let range = 1; range <= maxRange; range++) {
+      const tx = this.player.x + dx * range;
+      const ty = this.player.y + dy * range;
+      const tTile = getTile(this.map, { x: tx, y: ty });
+      const tName = String(tTile).toUpperCase();
+      
+      if (tName === 'WALL' || tTile === 2) {
+        hitWall = true;
+        hitX = tx;
+        hitY = ty;
+        break;
+      }
+
+      const found = this.robots.find((r) => r.isAlive && r.x === tx && r.y === ty);
+      if (found) {
+        hitRobot = found;
+        hitX = tx;
+        hitY = ty;
+        break;
+      }
+
+      const foundCanister = this.hazards.find((h) => !h.exploded && h.x === tx && h.y === ty);
+      if (foundCanister) {
+        hitCanister = foundCanister;
+        hitX = tx;
+        hitY = ty;
+        break;
+      }
+    }
+
+    // Play sound
+    if (weaponId === 'DART_GUN') {
+      soundFX.dart();
+    } else if (weaponId === 'SCATTER_SHOTGUN') {
+      soundFX.shotgun();
+    } else if (isQuantum) {
+      soundFX.laser();
+    } else {
+      soundFX.laser();
+    }
+
+    // Visuals
+    let beamColor = '#00f0ff';
+    let beamType: 'LASER' | 'ELEC' | 'PLASMA' | 'NEEDLE' | 'QUANTUM' = 'LASER';
+    let beamWidth = 3;
+    let sparkColor = '#00f0ff';
+    let sparkCount = 10;
+    let shakeIntensity = 0;
+
+    if (isQuantum) {
+      beamType = 'QUANTUM';
+      beamColor = '#b388ff';
+      beamWidth = 6;
+      sparkColor = '#b388ff';
+      sparkCount = 25;
+      shakeIntensity = 10;
+    }
+
+    this.laserBeams.push({
+      from: { x: this.player.x, y: this.player.y },
+      to: { x: hitX, y: hitY },
+      color: beamColor,
+      createdAt: Date.now(),
+      duration: 350,
+      beamType: beamType,
+      width: beamWidth,
+    });
+
+    const hitTileSize = (this.renderer as any)?.tileSize || 48;
+    (this.fx as any).spawnSparks(
+      hitX * hitTileSize + hitTileSize / 2,
+      hitY * hitTileSize + hitTileSize / 2,
+      sparkColor,
+      sparkCount
+    );
+    if (shakeIntensity > 0) {
+      (this.fx as any).triggerShake(shakeIntensity);
+    }
+
+    // Damage Logic
+    if (hitRobot) {
+      // 戰術背刺與奇襲判定 (Ambush / Silent Backstab)
+      const isBackstab =
+        this.player.isDisguised ||
+        hitRobot.aiState === 'patrol' ||
+        (hitRobot.stunnedTurns ?? 0) > 0;
+
+      const baseDamage = weapon.power ?? 35;
+      let damage = isBackstab ? Math.round(baseDamage * 3) : baseDamage;
+      
+      if (isQuantum) {
+        // Quantum Annihilator: 220 damage, pierces phase shield, stuns
+        damage = 220;
+        hitRobot.stunnedTurns = 2;
+      }
+
+      if (isBossRobot(hitRobot)) {
+        applyBossDamage(hitRobot, damage, this);
+      } else {
+        hitRobot.hp -= damage;
+        if (hitRobot.hp <= 0) {
+          hitRobot.isAlive = false;
+          soundFX.hit();
+          this.pushFloatingText(hitRobot.x, hitRobot.y, 'DESTROYED', '#ff3855');
+          this.pushMessage(hitRobot.name + ' destroyed!', 'success');
+        }
+      }
+
+      if (isQuantum) {
+        this.pushFloatingText(hitRobot.x, hitRobot.y, 'QUANTUM ANNIHILATION!', '#b388ff');
+        this.pushMessage(`QUANTUM ANNIHILATOR: Dealt ${damage} damage to ${hitRobot.name}!`, 'success');
+      } else if (isBackstab) {
+        this.pushFloatingText(hitRobot.x, hitRobot.y, `CRIT ${damage}!`, '#ffea00');
+        this.pushMessage(
+          `AMBUSH CRITICAL OVERRIDE: Dealt ${damage} damage to ${hitRobot.name}!`,
+          'success'
+        );
+      } else {
+        this.pushFloatingText(hitRobot.x, hitRobot.y, '-' + damage, '#ff3855');
+        this.pushMessage('Fired laser at ' + hitRobot.name + ' for ' + damage + ' dmg!', 'danger');
+      }
+
+      if (hitRobot.hp <= 0) {
+        hitRobot.isAlive = false;
+        soundFX.explosion();
+        (this.fx as any).spawnExplosion(
+          hitRobot.x * hitTileSize + hitTileSize / 2,
+          hitRobot.y * hitTileSize + hitTileSize / 2,
+          22
+        );
+        (this.fx as any).triggerShake(8);
+        this.gainExp(45);
+        this.player.credits += 50;
+        this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + 20);
+
+        // 隨機掉落殘骸補給物資 (Loot Drop from robot)
+        const dropRoll = Math.random();
+        if (dropRoll < 0.4) {
+          this.groundItems.push({
+            id: `drop-${Date.now()}`,
+            name: 'Plasma Battery',
+            itemType: 'BATTERY',
+            x: hitRobot.x,
+            y: hitRobot.y,
+            description: 'Salvaged power capacitor from destroyed chassis.',
+            amount: 1,
+            iconColor: '#00f0ff',
+          });
+        } else if (dropRoll < 0.7) {
+          this.groundItems.push({
+            id: `drop-${Date.now()}`,
+            name: 'Credit Chip',
+            itemType: 'CREDIT_CHIP',
+            x: hitRobot.x,
+            y: hitRobot.y,
+            description: 'Tzorg encoded currency token.',
+            amount: 45,
+            iconColor: '#ffea00',
+          });
+        }
+
+        this.pushFloatingText(hitRobot.x, hitRobot.y, '+50 CR', '#ffaa00');
+        this.pushMessage(hitRobot.name + ' destroyed! Salvaged scrap data & energy.', 'success');
+
+        // 檢查附近是否已無追擊者，若是則解除警報
+        const anyNearbyChasing = this.robots.some(
+          (r) =>
+            r.isAlive &&
+            r !== hitRobot &&
+            ((r as any).aiState === 'chase' || (r as any).aiState === 'attack' || ((r as any).pursuitTurns ?? 0) > 0) &&
+            Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 14
+        );
+        if (!anyNearbyChasing && this.securityLevel === 'ALERT') {
+          this.securityLevel = 'CLEAR' as SecurityLevel;
+          this.pushMessage('All nearby hostiles eliminated. Area secure.', 'info');
+        }
+      } else {
+        soundFX.hit();
+        hitRobot.aiState = 'chase';
+        hitRobot.targetPos = { x: this.player.x, y: this.player.y };
+        (hitRobot as any).pursuitTurns = 8;
+      }
+
+      // 槍響聲學偵測與警戒連鎖 (Gunfire Acoustics)
+      const isSuppressed = (weapon as any)?.isSuppressed === true;
+      if (isSuppressed) {
+        this.pushMessage('Suppressed shot fired! No acoustic signature detected.', 'info');
+      } else if (!isBackstab) {
+        this.securityLevel = 'ALERT' as SecurityLevel;
+        soundFX.alarm();
+
+        // 槍響震波：通知半徑 8 格內未發現主角的巡邏機器人前來調查
+        for (const r of this.robots) {
+          if (!r.isAlive || r === hitRobot) continue;
+          const d = Math.abs(r.x - this.player.x) + Math.abs(r.y - this.player.y);
+          if (d <= 8 && r.aiState === 'patrol') {
+            r.aiState = 'chase';
+            r.targetPos = { x: this.player.x, y: this.player.y };
+            (r as any).pursuitTurns = 6;
+          }
+        }
+      } else {
+        this.pushMessage('Silent takedown executed! Acoustic suppression maintained.', 'info');
+      }
+    } else if (hitCanister) {
+      this.detonateCanister(hitCanister);
+    } else {
+      // No target, just impact effect
+      this.pushFloatingText(hitX, hitY, 'IMPACT', '#00f0ff');
+      this.pushMessage('Fired weapon into the void.', 'info');
+      
+      // Acoustic alert even if no hit
+      const isSuppressed = (weapon as any)?.isSuppressed === true;
+      if (!isSuppressed) {
+        this.securityLevel = 'ALERT' as SecurityLevel;
+        soundFX.alarm();
+        for (const r of this.robots) {
+          if (!r.isAlive) continue;
+          const d = Math.abs(r.x - this.player.x) + Math.abs(r.y - this.player.y);
+          if (d <= 8 && r.aiState === 'patrol') {
+            r.aiState = 'chase';
+            r.targetPos = { x: this.player.x, y: this.player.y };
+            (r as any).pursuitTurns = 6;
+          }
+        }
+      }
+    }
+
+    this.tick();
+    return true;
   }
 
   private findTerminalAt(x: number, y: number): any {
