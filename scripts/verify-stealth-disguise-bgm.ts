@@ -156,4 +156,56 @@ const map = buildSector1Map();
   console.log('✓ Dynamic BGM intensity switching verified');
 }
 
+// 6. Verify Combat Mode and Alert De-escalation upon Eliminating Hostile Robots
+{
+  class MockCanvas {
+    getContext() {
+      return {
+        clearRect: () => {},
+        fillRect: () => {},
+        strokeRect: () => {},
+        fillText: () => {},
+        measureText: () => ({ width: 50 }),
+        beginPath: () => {},
+        moveTo: () => {},
+        lineTo: () => {},
+        stroke: () => {},
+        fill: () => {},
+        arc: () => {},
+        save: () => {},
+        restore: () => {},
+        drawImage: () => {},
+        setTransform: () => {},
+        resetTransform: () => {},
+      };
+    }
+  }
+
+  const game = new GameEngine(new MockCanvas() as any);
+  game.isTitleScreen = false;
+  game.player.x = 10;
+  game.player.y = 10;
+  game.securityLevel = SecurityLevel.ALERT;
+  game.robots.forEach((r) => { r.isAlive = false; });
+
+  const hostile = createRobot('SCOUT_DRONE' as RobotType, { x: 10, y: 11 }, []);
+  hostile.aiState = 'chase';
+  (hostile as any).pursuitTurns = 4;
+  hostile.isAlive = true;
+  game.robots.push(hostile);
+
+  game.render();
+  assert.strictEqual(bgm.currentIntensity, 'combat', 'Should be combat mode while hostile is alive');
+
+  // Eliminate hostile
+  hostile.isAlive = false;
+  hostile.hp = 0;
+  game.tick();
+
+  assert.strictEqual(game.securityLevel, SecurityLevel.CLEAR, 'Security level should de-escalate to CLEAR after eliminating hostile');
+  game.render();
+  assert.strictEqual(bgm.currentIntensity, 'exploration', 'Music should return to exploration mode after eliminating hostile');
+  console.log('✓ Combat mode and alert de-escalation upon enemy destruction verified');
+}
+
 console.log('All Stealth, Disguise & BGM tests PASSED!');

@@ -649,14 +649,15 @@ export class GameEngine {
     (this.renderer as any).fx = this.fx;
     (this.renderer as any).activeWaypoint = this.activeWaypoint;
     const bossNear = this.robots.some((r) => r.isAlive && r.robotType === 'EXTERMINATOR' && Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 9);
-    const hostileEngaged = this.robots.some(
+    const hostileNearby = this.robots.some(
       (r) =>
         r.isAlive &&
-        ((r as any).aiState === 'chase' || (r as any).aiState === 'attack' || ((r as any).pursuitTurns ?? 0) > 0)
+        ((r as any).aiState === 'chase' || (r as any).aiState === 'attack' || ((r as any).pursuitTurns ?? 0) > 0) &&
+        Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 14
     );
     if (bossNear) {
       bgm.setIntensity('boss');
-    } else if (this.securityLevel === 'ALERT' || this.securityLevel === 'LOCKDOWN' || hostileEngaged) {
+    } else if (hostileNearby) {
       bgm.setIntensity('combat');
     } else {
       bgm.setIntensity('exploration');
@@ -1254,6 +1255,19 @@ export class GameEngine {
 
             this.pushFloatingText(hitRobot.x, hitRobot.y, '+50 CR', '#ffaa00');
             this.pushMessage(hitRobot.name + ' destroyed! Salvaged scrap data & energy.', 'success');
+
+            // 檢查附近是否已無追擊者，若是則解除警報
+            const anyNearbyChasing = this.robots.some(
+              (r) =>
+                r.isAlive &&
+                r !== hitRobot &&
+                ((r as any).aiState === 'chase' || (r as any).aiState === 'attack' || ((r as any).pursuitTurns ?? 0) > 0) &&
+                Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 14
+            );
+            if (!anyNearbyChasing && this.securityLevel === 'ALERT') {
+              this.securityLevel = 'CLEAR' as SecurityLevel;
+              this.pushMessage('All nearby hostiles eliminated. Area secure.', 'info');
+            }
           } else {
             soundFX.hit();
             hitRobot.aiState = 'chase';
@@ -1427,6 +1441,19 @@ export class GameEngine {
           soundFX.powerDown();
           this.pushMessage('MISSION FAILED: Operative neutralized by Tzorg forces.', 'danger');
         }
+      }
+    }
+
+    // 若所有追擊者已消滅，自動解除警報
+    if (this.securityLevel === 'ALERT') {
+      const anyChasing = this.robots.some(
+        (r) =>
+          r.isAlive &&
+          ((r as any).aiState === 'chase' || (r as any).aiState === 'attack' || ((r as any).pursuitTurns ?? 0) > 0)
+      );
+      if (!anyChasing) {
+        this.securityLevel = 'CLEAR' as SecurityLevel;
+        this.pushMessage('Threat neutralized. Security alert cleared.', 'info');
       }
     }
 
