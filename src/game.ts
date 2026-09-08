@@ -1136,6 +1136,26 @@ export class GameEngine {
           }
         }
 
+        if (npc.id === 'npc-elena' && nextIndex >= list.length - 1) {
+          const inventory = (this.player as any).inventory;
+          if (Array.isArray(inventory)) {
+            const tapeIndex = inventory.findIndex((it: any) => it?.id === 'item-synth-tape');
+            if (tapeIndex !== -1) {
+              inventory.splice(tapeIndex, 1);
+              this.player.maxEnergy += 20;
+              this.player.energy = this.player.maxEnergy;
+              soundFX.pickup();
+              this.pushFloatingText(this.player.x, this.player.y, 'MAX EN +20!', '#00f0ff');
+              this.pushMessage(
+                isZh
+                  ? 'Elena: 謝謝你，特工！這捲母帶的類比頻率喚醒了神經共鳴，最大能量提升了！'
+                  : 'Elena: Thank you, operative! The analog frequency of this master tape awakened neural resonance. Max energy increased!',
+                'success'
+              );
+            }
+          }
+        }
+
         if (npc.id === 'npc-zero-one' && nextIndex >= list.length - 1) {
           const inventory = (this.player as any).inventory;
           if (Array.isArray(inventory)) {

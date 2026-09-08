@@ -175,6 +175,36 @@ export function getSector1NPCs(): NPC[] {
       ],
       rewardClaimed: false,
     },
+    {
+      id: 'npc-elena',
+      name: 'Elena',
+      role: '失落音軌保管人',
+      roleZh: '失落音軌保管人',
+      avatarColor: '#ff4081',
+      x: 21,
+      y: 11,
+      hp: 85,
+      maxHp: 85,
+      isAlive: true,
+      dialogue: [
+        'Shh... listen. Do you hear that? The hum of the old synthesizers.',
+        'Before the Tzorg silence, I was the archivist of the Underground Wave. We preserved the last analog masters.',
+        'The 1984 Synthwave Master Tape was lost during the purge. It fell into the Sub-Sector Zero sewers.',
+        'If you find it, bring it to me. Music is the only frequency the Overmind cannot corrupt.',
+      ],
+      dialogueZh: [
+        '噓……聽。你聽到了嗎？老式合成器的低鳴。',
+        '在佐格徹底封鎖聲音之前，我是地下電台的音軌保管員。我們保存了最後的類比母帶。',
+        '1984 年的合成波母帶在清洗行動中失蹤了，據說掉進了零號下水道的深處。',
+        '如果你能找到它，請帶給我。音樂是唯一中央主腦無法腐蝕的頻率。',
+      ],
+      questReward: {
+        type: 'ENERGY',
+        amount: 20,
+        message: 'Elena shared +20 Energy Cells for your trouble!',
+      },
+      rewardClaimed: false,
+    },
   ];
 }
 

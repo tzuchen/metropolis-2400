@@ -131,6 +131,15 @@ export function setupSubSectorZero(game: any): void {
       description: game.language === 'zh' ? '佐格軍用級解密晶片。能與量子約束核心合成為【量子殲滅重砲】。' : 'Military-grade decrypter chip. Component for Quantum Annihilator.',
       iconColor: '#00f0ff',
     },
+    {
+      id: 'item-synth-tape',
+      name: game.language === 'zh' ? '失落的 1984 合成波卡帶' : '1984 Synthwave Master Tape',
+      itemType: 'KEYCARD',
+      x: 6,
+      y: 12,
+      description: game.language === 'zh' ? 'Elena 朝思暮想的磁帶，記錄著舊時代合成波音樂。' : 'Elena\'s long-lost tape, recording old-era synthwave music.',
+      iconColor: '#ff4081',
+    },
   ];
   game.npcs = [];
   game.visibleTiles.clear();
