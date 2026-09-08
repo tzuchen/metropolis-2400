@@ -980,7 +980,7 @@ export class GameEngine {
         drawn ? 'Blaster drawn! Security will treat operative as hostile.' : 'Blaster holstered.',
         drawn ? 'warning' : 'info'
       );
-      this.render();
+      this.tick();
       return;
     } else if (key === 'q' || key === 'Q') {
       const weapon = cycleWeapon(this.player);
@@ -999,7 +999,7 @@ export class GameEngine {
         soundFX.powerDown();
         this.pushMessage('Holo-disguise deactivated.', 'info');
       }
-      this.render();
+      this.tick();
       return;
     } else if (key === 'e' || key === 'E') {
       const dirs: [number, number][] = [[0, 1], [0, -1], [1, 0], [-1, 0]];

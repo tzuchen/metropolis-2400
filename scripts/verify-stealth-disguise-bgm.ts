@@ -248,4 +248,54 @@ const map = buildSector1Map();
   console.log('✓ Sector transit de-escalation to CLEAR verified');
 }
 
+// 8. Verify Pressing [F] Advances Game Tick and Triggers Robot AI Reaction Immediately
+{
+  class MockCanvas {
+    getContext() {
+      return {
+        clearRect: () => {},
+        fillRect: () => {},
+        strokeRect: () => {},
+        fillText: () => {},
+        measureText: () => ({ width: 50 }),
+        beginPath: () => {},
+        moveTo: () => {},
+        lineTo: () => {},
+        stroke: () => {},
+        fill: () => {},
+        arc: () => {},
+        save: () => {},
+        restore: () => {},
+        drawImage: () => {},
+        setTransform: () => {},
+        resetTransform: () => {},
+      };
+    }
+  }
+
+  const game = new GameEngine(new MockCanvas() as any);
+  game.isTitleScreen = false;
+  game.player.x = 10;
+  game.player.y = 10;
+  game.player.isWeaponDrawn = false;
+  game.securityLevel = SecurityLevel.CLEAR;
+  game.robots.forEach((r) => { r.isAlive = false; });
+
+  const enforcer = createRobot('SHOCK_ENFORCER' as RobotType, { x: 10, y: 12 }, []);
+  enforcer.isAlive = true;
+  game.robots.push(enforcer);
+
+  assert.strictEqual(enforcer.aiState, 'patrol', 'Initially enforcer is in patrol mode');
+
+  // Press [F] to draw weapon
+  game.handleKeyDown('f');
+
+  assert.strictEqual(game.player.isWeaponDrawn, true, 'Weapon should be drawn after pressing F');
+  assert.ok(
+    enforcer.aiState === 'chase' || enforcer.aiState === 'attack',
+    'Enforcer must immediately react (chase/attack) on the very keypress tick of drawing weapon'
+  );
+  console.log('✓ Immediate robot reaction on F keypress verified');
+}
+
 console.log('All Stealth, Disguise & BGM tests PASSED!');
