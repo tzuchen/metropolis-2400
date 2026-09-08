@@ -317,6 +317,9 @@ export class GameEngine {
 
   switchSector(targetSectorId: string): void {
     const prevMapId = this.map?.id;
+    this.securityLevel = 'CLEAR' as SecurityLevel;
+    this.laserBeams = [];
+    bgm.setIntensity('exploration');
     if (targetSectorId === 'sub-sector-0') {
       setupSubSectorZero(this);
       if (prevMapId === 'sector-2') {

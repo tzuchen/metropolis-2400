@@ -208,4 +208,44 @@ const map = buildSector1Map();
   console.log('✓ Combat mode and alert de-escalation upon enemy destruction verified');
 }
 
+// 7. Verify Sector Switch (Elevator Transit) Clears Combat State
+{
+  class MockCanvas {
+    getContext() {
+      return {
+        clearRect: () => {},
+        fillRect: () => {},
+        strokeRect: () => {},
+        fillText: () => {},
+        measureText: () => ({ width: 50 }),
+        beginPath: () => {},
+        moveTo: () => {},
+        lineTo: () => {},
+        stroke: () => {},
+        fill: () => {},
+        arc: () => {},
+        save: () => {},
+        restore: () => {},
+        drawImage: () => {},
+        setTransform: () => {},
+        resetTransform: () => {},
+      };
+    }
+  }
+
+  const game = new GameEngine(new MockCanvas() as any);
+  game.isTitleScreen = false;
+  game.securityLevel = SecurityLevel.ALERT;
+  bgm.setIntensity('combat');
+  game.laserBeams = [{ from: { x: 1, y: 1 }, to: { x: 2, y: 2 }, color: '#fff', createdAt: Date.now() } as any];
+
+  // Ride elevator to Sector 2
+  game.switchSector('sector-2');
+
+  assert.strictEqual(game.securityLevel, SecurityLevel.CLEAR, 'Security level must reset to CLEAR after transit');
+  assert.strictEqual(bgm.currentIntensity, 'exploration', 'BGM must return to exploration after transit');
+  assert.strictEqual(game.laserBeams.length, 0, 'Residual laser beams must be cleared after transit');
+  console.log('✓ Sector transit de-escalation to CLEAR verified');
+}
+
 console.log('All Stealth, Disguise & BGM tests PASSED!');
