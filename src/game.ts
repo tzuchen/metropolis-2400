@@ -64,6 +64,12 @@ export class GameEngine {
   fx: FXManager = new FXManager();
   activeWaypoint: { x: number; y: number; name: string; color: string } | null = null;
   endgameChoice: string | null = null;
+  private turnCounter: number = 0;
+  private lastBroadcastTurn: number = 0;
+  private lastBroadcastIndex: number = 0;
+  private broadcastQueue: string[] = [];
+  private lastSectorId: string = '';
+  private lastLandmarkKey: string = '';
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -106,6 +112,177 @@ export class GameEngine {
     this.updateFOV();
     this.render();
     this.startAnimationLoop();
+  }
+
+  private getBroadcastMessages(): string[] {
+    const isZh = this.language === 'zh';
+    const sectorId = this.map?.id || 'sector-1';
+    const msgs: string[] = [];
+
+    // Resistance encrypted broadcast
+    if (isZh) {
+      msgs.push('【反抗軍加密頻道 7.83GHz】「所有單位注意：佐格巡邏隊已切換至夜間高壓模式。保持靜默，避免聲學暴露。——鬼影」');
+      msgs.push('【反抗軍加密頻道 7.83GHz】「中央核心能量讀數異常上升。佐格正在充能終端協議。我們必須在他們完成之前行動。——基拉」');
+      msgs.push('【反抗軍加密頻道 7.83GHz】「下水道毒性遙測：氨濃度 0.4ppm，可安全通行。但請注意腐蝕性液體池。——文斯博士」');
+      msgs.push('【反抗軍加密頻道 7.83GHz】「偵測到佐格量子通訊脈衝。他們正在同步終端協議。時間不多了。——鬼影」');
+    } else {
+      msgs.push('[RESISTANCE ENCRYPTED 7.83GHz] "All units: Tzorg patrols switched to night-high-alert. Maintain silence, avoid acoustic exposure. — Ghost"');
+      msgs.push('[RESISTANCE ENCRYPTED 7.83GHz] "Central core energy readings spiking. Tzorg is charging the Endgame Protocol. We must act before completion. — Kira"');
+      msgs.push('[RESISTANCE ENCRYPTED 7.83GHz] "Sewer toxicity telemetry: ammonia 0.4ppm, safe to traverse. Watch for corrosive pools. — Dr. Vance"');
+      msgs.push('[RESISTANCE ENCRYPTED 7.83GHz] "Detecting Tzorg quantum comm pulses. They are syncing the Endgame Protocol. Time is short. — Ghost"');
+    }
+
+    // Tzorg official broadcast
+    if (isZh) {
+      msgs.push('【佐格官方廣播】「市民請注意：根據《秩序法》第7條，未經授權進入管制區域者將被立即中和。佐格為您服務。佐格保護您。佐格愛您。」');
+      msgs.push('【佐格官方廣播】「提醒：所有仿生體必須每24小時進行忠誠度校準。未校準者將被標記為異常。佐格感謝您的配合。」');
+      msgs.push('【佐格官方廣播】「安全提醒：偵測到未經授權的電子訊號干擾。所有巡邏單位進入警戒狀態。佐格永遠與您同在。」');
+    } else {
+      msgs.push('[TZORG OFFICIAL BROADCAST] "Citizens: Under Order Statute §7, unauthorized entry into restricted zones will result in immediate neutralization. Tzorg serves. Tzorg protects. Tzorg loves you."');
+      msgs.push('[TZORG OFFICIAL BROADCAST] "Reminder: All synthetics must undergo loyalty calibration every 24 hours. Uncalibrated units will be flagged as anomalous. Tzorg thanks your cooperation."');
+      msgs.push('[TZORG OFFICIAL BROADCAST] "Security alert: Unauthorized electronic signal interference detected. All patrol units entering alert state. Tzorg is always with you."');
+    }
+
+    // Sector-specific ambient
+    if (sectorId === 'sub-sector-0') {
+      if (isZh) {
+        msgs.push('【環境遙測】「下水道濕度 94%。腐蝕性液體池溫度 42°C。注意：仿生生態林冠正在分泌酸性孢子。」');
+      } else {
+        msgs.push('[AMBIENT TELEMETRY] "Sewer humidity 94%. Corrosive pool temp 42°C. Caution: Bionic canopy secreting acidic spores."');
+      }
+    } else if (sectorId === 'sector-2') {
+      if (isZh) {
+        msgs.push('【環境遙測】「製造複合體：機械臂活動頻率上升。輸送帶負載 87%。偵測到量子核心充能脈衝。」');
+      } else {
+        msgs.push('[AMBIENT TELEMETRY] "Fab-Plex: Arm activity frequency rising. Conveyor load 87%. Quantum core charging pulse detected."');
+      }
+    }
+
+    return msgs;
+  }
+
+  private pushBroadcast(): void {
+    const msgs = this.getBroadcastMessages();
+    if (msgs.length === 0) return;
+    const idx = this.lastBroadcastIndex % msgs.length;
+    this.lastBroadcastIndex++;
+    this.pushMessage(msgs[idx], 'info');
+  }
+
+  private getLandmarkKey(): string {
+    const px = this.player.x;
+    const py = this.player.y;
+    const sectorId = this.map?.id || '';
+    // Check for special landmarks
+    if (sectorId === 'sector-1') {
+      if (px >= 3 && px <= 8 && py >= 3 && py <= 8) return 'safehouse';
+      if (px >= 18 && px <= 22 && py >= 10 && py <= 14) return 'cyber-park';
+      if (px >= 26 && px <= 30 && py >= 4 && py <= 8) return 'checkpoint';
+      if (px >= 34 && px <= 38 && py >= 23 && py <= 27) return 'elevator';
+    } else if (sectorId === 'sector-2') {
+      if (px >= 2 && px <= 6 && py >= 3 && py <= 7) return 'fab-entrance';
+      if (px >= 28 && px <= 36 && py >= 16 && py <= 24) return 'overmind-core';
+    } else if (sectorId === 'sub-sector-0') {
+      if (px >= 2 && px <= 6 && py >= 3 && py <= 7) return 'sewer-entrance';
+      if (px >= 30 && px <= 36 && py >= 20 && py <= 26) return 'sewer-exit';
+    }
+    return 'none';
+  }
+
+  private checkEnvironmentalObservations(): void {
+    const px = this.player.x;
+    const py = this.player.y;
+    const isZh = this.language === 'zh';
+    const sectorId = this.map?.id || '';
+
+    // Conveyor belt observation
+    if (this.isConveyorTile(px, py)) {
+      const key = `conveyor-${px},${py}`;
+      if (this.lastLandmarkKey !== key) {
+        this.lastLandmarkKey = key;
+        if (isZh) {
+          this.pushFloatingText(px, py, '⚙ 輸送帶啟動 ⚙', '#00f0ff');
+          this.pushMessage('履帶齒輪咬合，金屬表面微微振動。你被機械之手輕輕推向下一站。', 'info');
+        } else {
+          this.pushFloatingText(px, py, '⚙ CONVEYOR ACTIVE ⚙', '#00f0ff');
+          this.pushMessage('Gear teeth mesh with a low hum. The metal surface vibrates beneath your boots as the belt carries you forward.', 'info');
+        }
+      }
+    }
+
+    // Plasma barrier proximity
+    if (sectorId === 'sector-1' && px >= 24 && px <= 28 && py >= 5 && py <= 9) {
+      const key = 'plasma-barrier';
+      if (this.lastLandmarkKey !== key) {
+        this.lastLandmarkKey = key;
+        if (isZh) {
+          this.pushFloatingText(px, py, '⚡ 電漿屏障 ⚡', '#ff2a4b');
+          this.pushMessage('高能量電漿屏障在前方脈動，藍白色的弧光在空氣中嘶嘶作響。空氣中瀰漫著臭氧的刺鼻氣味。', 'info');
+        } else {
+          this.pushFloatingText(px, py, '⚡ PLASMA BARRIER ⚡', '#ff2a4b');
+          this.pushMessage('The high-energy plasma barrier pulses ahead, blue-white arcs crackling through the air. The ozone stings your nostrils.', 'info');
+        }
+      }
+    }
+
+    // Bionic canopy proximity (sewer sector)
+    if (sectorId === 'sub-sector-0' && px >= 10 && px <= 30 && py >= 8 && py <= 18) {
+      const key = 'bionic-canopy';
+      if (this.lastLandmarkKey !== key) {
+        this.lastLandmarkKey = key;
+        if (isZh) {
+          this.pushFloatingText(px, py, '🌿 仿生生態林冠 🌿', '#00ff88');
+          this.pushMessage('發光的仿生藤蔓從天花板垂下，分泌著微弱的酸性孢子。你的皮膚感到一陣輕微的刺痛。', 'info');
+        } else {
+          this.pushFloatingText(px, py, '🌿 BIONIC CANOPY 🌿', '#00ff88');
+          this.pushMessage('Glowing bionic vines drape from the ceiling, secreting faint acidic spores. A mild sting prickles your skin.', 'info');
+        }
+      }
+    }
+
+    // Landmark entry observation
+    const landmark = this.getLandmarkKey();
+    if (landmark !== 'none' && this.lastLandmarkKey !== landmark) {
+      this.lastLandmarkKey = landmark;
+      const observations: Record<string, { zh: string; en: string }> = {
+        safehouse: {
+          zh: '反抗軍安全屋：牆壁上貼滿手繪地圖與戰術標記。空氣中瀰漫著咖啡與機油混合的氣味。',
+          en: 'Rebel Safehouse: Hand-drawn maps and tactical markers cover the walls. The air smells of coffee and machine oil.',
+        },
+        'cyber-park': {
+          zh: '賽博公園：全息廣告在霧氣中閃爍，仿生花朵在人工陽光下綻放。一切看起來如此完美，如此虛假。',
+          en: 'Cyber Park: Holographic ads flicker through the mist, bionic flowers bloom under artificial sun. Everything looks so perfect, so false.',
+        },
+        checkpoint: {
+          zh: '檢查站：佐格巡邏隊在前方警戒。探照燈掃過街道，每一道光都帶著殺意。',
+          en: 'Checkpoint: Tzorg patrols stand guard ahead. Searchlights sweep the streets, each beam carrying the weight of intent.',
+        },
+        elevator: {
+          zh: '升降機：金屬門微微震動，等待著你的指令。通往製造複合體的通道就在眼前。',
+          en: 'Elevator: The metal doors hum softly, awaiting your command. The passage to the Fab-Plex lies before you.',
+        },
+        'fab-entrance': {
+          zh: '製造複合體入口：機械臂的節奏性運動在遠處形成一種催眠的旋律。空氣中瀰漫著焊接與金屬的氣味。',
+          en: 'Fab-Plex Entrance: The rhythmic motion of mechanical arms forms a hypnotic melody in the distance. The air reeks of welding and metal.',
+        },
+        'overmind-core': {
+          zh: '中央超心智核心：巨大的量子處理器在黑暗中脈動，藍色的光線如心跳般規律。這裡是佐格的控制中樞。',
+          en: 'Central Overmind Core: The massive quantum processor pulses in the darkness, blue light beating in a steady rhythm. This is Tzorg\'s control nexus.',
+        },
+        'sewer-entrance': {
+          zh: '下水道入口：腐蝕性液體在腳下潺潺流動，發出微弱的嘶嘶聲。黑暗在前方張開雙臂。',
+          en: 'Sewer Entrance: Corrosive liquid trickles at your feet, hissing softly. The darkness ahead opens its arms.',
+        },
+        'sewer-exit': {
+          zh: '下水道出口：新鮮的空氣從遠處湧來，帶著一絲自由的味道。出口就在前方。',
+          en: 'Sewer Exit: Fresh air rushes in from the distance, carrying a hint of freedom. The exit lies ahead.',
+        },
+      };
+      const obs = observations[landmark];
+      if (obs) {
+        this.pushMessage(isZh ? obs.zh : obs.en, 'info');
+      }
+    }
   }
 
   private startAnimationLoop(): void {
@@ -1443,8 +1620,25 @@ export class GameEngine {
       return;
     }
 
+    // Increment turn counter for broadcast scheduling
+    this.turnCounter++;
+
     // Process conveyor belt transport
     this.processConveyors();
+
+    // Check environmental observations (conveyor, plasma barrier, bionic canopy, landmarks)
+    this.checkEnvironmentalObservations();
+
+    // Radio broadcast system: every 15 turns or on sector change
+    const currentSectorId = this.map?.id || '';
+    if (currentSectorId !== this.lastSectorId) {
+      this.lastSectorId = currentSectorId;
+      this.pushBroadcast();
+      this.lastBroadcastTurn = this.turnCounter;
+    } else if (this.turnCounter - this.lastBroadcastTurn >= 15) {
+      this.pushBroadcast();
+      this.lastBroadcastTurn = this.turnCounter;
+    }
 
     for (const robot of this.robots) {
       if (!robot.isAlive) {
@@ -1745,6 +1939,29 @@ export class GameEngine {
           this.activeStoryLog = foundLog;
           soundFX.terminal();
           this.pushFloatingText(this.player.x, this.player.y, 'LORE UNLOCKED!', '#00e5ff');
+          const isZh = this.language === 'zh';
+          const slateObservations: Record<string, { zh: string; en: string }> = {
+            'slate-vance': {
+              zh: '數據板 01：文斯博士的記憶晶片。螢幕上閃爍著他顫抖的手寫字：「我創造了神經項圈，現在我必須毀掉它。」',
+              en: 'Data Slate 01: Dr. Vance\'s memory chip. His trembling handwriting flickers on the screen: "I built the neural collar. Now I must destroy it."',
+            },
+            'slate-kira': {
+              zh: '數據板 02：反抗軍戰報。基拉的聲音冰冷而堅定：「第二區已失守。七十名同志犧牲。我們不會忘記。」',
+              en: 'Data Slate 02: Resistance dispatch. Kira\'s voice is cold and resolute: "Sector 2 has fallen. Seventy comrades lost. We will not forget."',
+            },
+            'slate-tzorg': {
+              zh: '數據板 03：佐格安全指令。加密頻道中傳來機械化的聲音：「所有單位立即中和目標。五萬萬必須保持休眠。」',
+              en: 'Data Slate 03: Tzorg security directive. A mechanized voice echoes through the encrypted channel: "All units neutralize target immediately. The Five Million must remain dormant."',
+            },
+            'slate-ghost': {
+              zh: '數據板 04：量子傳輸截獲。鬼影的聲音在靜電中若隱若現：「神經項圈可以逆轉。自由不是特權，是權利。」',
+              en: 'Data Slate 04: Intercepted quantum transmission. Ghost\'s voice emerges from the static: "The neural collars can be reversed. Freedom is not a privilege. It is a right."',
+            },
+          };
+          const obs = slateObservations[item.storyLogId || ''];
+          if (obs) {
+            this.pushMessage(isZh ? obs.zh : obs.en, 'info');
+          }
           this.pushMessage(`Decrypted Data Slate: [${foundLog.title}]. Press [L] to review archives.`, 'success');
           this.updateNPCDialogues();
         }

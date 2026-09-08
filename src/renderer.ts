@@ -31,6 +31,13 @@ const SECTOR_STREET_SIGNS: StreetSign[] = [
   { x: 27, y: 3, text: '⚡ HIGH-VOLTAGE', color: '#ffea00' },
   { x: 30, y: 20, text: 'SYS // DATA HUB', color: '#9d4edd', subtext: 'AUTHORIZED ONLY' },
   { x: 35, y: 17, text: 'SERVER VAULT', color: '#00ff88' },
+  // 第二區 (Sector 2) - 黑市與工坊
+  { x: 42, y: 8, text: '⚙ BLACK MARKET', color: '#ff6600', subtext: 'NO QUESTIONS' },
+  { x: 45, y: 12, text: 'ZERO-ONE WORKSHOP', color: '#00ffcc', subtext: 'CUSTOM CYBERWARE' },
+  { x: 48, y: 6, text: '▲ CITADEL LIFT', color: '#ffea00', subtext: 'AUTHORIZED ONLY' },
+  // 零號下水道 (Sewer 0) - 排水與廢水
+  { x: 52, y: 25, text: '⚠ DRAIN VALVE 0-A', color: '#88ff00', subtext: 'TOXIC LEVEL' },
+  { x: 55, y: 28, text: '☣ SEWAGE BASIN', color: '#44ff88', subtext: 'DANGER' },
 ];
 
 export class GameRenderer {
@@ -313,6 +320,9 @@ export class GameRenderer {
 
     // 10. 畫面周圍氛圍暗角 (Vignette & Scanline Overlay)
     this.drawScreenAtmosphere(width, height, ctx);
+
+    // 10.5 各分區環境大氣特效 (Sector Environmental Atmosphere Effects)
+    this.drawSectorAtmosphere(px, py, width, height, camX, camY, ctx, now);
 
     // 11. 戰術小雷達 (Sector Mini Radar，包含道具黃點、居民綠點、機器人)
     this.drawMiniRadar(width, map, player, robots, npcs, groundItems, visible, ctx, now, this.isFullMapActive, this.language);
@@ -785,6 +795,172 @@ export class GameRenderer {
       ctx.fillStyle = grad;
       ctx.fillRect?.(0, 0, width, height);
     }
+    ctx.restore?.();
+  }
+
+  // 各分區環境大氣特效 (Sector Environmental Atmosphere Effects)
+  drawSectorAtmosphere(
+    px: number,
+    py: number,
+    width: number,
+    height: number,
+    camX: number,
+    camY: number,
+    ctx: any,
+    now: number
+  ): void {
+    ctx.save?.();
+
+    // 判斷玩家所在分區
+    const sector = this.getSectorFromPosition(px, py);
+
+    if (sector === 'SECTOR_1') {
+      // 賽博酸雨絲與霧氣粒子 (Cyber Acid Rain & Fog Particles)
+      this.drawAcidRainAndFog(width, height, ctx, now);
+    } else if (sector === 'SECTOR_2') {
+      // 科技區輸送帶微弱火花 (Tech District Conveyor Sparks)
+      this.drawConveyorSparks(width, height, ctx, now);
+    } else if (sector === 'SEWER_0') {
+      // 下水道微弱毒霧蒸汽 (Sewer Toxic Mist & Steam)
+      this.drawSewerToxicMist(width, height, ctx, now);
+    }
+
+    ctx.restore?.();
+  }
+
+  // 根據玩家位置判斷分區
+  getSectorFromPosition(px: number, py: number): string {
+    // 簡化分區判斷邏輯
+    if (px >= 50 && py >= 20) {
+      return 'SEWER_0';
+    } else if (px >= 40) {
+      return 'SECTOR_2';
+    } else {
+      return 'SECTOR_1';
+    }
+  }
+
+  // 賽博酸雨絲與霧氣粒子
+  drawAcidRainAndFog(width: number, height: number, ctx: any, now: number): void {
+    ctx.save?.();
+
+    // 霧氣層 (Fog Layer)
+    const fogGrad = ctx.createLinearGradient?.(0, 0, 0, height);
+    if (fogGrad) {
+      fogGrad.addColorStop(0, 'rgba(20, 40, 50, 0.15)');
+      fogGrad.addColorStop(0.5, 'rgba(10, 20, 30, 0.05)');
+      fogGrad.addColorStop(1, 'rgba(15, 30, 40, 0.2)');
+      ctx.fillStyle = fogGrad;
+      ctx.fillRect?.(0, 0, width, height);
+    }
+
+    // 酸雨絲 (Acid Rain Streaks)
+    const rainCount = 40;
+    for (let i = 0; i < rainCount; i++) {
+      const seed = i * 137.5 + now * 0.05;
+      const x = (Math.sin(seed * 0.7) * 0.5 + 0.5) * width;
+      const y = ((now * 0.3 + i * 50) % (height + 100)) - 50;
+      const len = 15 + Math.sin(seed * 0.3) * 10;
+      const alpha = 0.15 + 0.1 * Math.sin(seed * 0.5);
+
+      ctx.strokeStyle = `rgba(100, 255, 150, ${alpha})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath?.();
+      ctx.moveTo?.(x, y);
+      ctx.lineTo?.(x - 2, y + len);
+      ctx.stroke?.();
+    }
+
+    // 霧氣粒子 (Fog Particles)
+    const particleCount = 20;
+    for (let i = 0; i < particleCount; i++) {
+      const seed = i * 97.3 + now * 0.02;
+      const x = (Math.sin(seed * 0.4) * 0.5 + 0.5) * width;
+      const y = (Math.cos(seed * 0.3) * 0.5 + 0.5) * height;
+      const size = 20 + Math.sin(seed * 0.6) * 15;
+      const alpha = 0.03 + 0.02 * Math.sin(seed * 0.8);
+
+      ctx.fillStyle = `rgba(150, 200, 220, ${alpha})`;
+      ctx.beginPath?.();
+      ctx.arc?.(x, y, size, 0, Math.PI * 2);
+      ctx.fill?.();
+    }
+
+    ctx.restore?.();
+  }
+
+  // 科技區輸送帶微弱火花
+  drawConveyorSparks(width: number, height: number, ctx: any, now: number): void {
+    ctx.save?.();
+
+    // 背景微弱光暈 (Subtle Glow)
+    const glowGrad = ctx.createRadialGradient?.(width / 2, height / 2, 0, width / 2, height / 2, width * 0.6);
+    if (glowGrad) {
+      glowGrad.addColorStop(0, 'rgba(0, 100, 150, 0.08)');
+      glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = glowGrad;
+      ctx.fillRect?.(0, 0, width, height);
+    }
+
+    // 輸送帶火花 (Conveyor Sparks)
+    const sparkCount = 15;
+    for (let i = 0; i < sparkCount; i++) {
+      const seed = i * 211.7 + now * 0.08;
+      const x = (Math.sin(seed * 0.5) * 0.5 + 0.5) * width;
+      const y = (Math.cos(seed * 0.4) * 0.5 + 0.5) * height;
+      const size = 1 + Math.random() * 2;
+      const alpha = 0.3 + 0.3 * Math.sin(seed * 0.9);
+
+      ctx.fillStyle = `rgba(255, 200, 50, ${alpha})`;
+      ctx.shadowColor = '#ffcc33';
+      ctx.shadowBlur = 4;
+      ctx.beginPath?.();
+      ctx.arc?.(x, y, size, 0, Math.PI * 2);
+      ctx.fill?.();
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.restore?.();
+  }
+
+  // 下水道微弱毒霧蒸汽
+  drawSewerToxicMist(width: number, height: number, ctx: any, now: number): void {
+    ctx.save?.();
+
+    // 毒霧底色 (Toxic Mist Base)
+    const mistGrad = ctx.createLinearGradient?.(0, height * 0.6, 0, height);
+    if (mistGrad) {
+      mistGrad.addColorStop(0, 'rgba(50, 100, 30, 0)');
+      mistGrad.addColorStop(0.5, 'rgba(60, 120, 40, 0.12)');
+      mistGrad.addColorStop(1, 'rgba(80, 150, 50, 0.25)');
+      ctx.fillStyle = mistGrad;
+      ctx.fillRect?.(0, 0, width, height);
+    }
+
+    // 蒸汽粒子 (Steam Particles)
+    const steamCount = 25;
+    for (let i = 0; i < steamCount; i++) {
+      const seed = i * 173.1 + now * 0.015;
+      const x = (Math.sin(seed * 0.3) * 0.5 + 0.5) * width;
+      const y = height - ((now * 0.2 + i * 30) % (height * 0.4));
+      const size = 30 + Math.sin(seed * 0.5) * 20;
+      const alpha = 0.05 + 0.04 * Math.sin(seed * 0.7);
+
+      ctx.fillStyle = `rgba(120, 200, 80, ${alpha})`;
+      ctx.beginPath?.();
+      ctx.arc?.(x, y, size, 0, Math.PI * 2);
+      ctx.fill?.();
+    }
+
+    // 地面毒氣光暈 (Ground Toxic Glow)
+    const groundGlow = ctx.createLinearGradient?.(0, height - 80, 0, height);
+    if (groundGlow) {
+      groundGlow.addColorStop(0, 'rgba(100, 180, 60, 0)');
+      groundGlow.addColorStop(1, 'rgba(120, 200, 70, 0.15)');
+      ctx.fillStyle = groundGlow;
+      ctx.fillRect?.(0, height - 80, width, 80);
+    }
+
     ctx.restore?.();
   }
 
