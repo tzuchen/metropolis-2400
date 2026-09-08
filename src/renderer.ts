@@ -857,11 +857,11 @@ export class GameRenderer {
     // 酸雨絲 (Acid Rain Streaks)
     const rainCount = 40;
     for (let i = 0; i < rainCount; i++) {
-      const seed = i * 137.5 + now * 0.05;
-      const x = (Math.sin(seed * 0.7) * 0.5 + 0.5) * width;
-      const y = ((now * 0.3 + i * 50) % (height + 100)) - 50;
-      const len = 15 + Math.sin(seed * 0.3) * 10;
-      const alpha = 0.15 + 0.1 * Math.sin(seed * 0.5);
+      const baseX = (i * (width / rainCount) * 1.618) % width;
+      const x = baseX + Math.sin(now * 0.0006 + i) * 4;
+      const y = ((now * 0.22 + i * 35) % (height + 60)) - 30;
+      const len = 15 + Math.sin(i * 0.3) * 10;
+      const alpha = 0.15 + 0.1 * Math.sin(i * 0.5);
 
       ctx.strokeStyle = `rgba(100, 255, 150, ${alpha})`;
       ctx.lineWidth = 1;
@@ -874,11 +874,10 @@ export class GameRenderer {
     // 霧氣粒子 (Fog Particles)
     const particleCount = 20;
     for (let i = 0; i < particleCount; i++) {
-      const seed = i * 97.3 + now * 0.02;
-      const x = (Math.sin(seed * 0.4) * 0.5 + 0.5) * width;
-      const y = (Math.cos(seed * 0.3) * 0.5 + 0.5) * height;
-      const size = 20 + Math.sin(seed * 0.6) * 15;
-      const alpha = 0.03 + 0.02 * Math.sin(seed * 0.8);
+      const x = (i * (width / particleCount) + now * 0.012) % width;
+      const y = ((i * 73.1) % height) + Math.sin(now * 0.0006 + i) * 12;
+      const size = 20 + Math.sin(i * 0.6) * 15;
+      const alpha = 0.02 + 0.02 * Math.sin(i * 0.8);
 
       ctx.fillStyle = `rgba(150, 200, 220, ${alpha})`;
       ctx.beginPath?.();
@@ -940,11 +939,11 @@ export class GameRenderer {
     // 蒸汽粒子 (Steam Particles)
     const steamCount = 25;
     for (let i = 0; i < steamCount; i++) {
-      const seed = i * 173.1 + now * 0.015;
-      const x = (Math.sin(seed * 0.3) * 0.5 + 0.5) * width;
-      const y = height - ((now * 0.2 + i * 30) % (height * 0.4));
-      const size = 30 + Math.sin(seed * 0.5) * 20;
-      const alpha = 0.05 + 0.04 * Math.sin(seed * 0.7);
+      const baseX = (i * (width / steamCount) * 1.618) % width;
+      const x = baseX + Math.sin(now * 0.0008 + i * 0.5) * 8;
+      const y = height - ((now * 0.15 + i * 40) % (height * 0.5));
+      const size = 30 + Math.sin(i * 0.5) * 20;
+      const alpha = 0.04 + 0.03 * Math.sin(i * 0.7);
 
       ctx.fillStyle = `rgba(120, 200, 80, ${alpha})`;
       ctx.beginPath?.();
@@ -1556,7 +1555,10 @@ export class GameRenderer {
     ctx.fillStyle = `rgba(0, 229, 255, ${pulse})`;
     ctx.font = getTitleFont(12, isZh);
     ctx.textAlign = 'center';
-    ctx.fillText?.('PRESS [ SPACE ] OR [ ENTER ] OR [ ESC ] TO CLOSE ARCHIVAL RECORD', x + boxW / 2, y + boxH - 18);
+    const footerText = isZh
+      ? '按 [ 空白鍵 ]、[ ENTER ] 或 [ ESC ] 關閉檔案記錄  |  按 [ Z ] 切換中英文'
+      : 'PRESS [ SPACE ] OR [ ENTER ] OR [ ESC ] TO CLOSE  |  [ Z ] SWITCH LANGUAGE';
+    ctx.fillText?.(footerText, x + boxW / 2, y + boxH - 18);
 
     ctx.shadowBlur = 0;
     ctx.restore?.();
@@ -1575,6 +1577,7 @@ export class GameRenderer {
     const boxH = Math.min(height - 60, 440);
     const x = (width - boxW) / 2;
     const y = (height - boxH) / 2;
+    const isZh = this.language === 'zh';
 
     ctx.fillStyle = 'rgba(4, 10, 16, 0.97)';
     ctx.fillRect?.(x, y, boxW, boxH);
@@ -1586,15 +1589,19 @@ export class GameRenderer {
     ctx.strokeRect?.(x + 1, y + 1, boxW - 2, boxH - 2);
 
     ctx.fillStyle = '#ff9900';
-    ctx.font = 'bold 14px monospace';
+    ctx.font = getTitleFont(14, isZh);
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
-    ctx.fillText?.('// RESISTANCE LORE ARCHIVES // SECTOR 1 DATA BANK //', x + 20, y + 16);
+    const headerText = isZh ? '// 反抗軍歷史數據檔案庫 // 第一分區情報主機 //' : '// RESISTANCE LORE ARCHIVES // SECTOR 1 DATA BANK //';
+    ctx.fillText?.(headerText, x + 20, y + 16);
 
     const readCount = logs.filter((l) => l.read).length;
     ctx.fillStyle = '#8aa0aa';
-    ctx.font = '11px monospace';
-    ctx.fillText?.(`RECOVERED DATA SLATES: ${readCount} / ${logs.length} FOUND IN SECTOR`, x + 20, y + 36);
+    ctx.font = getFont(11, isZh);
+    const subHeaderText = isZh
+      ? `已解密記憶數據板：${readCount} / ${logs.length}（按 [1-4] 閱讀，按 [Z] 切換語言）`
+      : `RECOVERED DATA SLATES: ${readCount} / ${logs.length} FOUND (Press [1-4] to read, [Z] for Lang)`;
+    ctx.fillText?.(subHeaderText, x + 20, y + 36);
 
     ctx.strokeStyle = 'rgba(255, 153, 0, 0.3)';
     ctx.lineWidth = 1;
@@ -1614,33 +1621,43 @@ export class GameRenderer {
       ctx.strokeRect?.(x + 20, ly, boxW - 40, 70);
 
       ctx.fillStyle = isFound ? '#00e5ff' : '#667788';
-      ctx.font = 'bold 12px monospace';
-      ctx.fillText?.(
-        isFound ? `[ SLATE 0${i + 1} ] ${log.title}` : `[ SLATE 0${i + 1} ] // ENCRYPTED DATA CORRUPTED //`,
-        x + 30,
-        ly + 10
-      );
+      ctx.font = getTitleFont(12, isZh);
+      const logTitle = isZh && log.titleZh ? log.titleZh : log.title;
+      const slateLabel = isFound
+        ? `[ ${isZh ? '數據板' : 'SLATE'} 0${i + 1} ] ${logTitle}`
+        : isZh
+          ? `[ 數據板 0${i + 1} ] // 加密數據損毀未尋獲 //`
+          : `[ SLATE 0${i + 1} ] // ENCRYPTED DATA CORRUPTED //`;
+      ctx.fillText?.(slateLabel, x + 30, ly + 10);
 
       ctx.fillStyle = isFound ? '#ffea00' : '#445566';
-      ctx.font = '10px monospace';
-      ctx.fillText?.(
-        isFound ? `SOURCE: ${log.author} | DATE: ${log.timestamp}` : 'SEARCH SECTOR 1 DEPOTS TO RECOVER DISK',
-        x + 30,
-        ly + 28
-      );
+      ctx.font = getFont(10, isZh);
+      const sourceText = isFound
+        ? isZh
+          ? `來源：${log.author} | 日期戳：${log.timestamp}`
+          : `SOURCE: ${log.author} | DATE: ${log.timestamp}`
+        : isZh
+          ? '搜索第一分區物資據點以回收此記憶磁碟'
+          : 'SEARCH SECTOR 1 DEPOTS TO RECOVER DISK';
+      ctx.fillText?.(sourceText, x + 30, ly + 28);
 
       ctx.fillStyle = isFound ? '#c0d4de' : '#334455';
-      ctx.font = '10px monospace';
+      ctx.font = getFont(10, isZh);
       const snippet = isFound
-        ? (log.content[0] ? log.content[0].slice(0, 80) + '...' : '')
-        : 'Access restricted by Tzorg firewall.';
+        ? ((log.contentZh?.[0] || log.content[0] || '').slice(0, 80) + '...')
+        : isZh
+          ? '存取權限受佐格防火牆嚴格限制。'
+          : 'Access restricted by Tzorg firewall.';
       ctx.fillText?.(snippet, x + 30, ly + 46);
     });
 
     ctx.fillStyle = '#ff9900';
-    ctx.font = 'bold 11px monospace';
+    ctx.font = getTitleFont(11, isZh);
     ctx.textAlign = 'center';
-    ctx.fillText?.('PRESS [ L ] OR [ ESC ] TO RETURN TO TACTICAL VIEW', x + boxW / 2, y + boxH - 18);
+    const footerText = isZh
+      ? '按 [ L ] 或 [ ESC ] 關閉檔案庫  |  按 [ Z ] 切換中英文'
+      : 'PRESS [ L ] OR [ ESC ] TO RETURN TO TACTICAL VIEW  |  [ Z ] SWITCH LANGUAGE';
+    ctx.fillText?.(footerText, x + boxW / 2, y + boxH - 18);
 
     ctx.shadowBlur = 0;
     ctx.restore?.();

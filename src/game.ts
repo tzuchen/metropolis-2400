@@ -1007,6 +1007,10 @@ export class GameEngine {
         this.render();
         return;
       }
+      if (key === 'z' || key === 'Z') {
+        this.toggleLanguage();
+        return;
+      }
       return;
     }
 
@@ -1017,6 +1021,20 @@ export class GameEngine {
         soundFX.terminal();
         this.render();
         return;
+      }
+      if (key === 'z' || key === 'Z') {
+        this.toggleLanguage();
+        return;
+      }
+      const num = parseInt(key, 10);
+      if (!isNaN(num) && num >= 1 && num <= this.storyLogs.length) {
+        const selected = this.storyLogs[num - 1];
+        if (selected && selected.read) {
+          this.activeStoryLog = selected;
+          soundFX.terminal();
+          this.render();
+          return;
+        }
       }
       return;
     }
