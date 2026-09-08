@@ -578,92 +578,69 @@ export function drawTileSprite(
     ctx.fillRect(x + 6, y + size * 0.65, 3, 3);
     ctx.fillRect(x + size - 9, y + size * 0.65, 3, 3);
   } else {
-    // FLOOR 賽博街景地磚 (Cyberpunk Street Pavement)
+    // FLOOR 賽博街景地磚 (Cyberpunk Street Pavement) - 簡化暗色霧面質感
     // 座標哈希決定地磚變體 (0-3)
     const gx = Math.floor(x / size);
     const gy = Math.floor(y / size);
     const hash = (gx * 31 + gy * 17) % 4;
 
-    // 基底合金地磚
-    ctx.fillStyle = '#0b121a';
+    // 基底合金地磚 (深沉暗色)
+    ctx.fillStyle = '#070b10';
     ctx.fillRect(x, y, size, size);
 
-    // 地磚微邊縫
-    ctx.strokeStyle = '#141f2b';
+    // 地磚微邊縫 (極微弱暗色)
+    ctx.strokeStyle = '#0e141c';
     ctx.lineWidth = 1;
     ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
 
     if (hash === 0) {
-      // 變體 0: 重型水溝格柵 (Heavy Drain Grate)
-      ctx.fillStyle = '#121d28';
+      // 變體 0: 暗色金屬排水凹槽 (Subtle Drain Groove)
+      ctx.fillStyle = '#0c1017';
       ctx.fillRect(x + size * 0.2, y + size * 0.2, size * 0.6, size * 0.6);
-      ctx.fillStyle = '#1b2a3a';
+      ctx.fillStyle = '#0a0e15';
       for (let i = 0; i < 4; i++) {
         ctx.fillRect(x + size * 0.25, y + size * 0.25 + i * (size * 0.12), size * 0.5, 2);
       }
-      // 格柵邊框鉚釘
-      ctx.fillStyle = '#3a4f68';
+      // 凹槽邊框暗色鉚釘
+      ctx.fillStyle = '#141c26';
       ctx.fillRect(x + size * 0.22, y + size * 0.22, 2, 2);
       ctx.fillRect(x + size * 0.76, y + size * 0.22, 2, 2);
       ctx.fillRect(x + size * 0.22, y + size * 0.76, 2, 2);
       ctx.fillRect(x + size * 0.76, y + size * 0.76, 2, 2);
     } else if (hash === 1) {
-      // 變體 1: 霓虹導引反光標線 (Neon Guide Line)
-      ctx.fillStyle = '#121d28';
+      // 變體 1: 暗色合金加固板 (Dark Alloy Reinforcement Plate)
+      ctx.fillStyle = '#0a0e15';
       ctx.fillRect(x + size * 0.4, y + size * 0.1, size * 0.2, size * 0.8);
-      const neonPulse = 0.5 + 0.5 * Math.sin(time * 0.004 + (gx + gy) * 0.5);
-      ctx.fillStyle = `rgba(0, 240, 255, ${0.3 + neonPulse * 0.4})`;
-      ctx.shadowColor = '#00f0ff';
-      ctx.shadowBlur = 4;
-      ctx.fillRect(x + size * 0.45, y + size * 0.15, size * 0.1, size * 0.7);
-      ctx.shadowBlur = 0;
-      // 標線端點鉚釘
-      ctx.fillStyle = '#3a4f68';
+      // 加固板端點暗色鉚釘
+      ctx.fillStyle = '#141c26';
       ctx.fillRect(x + size * 0.42, y + size * 0.12, 2, 2);
       ctx.fillRect(x + size * 0.56, y + size * 0.12, 2, 2);
       ctx.fillRect(x + size * 0.42, y + size * 0.86, 2, 2);
       ctx.fillRect(x + size * 0.56, y + size * 0.86, 2, 2);
     } else if (hash === 2) {
-      // 變體 2: 雨水積水坑倒影 (Rain Puddle Reflection)
-      ctx.fillStyle = '#0d1a24';
+      // 變體 2: 暗色濕潤地磚紋理 (Dark Wet Pavement Texture)
+      ctx.fillStyle = '#080d13';
       ctx.beginPath();
       ctx.arc(x + size * 0.5, y + size * 0.5, size * 0.3, 0, Math.PI * 2);
       ctx.fill();
-      // 水面反光
-      const ripplePhase = (time * 0.003 + (gx * 7 + gy * 13) % 100) % 1;
-      ctx.strokeStyle = `rgba(0, 180, 255, ${0.2 + ripplePhase * 0.3})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(x + size * 0.5, y + size * 0.5, size * 0.15 + ripplePhase * size * 0.1, 0, Math.PI * 2);
-      ctx.stroke();
-      // 積水邊緣
-      ctx.fillStyle = '#1a2a3a';
+      // 濕潤邊緣暗色
+      ctx.fillStyle = '#0c1017';
       ctx.fillRect(x + size * 0.2, y + size * 0.48, size * 0.6, 1);
       ctx.fillRect(x + size * 0.2, y + size * 0.52, size * 0.6, 1);
     } else {
-      // 變體 3: 嵌入式高壓光纖線槽 (Embedded Fiber Optic Trench)
-      ctx.fillStyle = '#0e1520';
+      // 變體 3: 暗色嵌入式線槽 (Dark Embedded Cable Trench)
+      ctx.fillStyle = '#0a0e15';
       ctx.fillRect(x + size * 0.1, y + size * 0.4, size * 0.8, size * 0.2);
-      // 光纖導光條
-      const fiberPulse = 0.4 + 0.6 * Math.sin(time * 0.006 + gx * 0.3);
-      ctx.fillStyle = `rgba(255, 0, 110, ${0.3 + fiberPulse * 0.5})`;
-      ctx.shadowColor = '#ff006e';
-      ctx.shadowBlur = 5;
-      ctx.fillRect(x + size * 0.15, y + size * 0.45, size * 0.7, 3);
-      ctx.shadowBlur = 0;
-      // 線槽蓋板鉚釘
-      ctx.fillStyle = '#3a4f68';
+      // 線槽蓋板暗色鉚釘
+      ctx.fillStyle = '#141c26';
       ctx.fillRect(x + size * 0.12, y + size * 0.42, 2, 2);
       ctx.fillRect(x + size * 0.86, y + size * 0.42, 2, 2);
       ctx.fillRect(x + size * 0.12, y + size * 0.56, 2, 2);
       ctx.fillRect(x + size * 0.86, y + size * 0.56, 2, 2);
-      // 地底發光導光纖維管線微光
-      ctx.fillStyle = 'rgba(0, 180, 255, 0.08)';
-      ctx.fillRect(x, y + size - 1, size, 1);
     }
 
-    // 所有 FLOOR 地磚共用的沉頭鉚釘 (Flush Rivets)
-    ctx.fillStyle = '#2a3a4a';
+    // 所有 FLOOR 地磚共用的沉頭暗色鉚釘 (Flush Dark Rivets)
+    ctx.fillStyle = '#141c26';
     ctx.fillRect(x + 3, y + 3, 2, 2);
     ctx.fillRect(x + size - 5, y + 3, 2, 2);
     ctx.fillRect(x + 3, y + size - 5, 2, 2);
