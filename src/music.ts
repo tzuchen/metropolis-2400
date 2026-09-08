@@ -19,11 +19,16 @@ export class MusicSynthesizer {
   private intensity: MusicIntensity = 'exploration';
   private arpTimer: any = null;
   private arpStep: number = 0;
+  private _isTapeActive: boolean = false;
 
   // A minor pentatonic frequencies (Hz): A2, C3, D3, E3, G3, A3
   private readonly arpScale = [110, 130.81, 146.83, 164.81, 196.0, 220.0];
   // Bass roots: A1 (55Hz), F1 (43.65Hz), C2 (65.41Hz), G1 (49Hz)
   private readonly bassRoots = [55, 43.65, 65.41, 49];
+  // 80s Synthwave classic progression roots
+  private readonly synthwaveRoots = [73.42, 58.27, 87.31, 65.41];
+  // 80s Synthwave arpeggio scale
+  private readonly synthwaveArpScale = [146.83, 174.61, 196.0, 220.0, 261.63, 293.66, 349.23, 440.0];
   private chordIndex: number = 0;
 
   constructor() {
@@ -36,6 +41,10 @@ export class MusicSynthesizer {
 
   get currentIntensity(): MusicIntensity {
     return this.intensity;
+  }
+
+  get synthwaveTapeActive(): boolean {
+    return this._isTapeActive;
   }
 
   private ensureContext(): AudioContext | null {
@@ -175,6 +184,28 @@ export class MusicSynthesizer {
     }
   }
 
+  setSynthwaveTapeMode(active: boolean): void {
+    this._isTapeActive = active;
+    if (!this.ctx || !this.filterNode || !this.masterGain) return;
+
+    const now = this.ctx.currentTime;
+    if (active) {
+      this.filterNode.frequency.setTargetAtTime(1200, now, 0.3);
+      this.filterNode.Q.setTargetAtTime(3.8, now, 0.3);
+      this.masterGain.gain.setTargetAtTime(0.32, now, 0.3);
+    } else {
+      if (this.intensity === 'exploration') {
+        this.filterNode.frequency.setTargetAtTime(550, now, 0.4);
+        this.masterGain.gain.setTargetAtTime(0.22, now, 0.3);
+      }
+      this.filterNode.Q.setTargetAtTime(2.5, now, 0.3);
+    }
+
+    if (this.isPlaying) {
+      this.scheduleArp();
+    }
+  }
+
   private scheduleArp(): void {
     if (this.arpTimer) {
       clearInterval(this.arpTimer);
@@ -278,23 +309,38 @@ export class MusicSynthesizer {
     const now = this.ctx.currentTime;
     const isBoss = this.intensity === 'boss';
     const isCombat = this.intensity === 'combat';
+    const isTape = this._isTapeActive;
 
     // 換根音 (每 16 拍切換和弦)
     if (this.arpStep % 16 === 0) {
-      this.chordIndex = (this.chordIndex + 1) % this.bassRoots.length;
-      const root = this.bassRoots[this.chordIndex];
-      this.droneOsc?.frequency.setTargetAtTime(root, now, 0.1);
-      this.padOsc1?.frequency.setTargetAtTime(root * 4, now, 0.2);
-      this.padOsc2?.frequency.setTargetAtTime(root * 4 + 2.5, now, 0.2);
+      if (isTape) {
+        this.chordIndex = (this.chordIndex + 1) % this.synthwaveRoots.length;
+        const root = this.synthwaveRoots[this.chordIndex];
+        this.droneOsc?.frequency.setTargetAtTime(root, now, 0.1);
+        this.padOsc1?.frequency.setTargetAtTime(root * 4, now, 0.2);
+        this.padOsc2?.frequency.setTargetAtTime(root * 4 + 2.5, now, 0.2);
+      } else {
+        this.chordIndex = (this.chordIndex + 1) % this.bassRoots.length;
+        const root = this.bassRoots[this.chordIndex];
+        this.droneOsc?.frequency.setTargetAtTime(root, now, 0.1);
+        this.padOsc1?.frequency.setTargetAtTime(root * 4, now, 0.2);
+        this.padOsc2?.frequency.setTargetAtTime(root * 4 + 2.5, now, 0.2);
+      }
     }
 
-    // 戰鬥打擊節奏網格
-    if (isCombat || isBoss) {
+    // 戰鬥打擊節奏網格 或 Synthwave 輕快鼓點
+    if (isCombat || isBoss || isTape) {
       const step = this.arpStep % 16;
       
-      // Kick: 4-on-the-floor (0, 4, 8, 12)
-      if (step === 0 || step === 4 || step === 8 || step === 12) {
-        this.playKick(this.ctx, now, isBoss);
+      // Kick: 4-on-the-floor (0, 4, 8, 12) for combat/boss, 0, 8 for tape
+      if (isTape) {
+        if (step === 0 || step === 8) {
+          this.playKick(this.ctx, now, false);
+        }
+      } else {
+        if (step === 0 || step === 4 || step === 8 || step === 12) {
+          this.playKick(this.ctx, now, isBoss);
+        }
       }
 
       // Snare: Backbeat (4, 12)
@@ -316,7 +362,7 @@ export class MusicSynthesizer {
         try {
           const bassOsc = this.ctx.createOscillator();
           const bassGain = this.ctx.createGain();
-          const root = this.bassRoots[this.chordIndex];
+          const root = isTape ? this.synthwaveRoots[this.chordIndex] : this.bassRoots[this.chordIndex];
           
           bassOsc.type = 'sawtooth';
           bassOsc.frequency.setValueAtTime(root, now);
@@ -335,21 +381,37 @@ export class MusicSynthesizer {
     }
 
     // 挑選琶音音符
-    const notePattern = [0, 2, 4, 3, 1, 5, 2, 4];
-    const scaleIdx = notePattern[this.arpStep % notePattern.length];
-    const freq = this.arpScale[scaleIdx];
+    let freq: number;
+    let oscType: OscillatorType;
+    let peakGain: number;
+    let decayTime: number;
+
+    if (isTape) {
+      // 80s Synthwave arpeggio
+      const notePattern = [0, 2, 4, 6, 7, 5, 3, 1];
+      const scaleIdx = notePattern[this.arpStep % notePattern.length];
+      freq = this.synthwaveArpScale[scaleIdx];
+      oscType = 'sawtooth';
+      peakGain = 0.08;
+      decayTime = 0.14;
+    } else {
+      const notePattern = [0, 2, 4, 3, 1, 5, 2, 4];
+      const scaleIdx = notePattern[this.arpStep % notePattern.length];
+      freq = this.arpScale[scaleIdx];
+      // Combat/Boss use sawtooth, Exploration uses triangle
+      oscType = (isCombat || isBoss) ? 'sawtooth' : 'triangle';
+      // Boss has higher volume
+      peakGain = isBoss ? 0.12 : isCombat ? 0.08 : 0.04;
+      decayTime = isBoss ? 0.1 : isCombat ? 0.14 : 0.22;
+    }
 
     const osc = this.ctx.createOscillator();
-    // Combat/Boss use sawtooth, Exploration uses triangle
-    osc.type = (isCombat || isBoss) ? 'sawtooth' : 'triangle';
+    osc.type = oscType;
     osc.frequency.setValueAtTime(freq, now);
 
     const gain = this.ctx.createGain();
-    // Boss has higher volume
-    const peakGain = isBoss ? 0.12 : isCombat ? 0.08 : 0.04;
     gain.gain.setValueAtTime(peakGain, now);
     
-    const decayTime = isBoss ? 0.1 : isCombat ? 0.14 : 0.22;
     gain.gain.exponentialRampToValueAtTime(0.0001, now + decayTime);
 
     osc.connect(gain);

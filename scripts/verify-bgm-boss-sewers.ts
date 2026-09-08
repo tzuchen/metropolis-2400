@@ -270,4 +270,116 @@ if (!awakenRes.output.includes('五百萬人的全民大覺醒')) {
   throw new Error('AWAKEN command output should include Great Awakening victory text');
 }
 
+console.log('Testing 1984 Synthwave Mode Toggle & Elena Tape Quest Turn-in...');
+if (bgm.synthwaveTapeActive !== false) {
+  throw new Error('bgm.synthwaveTapeActive should start as false');
+}
+bgm.setSynthwaveTapeMode(true);
+if (bgm.synthwaveTapeActive !== true) {
+  throw new Error('bgm.synthwaveTapeActive should be true after setSynthwaveTapeMode(true)');
+}
+
+// Give player the synth tape item
+game.player.inventory.push({
+  id: 'item-synth-tape',
+  name: '1984 Synthwave Tape',
+  itemType: 'KEYCARD',
+  description: 'A mysterious synthwave recording from 1984',
+});
+
+// Trigger dialogue with Elena
+const elena = game.npcs.find((n) => n.id === 'npc-elena');
+if (!elena) {
+  throw new Error('Elena NPC not found');
+}
+const initialMaxEnergy = game.player.maxEnergy;
+game.activeDialogue = {
+  npc: elena,
+  textIndex: (elena.dialogueZh || elena.dialogue).length - 2,
+};
+game.handleKeyDown(' ');
+
+if (game.player.maxEnergy !== initialMaxEnergy + 20) {
+  throw new Error(`Expected maxEnergy to increase by 20 to ${initialMaxEnergy + 20}, got ${game.player.maxEnergy}`);
+}
+const tapeStillInInv = game.player.inventory.some((it) => it.id === 'item-synth-tape');
+if (tapeStillInInv) {
+  throw new Error('Synth tape should be removed from inventory after turn-in');
+}
+// Verify Elena's dialogue updated to 1984 synthwave broadcast content
+const elenaUpdatedDialogue = elena.dialogueZh || elena.dialogue;
+if (!elenaUpdatedDialogue.some((line: string) => line.includes('1984') || line.includes('合成波') || line.includes('synthwave'))) {
+  throw new Error('Elena dialogue should reference 1984 synthwave broadcast after tape delivery');
+}
+console.log('✅ 1984 Synthwave Mode & Elena Tape Quest verified!');
+
+console.log('Testing Dynamic Dialogue Progression for All NPCs...');
+// Verify Hiro's dialogue changed after ramen recipe turn-in
+const hiroAfterQuest = game.npcs.find((n) => n.id === 'npc-hiro');
+if (!hiroAfterQuest) {
+  throw new Error('Hiro NPC not found after quest');
+}
+const hiroDialogue = hiroAfterQuest.dialogueZh || hiroAfterQuest.dialogue;
+if (!hiroDialogue.some((line: string) => line.includes('豚骨') || line.includes('高湯') || line.includes('50'))) {
+  throw new Error('Hiro dialogue should reference secret tonkotsu broth and +50 HP after quest completion');
+}
+
+// Verify Sylvia's dialogue changed after receiving quantum core
+const sylvia = game.npcs.find((n) => n.id === 'npc-sylvia');
+if (!sylvia) {
+  throw new Error('Sylvia NPC not found');
+}
+// Simulate Sylvia having received the quantum core (set a flag or check dialogue)
+const sylviaDialogue = sylvia.dialogueZh || sylvia.dialogue;
+if (!sylviaDialogue.some((line: string) => line.includes('第二分區') || line.includes('Zero-One') || line.includes('zero-one'))) {
+  throw new Error('Sylvia dialogue should reference going to Sector 2 to find Zero-One after receiving quantum core');
+}
+
+// Simulate forcefield disabled and run updateNPCDialogues
+(game as any).forcefieldDisabled = true;
+const forcefieldObj = game.missionObjectives.find((o) => o.id === 'obj-forcefield');
+if (forcefieldObj) forcefieldObj.completed = true;
+game.updateNPCDialogues();
+
+// Verify ghost, kira, vance, jax dialogues advanced to post-forcefield lines
+const ghost = game.npcs.find((n) => n.id === 'npc-ghost');
+const kira = game.npcs.find((n) => n.id === 'npc-kira');
+const vance = game.npcs.find((n) => n.id === 'npc-vance');
+const jax = game.npcs.find((n) => n.id === 'npc-jax');
+
+if (ghost) {
+  const ghostDialogue = ghost.dialogueZh || ghost.dialogue;
+  if (!ghostDialogue.some((line: string) => line.includes('屏障') || line.includes('解除') || line.includes('forcefield'))) {
+    throw new Error('Ghost dialogue should reference forcefield being disabled');
+  }
+}
+if (kira) {
+  const kiraDialogue = kira.dialogueZh || kira.dialogue;
+  if (!kiraDialogue.some((line: string) => line.includes('屏障') || line.includes('解除') || line.includes('forcefield') || line.includes('通道') || line.includes('開放'))) {
+    throw new Error('Kira dialogue should reference forcefield being disabled');
+  }
+}
+if (vance) {
+  const vanceDialogue = vance.dialogueZh || vance.dialogue;
+  if (!vanceDialogue.some((line: string) => line.includes('屏障') || line.includes('解除') || line.includes('forcefield') || line.includes('通道') || line.includes('開放'))) {
+    throw new Error('Vance dialogue should reference forcefield being disabled');
+  }
+}
+if (jax) {
+  const jaxDialogue = jax.dialogueZh || jax.dialogue;
+  if (!jaxDialogue.some((line: string) => line.includes('屏障') || line.includes('解除') || line.includes('forcefield') || line.includes('通道') || line.includes('開放'))) {
+    throw new Error('Jax dialogue should reference forcefield being disabled');
+  }
+}
+
+// Verify Zero-One's dialogue changed after forging quantum cannon
+const zeroOne = game.npcs.find((n) => n.id === 'npc-zero-one');
+if (zeroOne) {
+  const zeroOneDialogue = zeroOne.dialogueZh || zeroOne.dialogue;
+  if (!zeroOneDialogue.some((line: string) => line.includes('二階段') || line.includes('護盾') || line.includes('shield'))) {
+    throw new Error('Zero-One dialogue should reference how to pierce Phase 2 shield after forging quantum cannon');
+  }
+}
+console.log('✅ Dynamic Dialogue Progression verified!');
+
 console.log('🎉 All Synthwave BGM, Boss Overdrive, Sewers, Quests, and Awaken Ending tests passed successfully!');
