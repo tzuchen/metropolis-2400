@@ -2,8 +2,18 @@ import type { Player, Robot } from './types';
 import { drawCustomNPCSprite } from './npcSprites';
 
 function getTileKind(tile: any): string {
-  if (typeof tile === 'string') return tile.toUpperCase();
+  if (typeof tile === 'string') {
+    const upper = tile.toUpperCase();
+    if (upper.startsWith('LETTER_')) {
+      const letter = upper.slice(7);
+      if (letter.length === 1 && letter >= 'A' && letter <= 'Z') return `LETTER_${letter}`;
+    }
+    return upper;
+  }
   if (typeof tile === 'number') {
+    if (tile >= 101 && tile <= 126) {
+      return `LETTER_${String.fromCharCode(64 + (tile - 100))}`;
+    }
     switch (tile) {
       case 2: return 'WALL';
       case 3: return 'DOOR_CLOSED';
@@ -39,8 +49,10 @@ export function drawTileSprite(
   y: number,
   size: number,
   visible: boolean = true,
-  time: number = 0
+  time: number = 0,
+  sectorId?: string
 ): void {
+  const sector = sectorId || 'sector-1';
   const kind = getTileKind(tile);
   ctx.save();
   if (!visible) {
@@ -48,76 +60,311 @@ export function drawTileSprite(
   }
 
   if (kind === 'WALL') {
-    // 裝甲鋼板建築外牆 (Cyberpunk Industrial Wall)
-    ctx.fillStyle = '#101722';
-    ctx.fillRect(x, y, size, size);
+    if (sector === 'sector-2') {
+      // Sector 2: 重工業高壓防爆鋼牆 (Heavy Industrial Hazard Wall)
+      ctx.fillStyle = '#1a1510';
+      ctx.fillRect(x, y, size, size);
 
-    // 2.5D 環境陰影 (Drop Shadow) - 底部向下投射
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-    ctx.fillRect(x, y + size, size, 4);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-    ctx.fillRect(x + 2, y + size + 4, size - 4, 3);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-    ctx.fillRect(x + 4, y + size + 7, size - 8, 2);
+      // 2.5D 環境陰影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(x, y + size, size, 4);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(x + 2, y + size + 4, size - 4, 3);
 
-    // 金屬倒角邊框高光與陰影
-    ctx.fillStyle = '#223245';
-    ctx.fillRect(x, y, size, 2);
-    ctx.fillRect(x, y, 2, size);
-    ctx.fillStyle = '#060a0f';
-    ctx.fillRect(x, y + size - 2, size, 2);
-    ctx.fillRect(x + size - 2, y, 2, size);
+      // 重工業鋼板邊框
+      ctx.fillStyle = '#3d3020';
+      ctx.fillRect(x, y, size, 3);
+      ctx.fillRect(x, y, 3, size);
+      ctx.fillStyle = '#0d0a08';
+      ctx.fillRect(x, y + size - 3, size, 3);
+      ctx.fillRect(x + size - 3, y, 3, size);
 
-    // 頂部霓虹壓頂燈條 (Parapet Neon Edge)
-    const parapetPulse = 0.6 + 0.4 * Math.sin(time * 0.005 + x * 0.05);
-    ctx.fillStyle = `rgba(0, 240, 255, ${0.4 + parapetPulse * 0.4})`;
-    ctx.shadowColor = '#00f0ff';
-    ctx.shadowBlur = 8;
-    ctx.fillRect(x + 2, y, size - 4, 3);
-    ctx.shadowBlur = 0;
-    // 壓頂燈條端點
-    ctx.fillStyle = '#00f0ff';
-    ctx.fillRect(x + 2, y, 2, 3);
-    ctx.fillRect(x + size - 4, y, 2, 3);
+      // 黃黑警示斜紋 (Hazard Stripes) - 頂部與底部
+      const hzW = 5;
+      for (let s = 0; s < size; s += hzW * 2) {
+        ctx.fillStyle = '#ffaa00';
+        ctx.fillRect(x + s, y + 3, hzW, 4);
+        ctx.fillStyle = '#111';
+        ctx.fillRect(x + s + hzW, y + 3, hzW, 4);
+        ctx.fillStyle = '#ffaa00';
+        ctx.fillRect(x + s, y + size - 7, hzW, 4);
+        ctx.fillStyle = '#111';
+        ctx.fillRect(x + s + hzW, y + size - 7, hzW, 4);
+      }
 
-    // 牆面複合裝甲板橫向刻槽
-    ctx.fillStyle = '#182433';
-    ctx.fillRect(x + 4, y + 6, size - 8, 4);
-    ctx.fillRect(x + 4, y + size / 2 - 2, size - 8, 4);
-    ctx.fillRect(x + 4, y + size - 10, size - 8, 4);
+      // 暴露的灼熱橙色冷卻管線 (Glowing Orange Cooling Pipes)
+      const pipePulse = 0.6 + 0.4 * Math.sin(time * 0.004 + x * 0.08);
+      ctx.fillStyle = '#2a1a0a';
+      ctx.fillRect(x + 4, y + 10, size - 8, 6);
+      ctx.fillRect(x + 4, y + size - 16, size - 8, 6);
+      ctx.fillStyle = `rgba(255, 119, 0, ${pipePulse})`;
+      ctx.shadowColor = '#ff7700';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(x + 6, y + 12, size - 12, 2);
+      ctx.fillRect(x + 6, y + size - 14, size - 12, 2);
+      ctx.shadowBlur = 0;
+      // 管線接頭
+      ctx.fillStyle = '#4a3520';
+      ctx.fillRect(x + 4, y + 10, 4, 6);
+      ctx.fillRect(x + size - 8, y + 10, 4, 6);
+      ctx.fillRect(x + 4, y + size - 16, 4, 6);
+      ctx.fillRect(x + size - 8, y + size - 16, 4, 6);
 
-    // 裝甲鉚釘
-    ctx.fillStyle = '#3a4f68';
-    ctx.fillRect(x + 5, y + 7, 2, 2);
-    ctx.fillRect(x + size - 7, y + 7, 2, 2);
-    ctx.fillRect(x + 5, y + size - 9, 2, 2);
-    ctx.fillRect(x + size - 7, y + size - 9, 2, 2);
+      // 大型加固重鉚釘 (Heavy Industrial Rivets)
+      ctx.fillStyle = '#5a4a30';
+      ctx.fillRect(x + 6, y + 10, 4, 4);
+      ctx.fillRect(x + size - 10, y + 10, 4, 4);
+      ctx.fillRect(x + 6, y + size - 14, 4, 4);
+      ctx.fillRect(x + size - 10, y + size - 14, 4, 4);
+      // 鉚釘高光
+      ctx.fillStyle = '#8a7a50';
+      ctx.fillRect(x + 7, y + 11, 2, 2);
+      ctx.fillRect(x + size - 9, y + 11, 2, 2);
+      ctx.fillRect(x + 7, y + size - 13, 2, 2);
+      ctx.fillRect(x + size - 9, y + size - 13, 2, 2);
 
-    // 高壓管線／導線管路 (Conduit line)
-    ctx.fillStyle = '#0e2a38';
-    ctx.fillRect(x, y + size / 2 - 1, size, 2);
-    ctx.fillStyle = '#00ffee';
-    ctx.shadowColor = '#00ffee';
-    ctx.shadowBlur = 4;
-    ctx.fillRect(x + 8, y + size / 2 - 1, 4, 2);
-    ctx.fillRect(x + size - 12, y + size / 2 - 1, 4, 2);
-    ctx.shadowBlur = 0;
-
-    // 霓虹告示燈條 (Neon Wall Accent)
-    const neonPulse = 0.7 + 0.3 * Math.sin(time * 0.003 + (x + y) * 0.1);
-    ctx.fillStyle = `rgba(255, 0, 110, ${neonPulse})`;
-    ctx.shadowColor = '#ff006e';
-    ctx.shadowBlur = 6;
-    ctx.fillRect(x + 8, y + 3, size - 16, 2);
-    ctx.shadowBlur = 0;
-
-    // 警示斜紋 (底部警戒帶)
-    const stripeW = 4;
-    for (let s = 0; s < size; s += stripeW * 2) {
+      // 中央防爆閥門輪
+      ctx.fillStyle = '#2a2015';
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, size * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ff7700';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#4a3520';
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, size * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+      // 閥門手柄
       ctx.fillStyle = '#ffaa00';
-      ctx.fillRect(x + s, y + size - 3, stripeW, 2);
-      ctx.fillStyle = '#111';
-      ctx.fillRect(x + s + stripeW, y + size - 3, stripeW, 2);
+      ctx.fillRect(x + size / 2 - 2, y + size / 2 - size * 0.15, 4, size * 0.1);
+      ctx.fillRect(x + size / 2 - 2, y + size / 2 + size * 0.05, 4, size * 0.1);
+
+    } else if (sector === 'sector-citadel') {
+      // Tzorg Citadel: 黑曜石神經迴路牆 (Obsidian Neural Circuit Wall)
+      ctx.fillStyle = '#080812';
+      ctx.fillRect(x, y, size, size);
+
+      // 2.5D 環境陰影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(x, y + size, size, 4);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.fillRect(x + 2, y + size + 4, size - 4, 3);
+
+      // 深紫黑鏡面斜角邊框
+      ctx.fillStyle = '#251b36';
+      ctx.fillRect(x, y, size, 3);
+      ctx.fillRect(x, y, 3, size);
+      ctx.fillStyle = '#05050a';
+      ctx.fillRect(x, y + size - 3, size, 3);
+      ctx.fillRect(x + size - 3, y, 3, size);
+
+      // 動態脈動的緋紅神經迴路光線
+      const neuralPulse = 0.5 + 0.5 * Math.sin(time * 0.004 + x * 0.05 + y * 0.03);
+      ctx.strokeStyle = `rgba(255, 0, 85, ${0.4 + neuralPulse * 0.6})`;
+      ctx.shadowColor = '#ff0055';
+      ctx.shadowBlur = 6 + neuralPulse * 6;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      // 主神經幹
+      ctx.moveTo(x + 4, y + size * 0.3);
+      ctx.lineTo(x + size - 4, y + size * 0.3);
+      ctx.moveTo(x + size * 0.5, y + size * 0.3);
+      ctx.lineTo(x + size * 0.5, y + size * 0.7);
+      // 分支神經
+      ctx.moveTo(x + size * 0.25, y + size * 0.3);
+      ctx.lineTo(x + size * 0.25, y + size * 0.6);
+      ctx.moveTo(x + size * 0.75, y + size * 0.3);
+      ctx.lineTo(x + size * 0.75, y + size * 0.6);
+      ctx.stroke();
+
+      // 金黃微核心節點
+      ctx.fillStyle = `rgba(255, 170, 0, ${0.6 + neuralPulse * 0.4})`;
+      ctx.shadowColor = '#ffaa00';
+      ctx.shadowBlur = 4 + neuralPulse * 4;
+      // 節點圓點
+      ctx.beginPath();
+      ctx.arc(x + size * 0.25, y + size * 0.3, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.3, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + size * 0.75, y + size * 0.3, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + size * 0.25, y + size * 0.6, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + size * 0.75, y + size * 0.6, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.7, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+    } else if (sector === 'sub-sector-0') {
+      // Sub-Sector 0: 老舊下水道石砌磚牆 (Decaying Sewer Brick Wall)
+      ctx.fillStyle = '#0a1210';
+      ctx.fillRect(x, y, size, size);
+
+      // 2.5D 環境陰影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(x, y + size, size, 4);
+
+      // 石磚砌體 (Stone Brick Pattern)
+      const brickH = size / 4;
+      for (let row = 0; row < 4; row++) {
+        const offset = row % 2 === 0 ? 0 : size / 4;
+        for (let col = -1; col < 3; col++) {
+          const bx = x + col * (size / 2) + offset;
+          const by = y + row * brickH;
+          // 石磚基底
+          ctx.fillStyle = row % 2 === 0 ? '#1a2520' : '#152018';
+          ctx.fillRect(bx + 1, by + 1, size / 2 - 2, brickH - 2);
+          // 石磚陰影邊
+          ctx.fillStyle = '#0d1512';
+          ctx.fillRect(bx + 1, by + brickH - 3, size / 2 - 2, 2);
+        }
+      }
+
+      // 鏽蝕的鐵箍支撐條 (Rusted Iron Support Straps)
+      ctx.fillStyle = '#3a2a1a';
+      ctx.fillRect(x, y + size * 0.25, size, 4);
+      ctx.fillRect(x, y + size * 0.75, size, 4);
+      // 鐵箍鏽蝕紋理
+      ctx.fillStyle = '#5a3a20';
+      ctx.fillRect(x + 4, y + size * 0.25, 3, 4);
+      ctx.fillRect(x + size - 7, y + size * 0.25, 3, 4);
+      ctx.fillRect(x + 4, y + size * 0.75, 3, 4);
+      ctx.fillRect(x + size - 7, y + size * 0.75, 3, 4);
+      // 鐵箍鉚釘
+      ctx.fillStyle = '#6a4a30';
+      ctx.fillRect(x + 6, y + size * 0.25 + 1, 2, 2);
+      ctx.fillRect(x + size - 8, y + size * 0.25 + 1, 2, 2);
+      ctx.fillRect(x + 6, y + size * 0.75 + 1, 2, 2);
+      ctx.fillRect(x + size - 8, y + size * 0.75 + 1, 2, 2);
+
+      // 綠色毒素苔蘚 (Toxic Moss Patches)
+      const mossPulse = 0.4 + 0.3 * Math.sin(time * 0.003 + (x + y) * 0.06);
+      ctx.fillStyle = `rgba(0, 255, 170, ${mossPulse * 0.4})`;
+      ctx.shadowColor = '#00ffaa';
+      ctx.shadowBlur = 4;
+      ctx.beginPath();
+      ctx.arc(x + size * 0.2, y + size * 0.3, size * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + size * 0.7, y + size * 0.6, size * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + size * 0.4, y + size * 0.8, size * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // 黏液滴落痕跡 (Slime Dripping Streaks)
+      const dripPulse = 0.5 + 0.3 * Math.sin(time * 0.005 + x * 0.1);
+      ctx.fillStyle = `rgba(57, 255, 20, ${dripPulse * 0.3})`;
+      ctx.shadowColor = '#39ff14';
+      ctx.shadowBlur = 3;
+      ctx.fillRect(x + size * 0.3, y + size * 0.2, 2, size * 0.4);
+      ctx.fillRect(x + size * 0.6, y + size * 0.4, 2, size * 0.35);
+      ctx.fillRect(x + size * 0.8, y + size * 0.15, 2, size * 0.5);
+      // 滴落末端水珠
+      ctx.beginPath();
+      ctx.arc(x + size * 0.3 + 1, y + size * 0.6, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + size * 0.6 + 1, y + size * 0.75, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+    } else {
+      // Sector 1: 賽博複合裝甲牆 (Cyber Composite Armor Wall)
+      ctx.fillStyle = '#101722';
+      ctx.fillRect(x, y, size, size);
+
+      // 2.5D 環境陰影 (Drop Shadow) - 底部向下投射
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.fillRect(x, y + size, size, 4);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.fillRect(x + 2, y + size + 4, size - 4, 3);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.fillRect(x + 4, y + size + 7, size - 8, 2);
+
+      // 金屬倒角邊框高光與陰影
+      ctx.fillStyle = '#223245';
+      ctx.fillRect(x, y, size, 2);
+      ctx.fillRect(x, y, 2, size);
+      ctx.fillStyle = '#060a0f';
+      ctx.fillRect(x, y + size - 2, size, 2);
+      ctx.fillRect(x + size - 2, y, 2, size);
+
+      // 頂部霓虹壓頂燈條 (Parapet Neon Edge) - 青色與洋紅雙色
+      const parapetPulse = 0.6 + 0.4 * Math.sin(time * 0.005 + x * 0.05);
+      // 青色主燈條
+      ctx.fillStyle = `rgba(0, 240, 255, ${0.4 + parapetPulse * 0.4})`;
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(x + 2, y, size - 4, 2);
+      ctx.shadowBlur = 0;
+      // 洋紅副燈條
+      const magentaPulse = 0.5 + 0.5 * Math.sin(time * 0.004 + x * 0.07);
+      ctx.fillStyle = `rgba(255, 0, 127, ${0.3 + magentaPulse * 0.4})`;
+      ctx.shadowColor = '#ff007f';
+      ctx.shadowBlur = 6;
+      ctx.fillRect(x + 4, y + 2, size - 8, 1);
+      ctx.shadowBlur = 0;
+      // 燈條端點
+      ctx.fillStyle = '#00f0ff';
+      ctx.fillRect(x + 2, y, 2, 2);
+      ctx.fillRect(x + size - 4, y, 2, 2);
+      ctx.fillStyle = '#ff007f';
+      ctx.fillRect(x + 4, y + 2, 2, 1);
+      ctx.fillRect(x + size - 6, y + 2, 2, 1);
+
+      // 牆面複合裝甲板橫向刻槽
+      ctx.fillStyle = '#182433';
+      ctx.fillRect(x + 4, y + 6, size - 8, 4);
+      ctx.fillRect(x + 4, y + size / 2 - 2, size - 8, 4);
+      ctx.fillRect(x + 4, y + size - 10, size - 8, 4);
+
+      // 裝甲鉚釘
+      ctx.fillStyle = '#3a4f68';
+      ctx.fillRect(x + 5, y + 7, 2, 2);
+      ctx.fillRect(x + size - 7, y + 7, 2, 2);
+      ctx.fillRect(x + 5, y + size - 9, 2, 2);
+      ctx.fillRect(x + size - 7, y + size - 9, 2, 2);
+
+      // 監控導線槽 (Surveillance Conduit Trench)
+      ctx.fillStyle = '#0a1520';
+      ctx.fillRect(x + 6, y + size * 0.3, size - 12, 3);
+      ctx.fillStyle = '#00f0ff';
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 3;
+      ctx.fillRect(x + 8, y + size * 0.3 + 1, 3, 1);
+      ctx.fillRect(x + size / 2, y + size * 0.3 + 1, 3, 1);
+      ctx.fillRect(x + size - 11, y + size * 0.3 + 1, 3, 1);
+      ctx.shadowBlur = 0;
+
+      // 高科技暗色鋼板面板 (High-Tech Dark Steel Panel)
+      ctx.fillStyle = '#0d1a28';
+      ctx.fillRect(x + 8, y + size * 0.45, size - 16, size * 0.35);
+      ctx.strokeStyle = '#1a3045';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 8, y + size * 0.45, size - 16, size * 0.35);
+      // 面板內部電路紋路
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.15)';
+      ctx.fillRect(x + 10, y + size * 0.5, size - 20, 1);
+      ctx.fillRect(x + 10, y + size * 0.6, size - 20, 1);
+      ctx.fillRect(x + 10, y + size * 0.7, size - 20, 1);
+
+      // 霓虹告示燈條 (Neon Wall Accent) - 洋紅
+      const neonPulse = 0.7 + 0.3 * Math.sin(time * 0.003 + (x + y) * 0.1);
+      ctx.fillStyle = `rgba(255, 0, 127, ${neonPulse})`;
+      ctx.shadowColor = '#ff007f';
+      ctx.shadowBlur = 6;
+      ctx.fillRect(x + 8, y + 4, size - 16, 2);
+      ctx.shadowBlur = 0;
     }
   } else if (kind === 'FORCEFIELD') {
     // 高能電漿力場柵欄 (High-Energy Plasma Barrier)
@@ -574,6 +821,58 @@ export function drawTileSprite(
       ctx.arc(steamX, steamY, size * 0.12 + s * 2, 0, Math.PI * 2);
       ctx.fill();
     }
+  } else if (kind.startsWith('LETTER_')) {
+    // 賽博霓虹招牌方塊 (Cyberpunk Neon Sign Box)
+    const letter = kind.slice(7);
+    const neonPulse = 0.6 + 0.4 * Math.sin(time * 0.005 + (x + y) * 0.08);
+
+    // 暗色合金底座邊框
+    ctx.fillStyle = '#0a0e14';
+    ctx.fillRect(x, y, size, size);
+    ctx.fillStyle = '#1a2535';
+    ctx.fillRect(x + 2, y + 2, size - 4, size - 4);
+    ctx.fillStyle = '#0d1520';
+    ctx.fillRect(x + 4, y + 4, size - 8, size - 8);
+
+    // 四角安裝鉚釘
+    ctx.fillStyle = '#3a4f68';
+    ctx.fillRect(x + 4, y + 4, 3, 3);
+    ctx.fillRect(x + size - 7, y + 4, 3, 3);
+    ctx.fillRect(x + 4, y + size - 7, 3, 3);
+    ctx.fillRect(x + size - 7, y + size - 7, 3, 3);
+    ctx.fillStyle = '#5a738e';
+    ctx.fillRect(x + 5, y + 5, 1, 1);
+    ctx.fillRect(x + size - 6, y + 5, 1, 1);
+    ctx.fillRect(x + 5, y + size - 6, 1, 1);
+    ctx.fillRect(x + size - 6, y + size - 6, 1, 1);
+
+    // 內嵌深色微光壓克力板
+    ctx.fillStyle = `rgba(0, 240, 255, ${0.05 + neonPulse * 0.08})`;
+    ctx.fillRect(x + 6, y + 6, size - 12, size - 12);
+
+    // 霓虹燈管邊框光暈
+    ctx.strokeStyle = `rgba(0, 240, 255, ${0.3 + neonPulse * 0.5})`;
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 6 + neonPulse * 4;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x + 6, y + 6, size - 12, size - 12);
+    ctx.shadowBlur = 0;
+
+    // 字母本體 - 動態呼吸光暈霓虹 LED 招牌
+    ctx.fillStyle = `rgba(0, 240, 255, ${0.8 + neonPulse * 0.2})`;
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 10 + neonPulse * 8;
+    ctx.font = `bold ${Math.round(size * 0.55)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(letter, x + size / 2, y + size / 2 + 1);
+
+    // 字母高光核心
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + neonPulse * 0.4})`;
+    ctx.shadowBlur = 4;
+    ctx.fillText(letter, x + size / 2, y + size / 2 + 1);
+    ctx.shadowBlur = 0;
+
   } else if (kind === 'REBEL_BARRICADE') {
     // 反抗軍防禦掩體 (Rebel Barricade)
     ctx.fillStyle = '#1a1510';
@@ -604,73 +903,268 @@ export function drawTileSprite(
     ctx.fillRect(x + 6, y + size * 0.65, 3, 3);
     ctx.fillRect(x + size - 9, y + size * 0.65, 3, 3);
   } else {
-    // FLOOR 賽博街景地磚 (Cyberpunk Street Pavement) - 簡化暗色霧面質感
-    // 座標哈希決定地磚變體 (0-3)
+    // FLOOR - 根據分區呈現不同風格
     const gx = Math.floor(x / size);
     const gy = Math.floor(y / size);
     const hash = (gx * 31 + gy * 17) % 4;
 
-    // 基底合金地磚 (深沉暗色)
-    ctx.fillStyle = '#070b10';
-    ctx.fillRect(x, y, size, size);
+    if (sector === 'sector-2') {
+      // Sector 2: 沉穩工業鈦合金暗色拼接縫 (Refined Industrial Titanium Floor)
+      ctx.fillStyle = '#14171a';
+      ctx.fillRect(x, y, size, size);
 
-    // 地磚微邊縫 (極微弱暗色)
-    ctx.strokeStyle = '#0e141c';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+      // 暗色拼接縫
+      ctx.strokeStyle = '#1d2228';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
 
-    if (hash === 0) {
-      // 變體 0: 暗色金屬排水凹槽 (Subtle Drain Groove)
-      ctx.fillStyle = '#0c1017';
-      ctx.fillRect(x + size * 0.2, y + size * 0.2, size * 0.6, size * 0.6);
-      ctx.fillStyle = '#0a0e15';
-      for (let i = 0; i < 4; i++) {
-        ctx.fillRect(x + size * 0.25, y + size * 0.25 + i * (size * 0.12), size * 0.5, 2);
+      // 四角小型合金鉚釘
+      ctx.fillStyle = '#252c34';
+      ctx.fillRect(x + 3, y + 3, 2, 2);
+      ctx.fillRect(x + size - 5, y + 3, 2, 2);
+      ctx.fillRect(x + 3, y + size - 5, 2, 2);
+      ctx.fillRect(x + size - 5, y + size - 5, 2, 2);
+
+      if (hash === 0) {
+        // 極簡拉絲金屬鋼板，中央微弱暗色分模線
+        ctx.fillStyle = '#1b2026';
+        ctx.fillRect(x + size * 0.1, y + size / 2 - 1, size * 0.8, 2);
+      } else if (hash === 1) {
+        // 沉穩的中心深色排風鋼格柵
+        ctx.fillStyle = '#0c0e10';
+        ctx.fillRect(x + size * 0.2, y + size * 0.2, size * 0.6, size * 0.6);
+        ctx.fillStyle = '#1c2228';
+        for (let i = 0; i < 4; i++) {
+          ctx.fillRect(x + size * 0.2, y + size * 0.25 + i * size * 0.15, size * 0.6, 1);
+        }
+      } else if (hash === 2) {
+        // 重型裝甲鋼板，微弱對角導角
+        ctx.fillStyle = '#1a1e24';
+        ctx.beginPath();
+        ctx.moveTo(x + 4, y + 4);
+        ctx.lineTo(x + size - 4, y + 4);
+        ctx.lineTo(x + size - 4, y + size - 4);
+        ctx.lineTo(x + 4, y + size - 4);
+        ctx.closePath();
+        ctx.fill();
+        // 對角導角高光
+        ctx.strokeStyle = '#2a3038';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + 4, y + 4);
+        ctx.lineTo(x + size - 4, y + size - 4);
+        ctx.stroke();
+      } else {
+        // hash === 3: 右上角小巧微弱琥珀色微型狀態指示燈
+        ctx.fillStyle = 'rgba(255, 170, 0, 0.45)';
+        ctx.fillRect(x + size - 6, y + 4, 2, 2);
       }
-      // 凹槽邊框暗色鉚釘
-      ctx.fillStyle = '#141c26';
-      ctx.fillRect(x + size * 0.22, y + size * 0.22, 2, 2);
-      ctx.fillRect(x + size * 0.76, y + size * 0.22, 2, 2);
-      ctx.fillRect(x + size * 0.22, y + size * 0.76, 2, 2);
-      ctx.fillRect(x + size * 0.76, y + size * 0.76, 2, 2);
-    } else if (hash === 1) {
-      // 變體 1: 暗色合金加固板 (Dark Alloy Reinforcement Plate)
-      ctx.fillStyle = '#0a0e15';
-      ctx.fillRect(x + size * 0.4, y + size * 0.1, size * 0.2, size * 0.8);
-      // 加固板端點暗色鉚釘
-      ctx.fillStyle = '#141c26';
-      ctx.fillRect(x + size * 0.42, y + size * 0.12, 2, 2);
-      ctx.fillRect(x + size * 0.56, y + size * 0.12, 2, 2);
-      ctx.fillRect(x + size * 0.42, y + size * 0.86, 2, 2);
-      ctx.fillRect(x + size * 0.56, y + size * 0.86, 2, 2);
-    } else if (hash === 2) {
-      // 變體 2: 暗色濕潤地磚紋理 (Dark Wet Pavement Texture)
-      ctx.fillStyle = '#080d13';
-      ctx.beginPath();
-      ctx.arc(x + size * 0.5, y + size * 0.5, size * 0.3, 0, Math.PI * 2);
-      ctx.fill();
-      // 濕潤邊緣暗色
-      ctx.fillStyle = '#0c1017';
-      ctx.fillRect(x + size * 0.2, y + size * 0.48, size * 0.6, 1);
-      ctx.fillRect(x + size * 0.2, y + size * 0.52, size * 0.6, 1);
-    } else {
-      // 變體 3: 暗色嵌入式線槽 (Dark Embedded Cable Trench)
-      ctx.fillStyle = '#0a0e15';
-      ctx.fillRect(x + size * 0.1, y + size * 0.4, size * 0.8, size * 0.2);
-      // 線槽蓋板暗色鉚釘
-      ctx.fillStyle = '#141c26';
-      ctx.fillRect(x + size * 0.12, y + size * 0.42, 2, 2);
-      ctx.fillRect(x + size * 0.86, y + size * 0.42, 2, 2);
-      ctx.fillRect(x + size * 0.12, y + size * 0.56, 2, 2);
-      ctx.fillRect(x + size * 0.86, y + size * 0.56, 2, 2);
-    }
 
-    // 所有 FLOOR 地磚共用的沉頭暗色鉚釘 (Flush Dark Rivets)
-    ctx.fillStyle = '#141c26';
-    ctx.fillRect(x + 3, y + 3, 2, 2);
-    ctx.fillRect(x + size - 5, y + 3, 2, 2);
-    ctx.fillRect(x + 3, y + size - 5, 2, 2);
-    ctx.fillRect(x + size - 5, y + size - 5, 2, 2);
+    } else if (sector === 'sector-citadel') {
+      // Tzorg Citadel: 深邃堡壘基底地板 (Deep Citadel Base Floor)
+      ctx.fillStyle = '#0c0a18';
+      ctx.fillRect(x, y, size, size);
+
+      // 幾何暗邊框
+      ctx.strokeStyle = '#1a1528';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+
+      // 內部幾何分割線
+      ctx.fillStyle = '#12101e';
+      ctx.fillRect(x + size * 0.1, y + size * 0.1, size * 0.8, size * 0.8);
+
+      if (hash === 0 || hash === 1) {
+        // 脈動的青藍色高能導流線
+        const flowPulse = 0.4 + 0.4 * Math.sin(time * 0.005 + x * 0.08 + y * 0.06);
+        ctx.strokeStyle = `rgba(0, 240, 255, ${0.3 + flowPulse * 0.5})`;
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 4 + flowPulse * 4;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        // 導流線路徑
+        ctx.moveTo(x + size * 0.15, y + size * 0.5);
+        ctx.lineTo(x + size * 0.35, y + size * 0.5);
+        ctx.lineTo(x + size * 0.35, y + size * 0.3);
+        ctx.lineTo(x + size * 0.65, y + size * 0.3);
+        ctx.lineTo(x + size * 0.65, y + size * 0.5);
+        ctx.lineTo(x + size * 0.85, y + size * 0.5);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      } else {
+        // 微型金黃晶片嵌入節點
+        const chipPulse = 0.5 + 0.5 * Math.sin(time * 0.006 + (x + y) * 0.1);
+        ctx.fillStyle = `rgba(255, 170, 0, ${0.4 + chipPulse * 0.4})`;
+        ctx.shadowColor = '#ffaa00';
+        ctx.shadowBlur = 3 + chipPulse * 3;
+        // 晶片方塊
+        ctx.fillRect(x + size * 0.3, y + size * 0.3, 4, 4);
+        ctx.fillRect(x + size * 0.6, y + size * 0.3, 4, 4);
+        ctx.fillRect(x + size * 0.3, y + size * 0.6, 4, 4);
+        ctx.fillRect(x + size * 0.6, y + size * 0.6, 4, 4);
+        // 晶片中心亮點
+        ctx.fillStyle = `rgba(255, 234, 0, ${0.5 + chipPulse * 0.5})`;
+        ctx.fillRect(x + size * 0.3 + 1, y + size * 0.3 + 1, 2, 2);
+        ctx.fillRect(x + size * 0.6 + 1, y + size * 0.3 + 1, 2, 2);
+        ctx.fillRect(x + size * 0.3 + 1, y + size * 0.6 + 1, 2, 2);
+        ctx.fillRect(x + size * 0.6 + 1, y + size * 0.6 + 1, 2, 2);
+        ctx.shadowBlur = 0;
+      }
+
+      // 四角暗色鉚釘
+      ctx.fillStyle = '#1a1528';
+      ctx.fillRect(x + 3, y + 3, 2, 2);
+      ctx.fillRect(x + size - 5, y + 3, 2, 2);
+      ctx.fillRect(x + 3, y + size - 5, 2, 2);
+      ctx.fillRect(x + size - 5, y + size - 5, 2, 2);
+
+    } else if (sector === 'sub-sector-0') {
+      // Sub-Sector 0: 潮濕陰暗的破損石板 (Damp Cracked Stone Slab)
+      ctx.fillStyle = '#0a100e';
+      ctx.fillRect(x, y, size, size);
+
+      // 石板基底
+      ctx.fillStyle = '#152018';
+      ctx.fillRect(x + 2, y + 2, size - 4, size - 4);
+
+      // 破損裂紋 (Cracks)
+      ctx.strokeStyle = '#0a0e0c';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.2, y + size * 0.3);
+      ctx.lineTo(x + size * 0.5, y + size * 0.5);
+      ctx.lineTo(x + size * 0.7, y + size * 0.4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.4, y + size * 0.7);
+      ctx.lineTo(x + size * 0.6, y + size * 0.6);
+      ctx.lineTo(x + size * 0.8, y + size * 0.8);
+      ctx.stroke();
+
+      // 鏽蝕鐵網排水格柵 (Rusted Iron Drain Grate)
+      if (hash === 0 || hash === 2) {
+        ctx.fillStyle = '#1a1510';
+        ctx.fillRect(x + size * 0.25, y + size * 0.25, size * 0.5, size * 0.5);
+        ctx.strokeStyle = '#3a2a1a';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath();
+          ctx.moveTo(x + size * 0.25, y + size * 0.25 + i * (size * 0.5) / 3);
+          ctx.lineTo(x + size * 0.75, y + size * 0.25 + i * (size * 0.5) / 3);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x + size * 0.25 + i * (size * 0.5) / 3, y + size * 0.25);
+          ctx.lineTo(x + size * 0.25 + i * (size * 0.5) / 3, y + size * 0.75);
+          ctx.stroke();
+        }
+        // 鏽蝕斑點
+        ctx.fillStyle = '#4a3020';
+        ctx.fillRect(x + size * 0.3, y + size * 0.3, 3, 3);
+        ctx.fillRect(x + size * 0.6, y + size * 0.6, 3, 3);
+      }
+
+      // 石縫間微光積水 (Glowing Water in Cracks)
+      const waterPulse = 0.3 + 0.3 * Math.sin(time * 0.004 + (x + y) * 0.08);
+      ctx.fillStyle = `rgba(0, 255, 170, ${waterPulse * 0.3})`;
+      ctx.shadowColor = '#00ffaa';
+      ctx.shadowBlur = 4;
+      ctx.fillRect(x + size * 0.15, y + size * 0.45, size * 0.3, 2);
+      ctx.fillRect(x + size * 0.55, y + size * 0.65, size * 0.25, 2);
+      ctx.shadowBlur = 0;
+
+      // 苔蘚斑點 (Moss Spots)
+      ctx.fillStyle = 'rgba(0, 200, 100, 0.2)';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.3, y + size * 0.7, size * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + size * 0.7, y + size * 0.3, size * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+
+    } else {
+      // Sector 1: 乾淨的賽博街景地磚 (Clean Cyber Street Pavement)
+      ctx.fillStyle = '#070b10';
+      ctx.fillRect(x, y, size, size);
+
+      // 地磚微邊縫 (極微弱暗色)
+      ctx.strokeStyle = '#0e141c';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+
+      if (hash === 0) {
+        // 變體 0: 微光光纖嵌縫 (Glowing Fiber Optic Inlay)
+        ctx.fillStyle = '#0c1017';
+        ctx.fillRect(x + size * 0.2, y + size * 0.2, size * 0.6, size * 0.6);
+        // 光纖嵌縫發光
+        const fiberPulse = 0.3 + 0.3 * Math.sin(time * 0.005 + x * 0.1);
+        ctx.fillStyle = `rgba(0, 240, 255, ${fiberPulse * 0.4})`;
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 3;
+        ctx.fillRect(x + size * 0.25, y + size * 0.25, size * 0.5, 1);
+        ctx.fillRect(x + size * 0.25, y + size * 0.74, size * 0.5, 1);
+        ctx.fillRect(x + size * 0.25, y + size * 0.25, 1, size * 0.5);
+        ctx.fillRect(x + size * 0.74, y + size * 0.25, 1, size * 0.5);
+        ctx.shadowBlur = 0;
+        // 凹槽邊框暗色鉚釘
+        ctx.fillStyle = '#141c26';
+        ctx.fillRect(x + size * 0.22, y + size * 0.22, 2, 2);
+        ctx.fillRect(x + size * 0.76, y + size * 0.22, 2, 2);
+        ctx.fillRect(x + size * 0.22, y + size * 0.76, 2, 2);
+        ctx.fillRect(x + size * 0.76, y + size * 0.76, 2, 2);
+      } else if (hash === 1) {
+        // 變體 1: 隱微排水孔 (Subtle Drain Holes)
+        ctx.fillStyle = '#0a0e15';
+        ctx.fillRect(x + size * 0.4, y + size * 0.1, size * 0.2, size * 0.8);
+        // 排水孔
+        ctx.fillStyle = '#05080a';
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.arc(x + size * 0.5, y + size * 0.25 + i * size * 0.25, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // 加固板端點暗色鉚釘
+        ctx.fillStyle = '#141c26';
+        ctx.fillRect(x + size * 0.42, y + size * 0.12, 2, 2);
+        ctx.fillRect(x + size * 0.56, y + size * 0.12, 2, 2);
+        ctx.fillRect(x + size * 0.42, y + size * 0.86, 2, 2);
+        ctx.fillRect(x + size * 0.56, y + size * 0.86, 2, 2);
+      } else if (hash === 2) {
+        // 變體 2: 暗色合金蓋板 (Dark Alloy Cover Plate)
+        ctx.fillStyle = '#080d13';
+        ctx.beginPath();
+        ctx.arc(x + size * 0.5, y + size * 0.5, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        // 蓋板邊緣
+        ctx.strokeStyle = '#1a2535';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // 濕潤邊緣暗色
+        ctx.fillStyle = '#0c1017';
+        ctx.fillRect(x + size * 0.2, y + size * 0.48, size * 0.6, 1);
+        ctx.fillRect(x + size * 0.2, y + size * 0.52, size * 0.6, 1);
+      } else {
+        // 變體 3: 暗色嵌入式線槽 (Dark Embedded Cable Trench)
+        ctx.fillStyle = '#0a0e15';
+        ctx.fillRect(x + size * 0.1, y + size * 0.4, size * 0.8, size * 0.2);
+        // 線槽蓋板暗色鉚釘
+        ctx.fillStyle = '#141c26';
+        ctx.fillRect(x + size * 0.12, y + size * 0.42, 2, 2);
+        ctx.fillRect(x + size * 0.86, y + size * 0.42, 2, 2);
+        ctx.fillRect(x + size * 0.12, y + size * 0.56, 2, 2);
+        ctx.fillRect(x + size * 0.86, y + size * 0.56, 2, 2);
+        // 線槽內微光
+        const cablePulse = 0.2 + 0.2 * Math.sin(time * 0.006 + y * 0.1);
+        ctx.fillStyle = `rgba(0, 240, 255, ${cablePulse * 0.3})`;
+        ctx.fillRect(x + size * 0.15, y + size * 0.48, size * 0.7, 1);
+      }
+
+      // 所有 FLOOR 地磚共用的沉頭暗色鉚釘 (Flush Dark Rivets)
+      ctx.fillStyle = '#141c26';
+      ctx.fillRect(x + 3, y + 3, 2, 2);
+      ctx.fillRect(x + size - 5, y + 3, 2, 2);
+      ctx.fillRect(x + 3, y + size - 5, 2, 2);
+      ctx.fillRect(x + size - 5, y + size - 5, 2, 2);
+    }
   }
 
   ctx.restore();
@@ -762,34 +1256,138 @@ export function drawPlayerSprite(
   ctx.fillRect(visorX + 2, visorY + 1, visorW - 4, 1.5);
   ctx.shadowBlur = 0;
 
-  // 7. 武器與雷射瞄準線 (Weapon & Targeting Laser)
+  // 7. 武器模型 (Cyberpunk Pistol) - 支援 4 向朝向
   if (player?.isWeaponDrawn) {
-    const isLeft = facing === 'left';
-    const gunX = isLeft ? cx - size * 0.42 : cx + size * 0.2;
-    const gunY = cy - size * 0.04;
-    const gunW = size * 0.24;
-    const gunH = size * 0.08;
+    const gunW = size * 0.22;
+    const gunH = size * 0.1;
+    const gripW = size * 0.08;
+    const gripH = size * 0.12;
 
-    ctx.fillStyle = '#1a232c';
-    ctx.fillRect(gunX, gunY, gunW, gunH);
-    ctx.fillStyle = '#3a4a5b';
-    ctx.fillRect(isLeft ? gunX : gunX + gunW - 4, gunY + 2, 4, gunH - 4);
+    // 武器就緒指示燈 (Armed LED)
+    const ledPulse = 0.6 + 0.4 * Math.sin(time * 0.01);
+    const ledColor = `rgba(0, 240, 255, ${ledPulse})`;
 
-    const muzzleX = isLeft ? gunX : gunX + gunW;
-    const muzzleY = gunY + gunH / 2;
+    ctx.save();
 
-    ctx.strokeStyle = 'rgba(255, 30, 50, 0.75)';
-    ctx.shadowColor = '#ff1e32';
-    ctx.shadowBlur = 6;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(muzzleX, muzzleY);
-    ctx.lineTo(isLeft ? muzzleX - size * 0.5 : muzzleX + size * 0.5, muzzleY);
-    ctx.stroke();
+    if (facing === 'right') {
+      const gx = cx + size * 0.15;
+      const gy = cy - size * 0.05;
 
-    ctx.fillStyle = '#ff1e32';
-    ctx.fillRect(muzzleX - 1, muzzleY - 1, 3, 3);
-    ctx.shadowBlur = 0;
+      // 握把 (Grip)
+      ctx.fillStyle = '#1a232c';
+      ctx.fillRect(gx, gy + gunH, gripW, gripH);
+      ctx.fillStyle = '#2d3a48';
+      ctx.fillRect(gx + 1, gy + gunH + 1, gripW - 2, gripH - 2);
+
+      // 槍身 (Slide)
+      ctx.fillStyle = '#2d3a48';
+      ctx.fillRect(gx - 2, gy, gunW + 4, gunH);
+      ctx.fillStyle = '#3d5268';
+      ctx.fillRect(gx - 2, gy, gunW + 4, 2);
+
+      // 槍口制動器 (Muzzle Brake)
+      ctx.fillStyle = '#1a232c';
+      ctx.fillRect(gx + gunW + 2, gy + 1, 4, gunH - 2);
+      ctx.fillStyle = '#0d1218';
+      ctx.fillRect(gx + gunW + 4, gy + 2, 2, gunH - 4);
+
+      // 就緒指示燈
+      ctx.fillStyle = ledColor;
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 4;
+      ctx.fillRect(gx + 2, gy + 2, 3, 3);
+      ctx.shadowBlur = 0;
+
+    } else if (facing === 'left') {
+      const gx = cx - size * 0.15 - gunW;
+      const gy = cy - size * 0.05;
+
+      // 握把 (Grip)
+      ctx.fillStyle = '#1a232c';
+      ctx.fillRect(gx + gunW - gripW, gy + gunH, gripW, gripH);
+      ctx.fillStyle = '#2d3a48';
+      ctx.fillRect(gx + gunW - gripW + 1, gy + gunH + 1, gripW - 2, gripH - 2);
+
+      // 槍身 (Slide)
+      ctx.fillStyle = '#2d3a48';
+      ctx.fillRect(gx - 2, gy, gunW + 4, gunH);
+      ctx.fillStyle = '#3d5268';
+      ctx.fillRect(gx - 2, gy, gunW + 4, 2);
+
+      // 槍口制動器 (Muzzle Brake)
+      ctx.fillStyle = '#1a232c';
+      ctx.fillRect(gx - 6, gy + 1, 4, gunH - 2);
+      ctx.fillStyle = '#0d1218';
+      ctx.fillRect(gx - 6, gy + 2, 2, gunH - 4);
+
+      // 就緒指示燈
+      ctx.fillStyle = ledColor;
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 4;
+      ctx.fillRect(gx + gunW - 5, gy + 2, 3, 3);
+      ctx.shadowBlur = 0;
+
+    } else if (facing === 'up') {
+      const gx = cx - gunW / 2;
+      const gy = cy - size * 0.35;
+
+      // 握把 (Grip) - 位於下方
+      ctx.fillStyle = '#1a232c';
+      ctx.fillRect(gx + gunW / 2 - gripW / 2, gy + gunH, gripW, gripH);
+      ctx.fillStyle = '#2d3a48';
+      ctx.fillRect(gx + gunW / 2 - gripW / 2 + 1, gy + gunH + 1, gripW - 2, gripH - 2);
+
+      // 槍身 (Slide) - 垂直
+      ctx.fillStyle = '#2d3a48';
+      ctx.fillRect(gx, gy, gunW, gunH + 4);
+      ctx.fillStyle = '#3d5268';
+      ctx.fillRect(gx, gy, 2, gunH + 4);
+
+      // 槍口制動器 (Muzzle Brake) - 上方
+      ctx.fillStyle = '#1a232c';
+      ctx.fillRect(gx + 1, gy - 4, gunW - 2, 4);
+      ctx.fillStyle = '#0d1218';
+      ctx.fillRect(gx + 2, gy - 4, gunW - 4, 2);
+
+      // 就緒指示燈
+      ctx.fillStyle = ledColor;
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 4;
+      ctx.fillRect(gx + gunW - 5, gy + 2, 3, 3);
+      ctx.shadowBlur = 0;
+
+    } else {
+      // facing === 'down'
+      const gx = cx - gunW / 2;
+      const gy = cy + size * 0.15;
+
+      // 握把 (Grip) - 位於上方
+      ctx.fillStyle = '#1a232c';
+      ctx.fillRect(gx + gunW / 2 - gripW / 2, gy - gripH, gripW, gripH);
+      ctx.fillStyle = '#2d3a48';
+      ctx.fillRect(gx + gunW / 2 - gripW / 2 + 1, gy - gripH + 1, gripW - 2, gripH - 2);
+
+      // 槍身 (Slide) - 垂直
+      ctx.fillStyle = '#2d3a48';
+      ctx.fillRect(gx, gy, gunW, gunH + 4);
+      ctx.fillStyle = '#3d5268';
+      ctx.fillRect(gx, gy + gunH + 2, 2, 2);
+
+      // 槍口制動器 (Muzzle Brake) - 下方
+      ctx.fillStyle = '#1a232c';
+      ctx.fillRect(gx + 1, gy + gunH + 4, gunW - 2, 4);
+      ctx.fillStyle = '#0d1218';
+      ctx.fillRect(gx + 2, gy + gunH + 6, gunW - 4, 2);
+
+      // 就緒指示燈
+      ctx.fillStyle = ledColor;
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 4;
+      ctx.fillRect(gx + 2, gy + gunH - 1, 3, 3);
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.restore();
   }
 
   // 8. 全像偽裝光環 (Holographic Disguise Ring)

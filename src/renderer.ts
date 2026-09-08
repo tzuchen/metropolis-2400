@@ -488,7 +488,7 @@ export class GameRenderer {
       }
     }
 
-    drawTileSprite(ctx, tile ?? 'FLOOR', sx, sy, this.tileSize, visible, now);
+    drawTileSprite(ctx, tile ?? 'FLOOR', sx, sy, this.tileSize, visible, now, m?.id);
     ctx.restore?.();
   }
 
@@ -979,7 +979,7 @@ export class GameRenderer {
     const range = Number(weapon.range) || 5;
     const dmg = Number(weapon.power ?? weapon.damage ?? 0) || 0;
     const isQuantum = String(weapon.name || '').toUpperCase().includes('QUANTUM');
-    const laserColor = isQuantum ? '#b388ff' : '#ff3855';
+    const laserColor = isQuantum ? '#b388ff' : '#ff1e27';
 
     // Determine direction vector
     let dx = 0, dy = 0;
@@ -991,21 +991,6 @@ export class GameRenderer {
     // Calculate end point of laser
     const endX = px + dx * range;
     const endY = py + dy * range;
-
-    // Draw laser line
-    ctx.save?.();
-    ctx.strokeStyle = laserColor;
-    ctx.shadowColor = laserColor;
-    ctx.shadowBlur = 8;
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = 0.6;
-    ctx.beginPath?.();
-    ctx.moveTo?.(px * this.tileSize - camX + this.tileSize / 2, py * this.tileSize - camY + this.tileSize / 2);
-    ctx.lineTo?.(endX * this.tileSize - camX + this.tileSize / 2, endY * this.tileSize - camY + this.tileSize / 2);
-    ctx.stroke?.();
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-    ctx.restore?.();
 
     // Check for robots in the line of fire
     let lockedRobot: Robot | null = null;
@@ -1039,15 +1024,47 @@ export class GameRenderer {
       });
     }
 
+    // Determine where to draw the red dot
+    let dotX: number;
+    let dotY: number;
+    if (lockedRobot) {
+      dotX = Number(lockedRobot.x);
+      dotY = Number(lockedRobot.y);
+    } else {
+      dotX = endX;
+      dotY = endY;
+    }
+
+    const sx = dotX * this.tileSize - camX + this.tileSize / 2;
+    const sy = dotY * this.tileSize - camY + this.tileSize / 2;
+    const pulse = 0.8 + 0.2 * Math.sin(now * 0.01);
+
+    ctx.save?.();
+
+    // Draw Red Dot Sight
+    ctx.fillStyle = laserColor;
+    ctx.shadowColor = laserColor;
+    ctx.shadowBlur = 8 * pulse;
+    ctx.globalAlpha = pulse;
+    ctx.beginPath?.();
+    ctx.arc?.(sx, sy, 2.5, 0, Math.PI * 2);
+    ctx.fill?.();
+
+    // White core
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 2;
+    ctx.globalAlpha = 1;
+    ctx.beginPath?.();
+    ctx.arc?.(sx, sy, 1, 0, Math.PI * 2);
+    ctx.fill?.();
+
     // Draw lock-on reticle if robot found
     if (lockedRobot) {
       const rx = Number(lockedRobot.x);
       const ry = Number(lockedRobot.y);
-      const sx = rx * this.tileSize - camX;
-      const sy = ry * this.tileSize - camY;
-      const pulse = 0.8 + 0.2 * Math.sin(now * 0.01);
+      const boxX = rx * this.tileSize - camX;
+      const boxY = ry * this.tileSize - camY;
 
-      ctx.save?.();
       ctx.strokeStyle = laserColor;
       ctx.shadowColor = laserColor;
       ctx.shadowBlur = 10;
@@ -1059,27 +1076,27 @@ export class GameRenderer {
       const offset = this.tileSize * 0.2;
       // Top-left
       ctx.beginPath?.();
-      ctx.moveTo?.(sx + offset, sy + offset + size);
-      ctx.lineTo?.(sx + offset, sy + offset);
-      ctx.lineTo?.(sx + offset + size, sy + offset);
+      ctx.moveTo?.(boxX + offset, boxY + offset + size);
+      ctx.lineTo?.(boxX + offset, boxY + offset);
+      ctx.lineTo?.(boxX + offset + size, boxY + offset);
       ctx.stroke?.();
       // Top-right
       ctx.beginPath?.();
-      ctx.moveTo?.(sx + this.tileSize - offset - size, sy + offset);
-      ctx.lineTo?.(sx + this.tileSize - offset, sy + offset);
-      ctx.lineTo?.(sx + this.tileSize - offset, sy + offset + size);
+      ctx.moveTo?.(boxX + this.tileSize - offset - size, boxY + offset);
+      ctx.lineTo?.(boxX + this.tileSize - offset, boxY + offset);
+      ctx.lineTo?.(boxX + this.tileSize - offset, boxY + offset + size);
       ctx.stroke?.();
       // Bottom-left
       ctx.beginPath?.();
-      ctx.moveTo?.(sx + offset, sy + this.tileSize - offset - size);
-      ctx.lineTo?.(sx + offset, sy + this.tileSize - offset);
-      ctx.lineTo?.(sx + offset + size, sy + this.tileSize - offset);
+      ctx.moveTo?.(boxX + offset, boxY + this.tileSize - offset - size);
+      ctx.lineTo?.(boxX + offset, boxY + this.tileSize - offset);
+      ctx.lineTo?.(boxX + offset + size, boxY + this.tileSize - offset);
       ctx.stroke?.();
       // Bottom-right
       ctx.beginPath?.();
-      ctx.moveTo?.(sx + this.tileSize - offset - size, sy + this.tileSize - offset);
-      ctx.lineTo?.(sx + this.tileSize - offset, sy + this.tileSize - offset);
-      ctx.lineTo?.(sx + this.tileSize - offset, sy + this.tileSize - offset - size);
+      ctx.moveTo?.(boxX + this.tileSize - offset - size, boxY + this.tileSize - offset);
+      ctx.lineTo?.(boxX + this.tileSize - offset, boxY + this.tileSize - offset);
+      ctx.lineTo?.(boxX + this.tileSize - offset, boxY + this.tileSize - offset - size);
       ctx.stroke?.();
 
       // Draw lock text
@@ -1088,11 +1105,11 @@ export class GameRenderer {
       ctx.font = 'bold 10px monospace';
       ctx.textAlign = 'center';
       const lockText = this.language === 'zh' ? `[鎖定: ${dmg} 傷害]` : `[LOCKED: ${dmg} DMG]`;
-      ctx.fillText?.(lockText, sx + this.tileSize / 2, sy - 8);
-
-      ctx.shadowBlur = 0;
-      ctx.restore?.();
+      ctx.fillText?.(lockText, boxX + this.tileSize / 2, boxY - 8);
     }
+
+    ctx.shadowBlur = 0;
+    ctx.restore?.();
   }
 
   drawHud(
@@ -1120,8 +1137,14 @@ export class GameRenderer {
     const py = Number(p?.y) || 0;
     const sec = String(securityLevel ?? 'CLEAR').toUpperCase();
 
+    const curSec = (player as any)?.currentSectorId;
+    let sectorLabel = 'SECTOR 01';
+    if (curSec === 'sector-2') sectorLabel = 'SECTOR 02';
+    else if (curSec === 'sub-sector-0') sectorLabel = 'SECTOR 00';
+    else if (curSec === 'sector-citadel') sectorLabel = 'CITADEL APEX';
+
     ctx.fillStyle = '#00e5ff';
-    ctx.fillText?.('SECTOR 01 [POS ' + px + ',' + py + ']', 12, 18);
+    ctx.fillText?.(sectorLabel + ' [POS ' + px + ',' + py + ']', 12, 18);
 
     let secColor = '#00ff66';
     if (sec === 'SUSPICIOUS') secColor = '#ffea00';
@@ -1129,21 +1152,21 @@ export class GameRenderer {
     if (sec === 'LOCKDOWN') secColor = '#ff1744';
 
     ctx.fillStyle = secColor;
-    ctx.fillText?.('SEC: ' + sec, 175, 18);
+    ctx.fillText?.('SEC: ' + sec, 190, 18);
 
     const hp = Math.max(0, p?.hp ?? 100);
     const maxHp = p?.maxHp ?? 100;
     ctx.fillStyle = '#ff2a4b';
-    ctx.fillText?.('HP ' + hp + '/' + maxHp, 280, 18);
+    ctx.fillText?.('HP ' + hp + '/' + maxHp, 290, 18);
 
     const energy = Math.max(0, p?.energy ?? 100);
     const maxEnergy = p?.maxEnergy ?? 100;
     ctx.fillStyle = '#00f0ff';
-    ctx.fillText?.('EN ' + energy + '/' + maxEnergy, 380, 18);
+    ctx.fillText?.('EN ' + energy + '/' + maxEnergy, 390, 18);
 
     const credits = p?.credits ?? 0;
     ctx.fillStyle = '#ffb700';
-    ctx.fillText?.('CR: ' + credits, 480, 18);
+    ctx.fillText?.('CR: ' + credits, 490, 18);
 
     const weaponName = p?.equippedWeapon?.name || 'None';
     const weaponDmg = Number(p?.equippedWeapon?.power ?? p?.equippedWeapon?.damage ?? 0) || 0;

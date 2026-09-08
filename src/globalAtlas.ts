@@ -68,20 +68,22 @@ function drawMiniGrid(ctx: any, x: number, y: number, w: number, h: number, tile
 }
 
 function drawLandmarks(ctx: any, x: number, y: number, lines: string[], language: string): void {
-  ctx.font = getFont(10, zh(language));
+  const isZh = zh(language);
+  const lineH = isZh ? 20 : 16;
+  ctx.font = getFont(11, isZh);
   ctx.textBaseline = 'top';
   ctx.textAlign = 'left';
   lines.slice(0, 4).forEach((line, i) => {
-    const ly = y + i * 10;
+    const ly = y + i * lineH;
     ctx.fillStyle = '#ffd54f';
-    ctx.fillRect(x, ly + 2, 4, 4);
+    ctx.fillRect(x, ly + 4, 4, 4);
     ctx.fillStyle = '#d7e3ee';
     ctx.fillText(line, x + 10, ly);
   });
 }
 
 function drawChannelPanel(ctx: any, areaX: number, areaY: number, areaW: number, areaH: number, language: string): void {
-  const h = 54, y = areaY + areaH - h - 6, x = areaX + 6, w = areaW - 12;
+  const h = 72, y = areaY + areaH - h - 6, x = areaX + 6, w = areaW - 12;
   ctx.fillStyle = 'rgba(10,14,18,0.82)';
   ctx.fillRect(x, y, w, h);
   ctx.strokeStyle = 'rgba(120,160,200,0.35)';
@@ -96,18 +98,18 @@ function drawChannelPanel(ctx: any, areaX: number, areaY: number, areaW: number,
   const lines = ['ELEVATOR: S1 (36,26) ⇄ S2 (3,5)', 'DRAINAGE: S1 (4,21) ⇄ S0 (4,5)', 'CATWALK:  S0 (35,22) ⇄ S2 (3,25)'];
   lines.forEach((line, i) => {
     ctx.fillStyle = i === 0 ? '#9be7ff' : i === 1 ? '#a8d4b8' : '#ffd54f';
-    ctx.fillText(line, x + 8, y + 22 + i * 11);
+    ctx.fillText(line, x + 8, y + 26 + i * 15);
   });
 }
 
 export function drawGlobalAllSectorsMap(ctx: any, areaX: number, areaY: number, areaW: number, areaH: number, player: any, language: string, now: number): void {
-  const gap = 12, topPad = 6, titleH = 24, channelH = 54, landmarkH = 42;
+  const gap = 12, topPad = 6, titleH = 24, channelH = 74, landmarkH = 84;
   const colW = Math.max(48, Math.floor((areaW - 12 - 2 * gap) / 3));
   const gridH = Math.max(48, Math.min(areaH - topPad - titleH - channelH - landmarkH - 24, Math.floor((colW * H) / W)));
   const titleY = areaY + topPad;
   const gridY = titleY + titleH;
   const panelY = areaY + areaH - channelH - 6;
-  const landmarkY = Math.min(gridY + gridH + 6, panelY - landmarkH - 6);
+  const landmarkY = gridY + gridH + 8;
 
   const isZh = zh(language);
   const sectorNames = isZh ? ['【第 01 分區】上城街區', '【第 02 分區】製造工廠', '【次分區 ZERO】地下水路'] : ['Sector 1', 'Sector 2', 'Sub-Sector 0'];
@@ -116,7 +118,16 @@ export function drawGlobalAllSectorsMap(ctx: any, areaX: number, areaY: number, 
     isZh ? ['• 升降電梯 (3,5)', '• 維修天橋 (3,25)', '• 自動裝配流水線', '• 伺服器核心 & Boss (32,18)'] : ['Elevator (3,5)', 'Catwalk (3,25)', 'Market'],
     isZh ? ['• 排水豎井 (4,5)', '• 維修天橋 (35,22)', '• 毒素污水暗流', '• 秘密拉麵據點'] : ['Drainage (4,5)', 'Catwalk (35,22)', 'Pump Room'],
   ];
-  const currentSector = Number(player?.sector ?? player?.sectorId ?? player?.zone ?? -1);
+  let currentSector = -1;
+  const rawSector = player?.sector ?? player?.sectorId ?? player?.zone ?? -1;
+  if (typeof rawSector === 'string') {
+    const s = rawSector.toLowerCase();
+    if (s === 'sector-1' || s === '1') currentSector = 1;
+    else if (s === 'sector-2' || s === '2') currentSector = 2;
+    else if (s === 'sub-sector-0' || s === '0') currentSector = 0;
+  } else {
+    currentSector = Number(rawSector);
+  }
   const pulse = 0.5 + 0.5 * Math.sin(Number(now || 0) / 500);
   const builders: any[] = [buildSector1Map, buildSector2Map, buildSubSectorZeroMap];
 
@@ -150,7 +161,7 @@ export function drawGlobalAllSectorsMap(ctx: any, areaX: number, areaY: number, 
     if (currentSector === i + 1) {
       const labelW = ctx.measureText(sectorNames[i]).width;
       ctx.fillStyle = '#ffd54f';
-      ctx.fillText(isZh ? ' · 当前' : ' · Current', x + 4 + labelW + 4, titleY + 3);
+      ctx.fillText(isZh ? ' · 當前' : ' · Current', x + 4 + labelW + 4, titleY + 3);
     }
 
     drawMiniGrid(ctx, x, gridY, colW, gridH, tiles);

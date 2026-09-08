@@ -86,6 +86,7 @@ export function buildSubSectorZeroMap(): SectorMap {
         name: 'DRAINAGE PUMP CONTROLLER',
         clearanceNeeded: 'CLEAR',
         isHacked: false,
+        position: { x: 14, y: 14 },
         logs: [
           'SUB-METROPOLIS OVERFLOW RELAY 00',
           'DRAINAGE VALVE: LOCKED. HIGH PRESSURE DETECTED.',
@@ -106,7 +107,7 @@ export function setupSubSectorZero(game: any): void {
   game.robots = [
     createRobot('SCOUT_DRONE' as any, { x: 10, y: 7 }, [{ x: 10, y: 7 }, { x: 15, y: 7 }]),
     createRobot('SERVICE_BOT' as any, { x: 20, y: 14 }, [{ x: 20, y: 14 }, { x: 26, y: 14 }]),
-    createRobot('SCOUT_DRONE' as any, { x: 28, y: 22 }, [{ x: 28, y: 22 }, { x: 34, y: 22 }]),
+    createRobot('SCOUT_DRONE' as any, { x: 30, y: 22 }, [{ x: 30, y: 22 }, { x: 34, y: 22 }]),
   ];
   game.hazards = [
     { id: 'hazard-sewer-1', x: 15, y: 7, type: 'STEAM_VENT', hp: 1, exploded: false },
@@ -156,7 +157,10 @@ export function getNextSectorId(currentMapId: string, playerX: number, playerY: 
   } else if (currentMapId === 'sector-1') {
     return (playerX <= 10 && playerY >= 20) ? 'sub-sector-0' : 'sector-2';
   } else if (currentMapId === 'sector-2') {
+    if (playerX >= 30) return 'sector-citadel';
     return (playerX <= 5 && playerY >= 20) ? 'sub-sector-0' : 'sector-1';
+  } else if (currentMapId === 'sector-citadel') {
+    return 'sector-2';
   } else {
     return 'sector-1';
   }

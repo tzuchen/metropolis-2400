@@ -2,6 +2,7 @@ import type { SectorMap, Player, Robot, NPC, GroundItem, Language } from './type
 import { drawGlobalAllSectorsMap } from './globalAtlas';
 import { buildSector1Map, buildSector2Map } from './map';
 import { buildSubSectorZeroMap } from './sewerMap';
+import { buildCitadelMap } from './citadelMap';
 
 function normalizeTileKind(tile: any): string {
   if (typeof tile === 'string') return tile.toUpperCase();
@@ -51,6 +52,7 @@ export function drawBigMapModal(
     selectedSector === 'sector-1' ? (buildSector1Map() as SectorMap) :
     selectedSector === 'sector-2' ? (buildSector2Map() as SectorMap) :
     selectedSector === 'sub-sector-0' ? (buildSubSectorZeroMap() as SectorMap) :
+    selectedSector === 'sector-citadel' ? (buildCitadelMap() as SectorMap) :
     map;
 
   // 1. 大地圖外框尺寸
@@ -98,6 +100,9 @@ export function drawBigMapModal(
   } else if (currentSectorId === 'sub-sector-0') {
     sectorTitleZh = '次分區 ZERO // 舊城地下水路與廢棄管網';
     sectorTitleEn = 'SUB-SECTOR ZERO // UNDERGROUND SEWER SYSTEM';
+  } else if (currentSectorId === 'sector-citadel') {
+    sectorTitleZh = '終局堡壘 // 佐格主腦中樞與至高王座';
+    sectorTitleEn = 'TZORG CITADEL // OVERMIND APEX THRONE';
   } else if (currentSectorId === 'all') {
     sectorTitleZh = '全域總覽 // 三區宏觀衛星地圖';
     sectorTitleEn = 'GLOBAL OVERVIEW // ALL SECTORS SATELLITE MAP';
@@ -165,6 +170,68 @@ export function drawBigMapModal(
   ctx.lineWidth = 1;
   ctx.strokeRect?.(mapStartX - 0.5, mapStartY - 0.5, mapRenderW + 1, mapRenderH + 1);
 
+  // 根據分區定義色彩體系
+  const sectorColors = {
+    'sector-1': {
+      wallVis: '#265173',
+      wallVisStroke: '#00f0ff',
+      wallExplored: '#1b3b54',
+      wallExploredStroke: '#2d658c',
+      wallUnexplored: '#0f2231',
+      wallUnexploredStroke: 'rgba(0, 180, 240, 0.4)',
+      floorVis: '#081724',
+      floorExplored: '#050f18',
+      unexploredDot: 'rgba(0, 240, 255, 0.05)',
+      doorClosed: '#00e5ff',
+      doorOpen: 'rgba(0, 229, 255, 0.25)',
+      conveyor: '#1e3830'
+    },
+    'sector-2': {
+      wallVis: '#5a381c',
+      wallVisStroke: '#ffaa00',
+      wallExplored: '#3d2510',
+      wallExploredStroke: '#8a5a20',
+      wallUnexplored: '#241608',
+      wallUnexploredStroke: 'rgba(255, 170, 0, 0.4)',
+      floorVis: '#1c140d',
+      floorExplored: '#120d08',
+      unexploredDot: 'rgba(255, 170, 0, 0.05)',
+      doorClosed: '#ffaa00',
+      doorOpen: 'rgba(255, 170, 0, 0.25)',
+      conveyor: '#2a1f15'
+    },
+    'sub-sector-0': {
+      wallVis: '#1c4530',
+      wallVisStroke: '#00ffaa',
+      wallExplored: '#123020',
+      wallExploredStroke: '#008855',
+      wallUnexplored: '#0a1a12',
+      wallUnexploredStroke: 'rgba(0, 255, 170, 0.4)',
+      floorVis: '#0d1a14',
+      floorExplored: '#08100c',
+      unexploredDot: 'rgba(0, 255, 170, 0.05)',
+      doorClosed: '#00ffaa',
+      doorOpen: 'rgba(0, 255, 170, 0.25)',
+      conveyor: '#15251d'
+    },
+    'sector-citadel': {
+      wallVis: '#3a1020',
+      wallVisStroke: '#ff0055',
+      wallExplored: '#240a14',
+      wallExploredStroke: '#880033',
+      wallUnexplored: '#14050a',
+      wallUnexploredStroke: 'rgba(255, 0, 85, 0.4)',
+      floorVis: '#140d18',
+      floorExplored: '#0c0810',
+      unexploredDot: 'rgba(255, 0, 85, 0.05)',
+      doorClosed: '#ff0055',
+      doorOpen: 'rgba(255, 0, 85, 0.25)',
+      conveyor: '#251520'
+    }
+  };
+
+  const activeColors = (sectorColors as Record<string, any>)[currentSectorId] || sectorColors['sector-1'];
+
   const tiles = (activeMap as any).tiles;
   if (Array.isArray(tiles)) {
     for (let ty = 0; ty < mh; ty++) {
@@ -181,19 +248,19 @@ export function drawBigMapModal(
 
         if (kind === 'WALL') {
           if (isVis) {
-            ctx.fillStyle = '#265173';
+            ctx.fillStyle = activeColors.wallVis;
             ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
-            ctx.strokeStyle = '#00f0ff';
+            ctx.strokeStyle = activeColors.wallVisStroke;
             ctx.strokeRect?.(cellX + 0.5, cellY + 0.5, tileSize - 1, tileSize - 1);
           } else if (isExplored) {
-            ctx.fillStyle = '#1b3b54';
+            ctx.fillStyle = activeColors.wallExplored;
             ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
-            ctx.strokeStyle = '#2d658c';
+            ctx.strokeStyle = activeColors.wallExploredStroke;
             ctx.strokeRect?.(cellX + 0.5, cellY + 0.5, tileSize - 1, tileSize - 1);
           } else {
-            ctx.fillStyle = '#0f2231';
+            ctx.fillStyle = activeColors.wallUnexplored;
             ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
-            ctx.strokeStyle = 'rgba(0, 180, 240, 0.4)';
+            ctx.strokeStyle = activeColors.wallUnexploredStroke;
             ctx.strokeRect?.(cellX + 0.5, cellY + 0.5, tileSize - 1, tileSize - 1);
           }
           continue;
@@ -202,7 +269,7 @@ export function drawBigMapModal(
         if (!isExplored) {
           // 未探索區域：深黑背景微弱點陣
           if ((tx + ty) % 4 === 0) {
-            ctx.fillStyle = 'rgba(0, 240, 255, 0.05)';
+            ctx.fillStyle = activeColors.unexploredDot;
             ctx.fillRect?.(cellX + tileSize / 2 - 1, cellY + tileSize / 2 - 1, 2, 2);
           }
           continue;
@@ -213,10 +280,10 @@ export function drawBigMapModal(
           ctx.fillStyle = `rgba(255, 40, 80, ${pulseAlpha})`;
           ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
         } else if (kind === 'DOOR_CLOSED') {
-          ctx.fillStyle = '#00e5ff';
+          ctx.fillStyle = activeColors.doorClosed;
           ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
         } else if (kind === 'DOOR_OPEN') {
-          ctx.fillStyle = 'rgba(0, 229, 255, 0.25)';
+          ctx.fillStyle = activeColors.doorOpen;
           ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
         } else if (kind === 'TERMINAL') {
           ctx.fillStyle = '#ffea00';
@@ -225,11 +292,11 @@ export function drawBigMapModal(
           ctx.fillStyle = '#00aaff';
           ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
         } else if (kind === 'CONVEYOR') {
-          ctx.fillStyle = '#1e3830';
+          ctx.fillStyle = activeColors.conveyor;
           ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
         } else {
           // 一般地板
-          ctx.fillStyle = isVis ? '#081724' : '#050f18';
+          ctx.fillStyle = isVis ? activeColors.floorVis : activeColors.floorExplored;
           ctx.fillRect?.(cellX, cellY, tileSize, tileSize);
         }
       }
@@ -351,6 +418,13 @@ export function drawBigMapModal(
       { nameZh: '黑市地下軍火巷', nameEn: 'Black Market', coord: '[22, 24]', color: '#c77dff' },
       { nameZh: '佐格主腦終端室', nameEn: 'Overmind Apex', coord: '[34, 14]', color: '#ff0055' },
       { nameZh: '往返 Sec-01 電梯', nameEn: 'Transit Elevator', coord: '[02, 06]', color: '#00aaff' },
+    ];
+  } else if (currentSectorId === 'sector-citadel') {
+    pois = [
+      { nameZh: '頂層高速升降梯', nameEn: 'Express Elevator', coord: '[03, 15]', color: '#00aaff' },
+      { nameZh: '前室安檢防衛終端', nameEn: 'Security Gate', coord: '[06, 13]', color: '#00ff88' },
+      { nameZh: '終極殲滅者戰鬥台', nameEn: 'Boss Platform', coord: '[22, 15]', color: '#ff3366' },
+      { nameZh: '佐格主腦中樞終端', nameEn: 'Overmind Central Core', coord: '[36, 15]', color: '#ffd700' },
     ];
   } else {
     pois = [

@@ -87,6 +87,36 @@ export function initGame(): GameEngineInstance {
     engine.handleKeyDown(event.key);
   });
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const startParam = urlParams.get('start');
+  const sectorParam = urlParams.get('sector');
+
+  if (startParam === '1' || startParam === 'true') {
+    engine.handleKeyDown('Enter');
+  }
+
+  if (sectorParam) {
+    engine.handleKeyDown('Enter');
+    const switchSector = (engine as unknown as { switchSector?: (sector: string) => void }).switchSector;
+    if (typeof switchSector === 'function') {
+      switchSector.call(engine, sectorParam);
+    }
+  }
+
+  const omniParam = urlParams.get('omni');
+  if (omniParam === '1' || omniParam === 'true') {
+    engine.handleKeyDown('v');
+  }
+
+  const bigMapParam = urlParams.get('bigmap');
+  if (bigMapParam) {
+    (engine as any).isBigMapOpen = true;
+    if (bigMapParam !== '1' && bigMapParam !== 'true') {
+      (engine as any).bigMapSelectedSector = bigMapParam;
+    }
+    (engine as any).render();
+  }
+
   return engine;
 }
 

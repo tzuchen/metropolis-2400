@@ -123,7 +123,7 @@ export function getSector1NPCs(): NPC[] {
       roleZh: '仿生公園植物學家',
       avatarColor: '#7cffcb',
       x: 11,
-      y: 20,
+      y: 19,
       hp: 75,
       maxHp: 75,
       isAlive: true,

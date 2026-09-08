@@ -12,6 +12,7 @@ import { createBreachSession, moveBreachCursor, selectBreachCell, type BreachSes
 import { handleSpecialInput } from './inputHandler';
 import { bgm } from './music';
 import { setupSubSectorZero, getNextSectorId } from './sewerMap';
+import { setupCitadel, buildCitadelMap } from './citadelMap';
 import { FXManager } from './fx';
 
 export interface ResolutionPreset {
@@ -75,6 +76,7 @@ export class GameEngine {
   private lastSectorId: string = '';
   private lastLandmarkKey: string = '';
   storyArchiveSelectedIndex: number = 0;
+  sectorGroundItems: Record<string, GroundItem[]> = {};
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -334,7 +336,7 @@ export class GameEngine {
     return [
       createRobot('SCOUT_DRONE' as RobotType, { x: 12, y: 5 }, [{ x: 12, y: 5 }, { x: 12, y: 12 }]),
       createRobot('SCOUT_DRONE' as RobotType, { x: 18, y: 8 }, [{ x: 18, y: 8 }, { x: 24, y: 8 }]),
-      createRobot('SHOCK_ENFORCER' as RobotType, { x: 25, y: 6 }, [{ x: 25, y: 6 }, { x: 27, y: 6 }]),
+      createRobot('SHOCK_ENFORCER' as RobotType, { x: 24, y: 6 }, [{ x: 24, y: 5 }, { x: 24, y: 8 }]),
       createRobot('HUNTER_KILLER' as RobotType, { x: 32, y: 18 }, [{ x: 32, y: 18 }, { x: 32, y: 24 }]),
       createRobot('SERVICE_BOT' as RobotType, { x: 8, y: 10 }, [{ x: 8, y: 10 }, { x: 8, y: 14 }]),
     ];
@@ -390,7 +392,7 @@ export class GameEngine {
         id: 'item-bat-1',
         name: 'Plasma Battery',
         itemType: 'BATTERY',
-        x: 18,
+        x: 19,
         y: 3,
         description: 'Super-capacitance plasma power cell. Restores +50 EN.',
         amount: 1,
@@ -401,7 +403,7 @@ export class GameEngine {
         name: 'EMP Disruptor',
         itemType: 'EMP_GRENADE',
         x: 23,
-        y: 10,
+        y: 11,
         description: 'Electro-magnetic disruptor grenade. Stuns all robots in radius 4 for 4 turns.',
         amount: 1,
         iconColor: '#c77dff',
@@ -430,7 +432,7 @@ export class GameEngine {
         id: 'slate-item-vance',
         name: 'Data Slate 01',
         itemType: 'DATA_SLATE',
-        x: 6,
+        x: 5,
         y: 3,
         description: 'Encrypted memory disc: Dr. Vance\'s remorse regarding the Neural Collar.',
         iconColor: '#00e5ff',
@@ -440,7 +442,7 @@ export class GameEngine {
         id: 'slate-item-kira',
         name: 'Data Slate 02',
         itemType: 'DATA_SLATE',
-        x: 3,
+        x: 4,
         y: 7,
         description: 'Resistance dispatch: The Fall of Sector 2 & Operation Prometheus.',
         iconColor: '#ff7700',
@@ -451,7 +453,7 @@ export class GameEngine {
         name: 'Data Slate 03',
         itemType: 'DATA_SLATE',
         x: 21,
-        y: 9,
+        y: 8,
         description: 'Tzorg Syndicate security directive concerning rogue Subject Raven.',
         iconColor: '#ff2a4b',
         storyLogId: 'slate-tzorg',
@@ -485,6 +487,41 @@ export class GameEngine {
         description: '全域軌道測繪晶片：啟動全地圖探索視圖。',
         amount: 1,
         iconColor: '#ffea00',
+      },
+    ];
+  }
+
+  private createSector2Items(): GroundItem[] {
+    return [
+      {
+        id: 'sec2-med-1',
+        name: 'Nanite Medkit',
+        itemType: 'MEDKIT',
+        x: 8,
+        y: 5,
+        description: 'Military-grade nanite injector. Restores +40 HP.',
+        amount: 1,
+        iconColor: '#00ff88',
+      },
+      {
+        id: 'sec2-bat-1',
+        name: 'Plasma Battery',
+        itemType: 'BATTERY',
+        x: 16,
+        y: 7,
+        description: 'Super-capacitance plasma power cell. Restores +50 EN.',
+        amount: 1,
+        iconColor: '#00f0ff',
+      },
+      {
+        id: 'sec2-emp-1',
+        name: 'EMP Disruptor',
+        itemType: 'EMP_GRENADE',
+        x: 25,
+        y: 20,
+        description: 'Electro-magnetic disruptor grenade. Stuns all robots in radius 4 for 4 turns.',
+        amount: 1,
+        iconColor: '#c77dff',
       },
     ];
   }
@@ -529,7 +566,7 @@ export class GameEngine {
       { id: 'hazard-plasma-1', x: 19, y: 8, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
       { id: 'hazard-plasma-2', x: 26, y: 7, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
       { id: 'hazard-plasma-3', x: 33, y: 19, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
-      { id: 'hazard-plasma-4', x: 14, y: 12, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
+      { id: 'hazard-plasma-4', x: 14, y: 13, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
     ];
   }
 
@@ -538,6 +575,20 @@ export class GameEngine {
     this.securityLevel = 'CLEAR' as SecurityLevel;
     this.laserBeams = [];
     bgm.setIntensity('exploration');
+
+    // Save current sector's ground items before switching
+    if (prevMapId) {
+      this.sectorGroundItems[prevMapId] = this.groundItems;
+    }
+
+    if (targetSectorId === 'sector-citadel') {
+      setupCitadel(this);
+      if (this.sectorGroundItems['sector-citadel']) {
+        this.groundItems = this.sectorGroundItems['sector-citadel'];
+      }
+      bgm.setIntensity('combat');
+      return;
+    }
     if (targetSectorId === 'sub-sector-0') {
       setupSubSectorZero(this);
       if (prevMapId === 'sector-2') {
@@ -547,6 +598,10 @@ export class GameEngine {
         this.player.x = 4;
         this.player.y = 5;
       }
+      // Restore sub-sector-0 items if previously visited
+      if (this.sectorGroundItems['sub-sector-0']) {
+        this.groundItems = this.sectorGroundItems['sub-sector-0'];
+      }
       return;
     }
     if (targetSectorId === 'sector-2') {
@@ -554,6 +609,9 @@ export class GameEngine {
       if (prevMapId === 'sub-sector-0') {
         this.player.x = 3;
         this.player.y = 25;
+      } else if (prevMapId === 'sector-citadel') {
+        this.player.x = 35;
+        this.player.y = 22;
       } else {
         this.player.x = 3;
         this.player.y = 5;
@@ -570,6 +628,7 @@ export class GameEngine {
         { id: 'hazard-sec2-2', x: 25, y: 14, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
       ];
       this.npcs = this.createSector2NPCs();
+      this.groundItems = this.sectorGroundItems['sector-2'] || this.createSector2Items();
       this.visibleTiles.clear();
       this.exploredTiles.clear();
       this.updateFOV();
@@ -589,6 +648,7 @@ export class GameEngine {
       this.robots = this.createSectorRobots();
       this.hazards = this.createSectorHazards();
       this.npcs = this.createSectorNPCs();
+      this.groundItems = this.sectorGroundItems['sector-1'] || this.createSectorItems();
       this.visibleTiles.clear();
       this.exploredTiles.clear();
       this.updateFOV();
@@ -984,7 +1044,7 @@ export class GameEngine {
         return;
       }
       if (key === 's' || key === 'S') {
-        const sectors = ['current', 'sector-1', 'sector-2', 'sub-sector-0', 'all'];
+        const sectors = ['current', 'sector-1', 'sector-2', 'sub-sector-0', 'sector-citadel', 'all'];
         const idx = sectors.indexOf(this.bigMapSelectedSector);
         this.bigMapSelectedSector = sectors[(idx + 1) % sectors.length];
         soundFX.terminal();

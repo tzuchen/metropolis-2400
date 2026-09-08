@@ -28,6 +28,32 @@ export const TileType = {
   SERVER_RACK: 15,
   STEAM_VENT: 16,
   REBEL_BARRICADE: 17,
+  LETTER_A: 101,
+  LETTER_B: 102,
+  LETTER_C: 103,
+  LETTER_D: 104,
+  LETTER_E: 105,
+  LETTER_F: 106,
+  LETTER_G: 107,
+  LETTER_H: 108,
+  LETTER_I: 109,
+  LETTER_J: 110,
+  LETTER_K: 111,
+  LETTER_L: 112,
+  LETTER_M: 113,
+  LETTER_N: 114,
+  LETTER_O: 115,
+  LETTER_P: 116,
+  LETTER_Q: 117,
+  LETTER_R: 118,
+  LETTER_S: 119,
+  LETTER_T: 120,
+  LETTER_U: 121,
+  LETTER_V: 122,
+  LETTER_W: 123,
+  LETTER_X: 124,
+  LETTER_Y: 125,
+  LETTER_Z: 126,
 } as const;
 
 export type TileType = (typeof TileType)[keyof typeof TileType];
@@ -130,6 +156,9 @@ export interface TerminalData {
   logs: string[];
   forcefieldToDisable?: string;
   doorToUnlock?: string;
+  position?: Position;
+  x?: number;
+  y?: number;
 }
 
 export type GameMessageType = 'info' | 'warning' | 'danger' | 'success';

@@ -34,12 +34,33 @@ export function parseKey(keyStr: string): Position | null {
 
 export function isWalkable(tile: TileType): boolean {
   const t = tile as any;
-  return t === FLOOR || t === DOOR_OPEN || t === 1 || t === 4 || t === 9 || t === 10 || t === 16 || t === 'ELEVATOR' || t === 'CONVEYOR' || t === 'STEAM_VENT';
+  return t === FLOOR || t === DOOR_OPEN || t === 1 || t === 4 || t === 7 || t === 9 || t === 10 || t === 16 || t === 'ELEVATOR' || t === 'CONVEYOR' || t === 'STEAM_VENT' || t === 'REBEL_CACHE';
 }
 
 export function isTransparent(tile: TileType): boolean {
   const t = tile as any;
+  if (typeof t === 'number' && t >= 101 && t <= 126) return true;
+  if (typeof t === 'string' && t.startsWith('LETTER_')) return true;
   return t === FLOOR || t === DOOR_OPEN || t === FORCEFIELD || t === 1 || t === 4 || t === 5 || t === 9 || t === 10 || t === 11 || t === 13 || t === 16 || t === 17 || t === 'ELEVATOR' || t === 'CONVEYOR' || t === 'TURRET' || t === 'PARK_WATER' || t === 'STEAM_VENT' || t === 'REBEL_BARRICADE';
+}
+
+export function getLetterTile(char: string): TileType {
+  const upper = char.toUpperCase();
+  const code = upper.charCodeAt(0);
+  if (code >= 65 && code <= 90) {
+    return (100 + (code - 64)) as unknown as TileType;
+  }
+  return FLOOR;
+}
+
+export function placeSign(tiles: TileType[][], startX: number, startY: number, text: string): void {
+  for (let i = 0; i < text.length; i++) {
+    const x = startX + i;
+    const y = startY;
+    const row = tiles[y];
+    if (!row || x < 0 || x >= row.length) continue;
+    row[x] = getLetterTile(text[i]);
+  }
 }
 
 export function isInBounds(map: SectorMap, position: Position): boolean {
@@ -206,6 +227,7 @@ export function buildSector1Map(): SectorMap {
   const height = 30;
   const tiles = createTiles(width, height);
 
+  // Outer boundary walls
   for (let x = 0; x < width; x += 1) {
     setWall(tiles, x, 0);
     setWall(tiles, x, height - 1);
@@ -215,6 +237,8 @@ export function buildSector1Map(): SectorMap {
     setWall(tiles, width - 1, y);
   }
 
+  // === SAFEHOUSE BLOCK (NW) ===
+  // Safehouse perimeter with interior rooms
   for (let x = 2; x <= 10; x += 1) {
     setWall(tiles, x, 2);
     setWall(tiles, x, 8);
@@ -223,13 +247,35 @@ export function buildSector1Map(): SectorMap {
     setWall(tiles, 2, y);
     setWall(tiles, 10, y);
   }
-  setDoor(tiles, 10, 5, true);
+  // Interior partition in safehouse
+  for (let x = 4; x <= 8; x += 1) setWall(tiles, x, 5);
+  setDoor(tiles, 6, 5, true); // Door between safehouse rooms
+  setDoor(tiles, 10, 5, true); // Main exit to street
 
+  // === MAIN STREET (horizontal corridor y=9..12) ===
+  // Street runs from safehouse to checkpoint
+  // Buildings flanking the street
+  for (let x = 12; x <= 23; x += 1) {
+    setWall(tiles, x, 9);
+    setWall(tiles, x, 12);
+  }
+  // Building A (north side of street)
   for (let y = 3; y <= 6; y += 1) setWall(tiles, 14, y);
-  for (let y = 8; y <= 11; y += 1) setWall(tiles, 17, y);
-  for (let y = 3; y <= 5; y += 1) setWall(tiles, 20, y);
-  for (let y = 9; y <= 11; y += 1) setWall(tiles, 22, y);
+  for (let y = 3; y <= 6; y += 1) setWall(tiles, 18, y);
+  for (let x = 14; x <= 18; x += 1) setWall(tiles, x, 3);
+  // Building B (south side of street)
+  for (let y = 14; y <= 17; y += 1) setWall(tiles, 14, y);
+  for (let y = 14; y <= 17; y += 1) setWall(tiles, 18, y);
+  for (let x = 14; x <= 18; x += 1) setWall(tiles, x, 17);
 
+  // === ALLEY / BACKSTREET (vertical, x=20) ===
+  // Backstreet connecting main street to south park area
+  for (let y = 13; y <= 19; y += 1) setWall(tiles, 19, y);
+  for (let y = 13; y <= 19; y += 1) setWall(tiles, 21, y);
+  setDoor(tiles, 20, 13, true); // Alley entrance from main street
+  setDoor(tiles, 20, 19, true); // Alley exit to park area
+
+  // === CHECKPOINT 01 COMPLEX ===
   for (let x = 25; x <= 31; x += 1) {
     setWall(tiles, x, 3);
     setWall(tiles, x, 11);
@@ -238,10 +284,11 @@ export function buildSector1Map(): SectorMap {
     setWall(tiles, 25, y);
     setWall(tiles, 31, y);
   }
-  setDoor(tiles, 25, 7, true);
-  for (let y = 4; y <= 10; y += 1) setForcefield(tiles, 27, y);
-  setDoor(tiles, 29, 11, true);
+  setDoor(tiles, 25, 7, true); // Main entrance to checkpoint
+  for (let y = 4; y <= 10; y += 1) setForcefield(tiles, 27, y); // Forcefield barrier
+  setDoor(tiles, 29, 11, true); // Exit from checkpoint to data hub
 
+  // === DATA HUB / SERVER ROOM (SE) ===
   for (let x = 30; x <= 37; x += 1) {
     setWall(tiles, x, 16);
     setWall(tiles, x, 27);
@@ -250,8 +297,9 @@ export function buildSector1Map(): SectorMap {
     setWall(tiles, 30, y);
     setWall(tiles, 37, y);
   }
-  setDoor(tiles, 30, 22, true);
+  setDoor(tiles, 30, 22, true); // Entrance to data hub
 
+  // Interior server room partition
   for (let x = 34; x <= 36; x += 1) {
     setWall(tiles, x, 18);
     setWall(tiles, x, 20);
@@ -260,8 +308,76 @@ export function buildSector1Map(): SectorMap {
     setWall(tiles, 34, y);
     setWall(tiles, 36, y);
   }
-  setDoor(tiles, 35, 18, true);
-  tiles[22][4] = TileType.ELEVATOR;
+  setDoor(tiles, 35, 18, true); // Door to server core
+
+  // === SOUTH PARK / ECO-PARK AREA ===
+  // Park perimeter
+  for (let x = 8; x <= 16; x += 1) {
+    setWall(tiles, x, 20);
+    setWall(tiles, x, 26);
+  }
+  for (let y = 20; y <= 26; y += 1) {
+    setWall(tiles, 8, y);
+    setWall(tiles, 16, y);
+  }
+  setDoor(tiles, 12, 20, true); // Park entrance from alley
+  setDoor(tiles, 12, 26, true); // Park exit to south street
+
+  // === SOUTH STREET (horizontal, y=27..28) ===
+  // Connects park to elevator
+  for (let x = 18; x <= 36; x += 1) {
+    setWall(tiles, x, 27);
+  }
+  // Buildings along south street
+  for (let y = 24; y <= 26; y += 1) setWall(tiles, 20, y);
+  for (let y = 24; y <= 26; y += 1) setWall(tiles, 24, y);
+  for (let x = 20; x <= 24; x += 1) setWall(tiles, x, 24);
+  for (let y = 24; y <= 26; y += 1) setWall(tiles, 28, y);
+  for (let y = 24; y <= 26; y += 1) setWall(tiles, 32, y);
+  for (let x = 28; x <= 32; x += 1) setWall(tiles, x, 24);
+
+  // === ELEVATOR ACCESS ===
+  tiles[22][4] = TileType.ELEVATOR; // Sewer ladder to Sub-Sector Zero
+  tiles[25][38] = 9 as any; // ELEVATOR to Sector 2
+
+  // === DECORATIVE TILES ===
+  // 西北反抗軍基地掩體 (Rebel barricades in safehouse)
+  tiles[7][2] = 17 as any;
+
+  // Sign decorations
+  placeSign(tiles, 14, 3, 'RAMEN');
+  placeSign(tiles, 4, 1, 'SPARK');
+  placeSign(tiles, 25, 2, 'GATE');
+  tiles[7][3] = 17 as any;
+  tiles[3][4] = 17 as any;
+  tiles[3][6] = 17 as any;
+
+  // 中央霓虹商店街攤位 (Vendor stalls along main street)
+  tiles[4][14] = 14 as any;
+  tiles[4][18] = 14 as any;
+  tiles[4][22] = 14 as any;
+  tiles[10][15] = 14 as any;
+  tiles[10][19] = 14 as any;
+  tiles[10][23] = 14 as any;
+
+  // 南側生化仿生生態公園 (Bio-eco park with water and trees)
+  for (let y = 21; y <= 23; y++) {
+    for (let x = 10; x <= 13; x++) {
+      tiles[y][x] = 13 as any; // PARK_WATER
+    }
+  }
+  tiles[19][9] = 12 as any; // BIO_TREE
+  tiles[19][14] = 12 as any; // BIO_TREE
+  tiles[25][9] = 12 as any; // BIO_TREE
+  tiles[25][14] = 12 as any; // BIO_TREE
+  tiles[22][11] = 12 as any; // BIO_TREE in park
+  tiles[22][15] = 12 as any; // BIO_TREE in park
+  tiles[24][10] = 12 as any; // BIO_TREE
+  tiles[24][16] = 12 as any; // BIO_TREE
+
+  // Additional park water features
+  tiles[21][14] = 13 as any;
+  tiles[23][10] = 13 as any;
 
   const checkpointForcefieldPositions: Position[] = [];
   for (let y = 4; y <= 10; y += 1) {
@@ -292,26 +408,6 @@ export function buildSector1Map(): SectorMap {
       log: 'Tzorg data hub log: Server room contains the central data terminal and sector surveillance archives.',
     },
   } as unknown as Record<string, TerminalData>;
-
-  // 西北反抗軍基地掩體
-  tiles[7][2] = 17 as any;
-  tiles[7][3] = 17 as any;
-  // 中央霓虹商店街攤位 (拉麵攤/黑市義體商/情報販子)
-  tiles[4][14] = 14 as any;
-  tiles[4][18] = 14 as any;
-  tiles[4][22] = 14 as any;
-  // 南側生化仿生生態公園 (水池與發光仿生樹)
-  for (let y = 21; y <= 23; y++) {
-    for (let x = 10; x <= 13; x++) {
-      tiles[y][x] = 13 as any;
-    }
-  }
-  tiles[19][9] = 12 as any;
-  tiles[19][14] = 12 as any;
-  tiles[25][9] = 12 as any;
-  tiles[25][14] = 12 as any;
-
-  tiles[25][38] = 9 as any; // ELEVATOR to Sector 2
 
   const map = {
     id: 'sector-1',
@@ -350,44 +446,97 @@ export function buildSector2Map(): SectorMap {
     setWall(tiles, width - 1, y);
   }
 
-  // West Entrance Staging Bay (around Elevator)
+  // === WEST ENTRANCE STAGING BAY ===
+  // Staging bay walls
   for (let y = 2; y <= 8; y++) {
     setWall(tiles, 6, y);
   }
-  setDoor(tiles, 6, 5, true);
+  setDoor(tiles, 6, 5, true); // Main entrance from staging bay
   tiles[5][2] = 9 as any; // ELEVATOR back to Sector 1
 
-  // Central Assembly Hall with dual conveyor lines
+  // Staging bay interior partitions
+  for (let x = 3; x <= 5; x++) setWall(tiles, x, 3);
+  for (let x = 3; x <= 5; x++) setWall(tiles, x, 7);
+  for (let y = 3; y <= 7; y++) setWall(tiles, 3, y);
+  setDoor(tiles, 4, 3, true); // Staging bay door
+
+  // === CENTRAL ASSEMBLY HALL ===
+  // Dual conveyor lines (y=8 eastbound, y=14 westbound)
   for (let x = 8; x <= 26; x++) {
-    tiles[8][x] = 10 as any;  // Industrial conveyor line 1
-    tiles[14][x] = 10 as any; // Industrial conveyor line 2
+    tiles[8][x] = 10 as any;  // Industrial conveyor line 1 (east)
+    tiles[14][x] = 10 as any; // Industrial conveyor line 2 (west)
   }
 
-  // Workstation Partition Walls
+  // Workstation partition walls between conveyors
   for (let x = 10; x <= 18; x++) {
     setWall(tiles, x, 11);
   }
-  setDoor(tiles, 14, 11, true);
+  setDoor(tiles, 14, 11, true); // Access door between workstations
 
-  // 西側黑市暗巷蒸氣孔與掩體
-  tiles[16][3] = 16 as any;
-  tiles[20][4] = 16 as any;
-  tiles[24][3] = 16 as any;
-  tiles[18][5] = 17 as any;
-  tiles[25][2] = 9 as any; // ELEVATOR / Sewer ladder to Sub-Sector Zero
-  // 中央機房高密度伺服器機櫃
-  tiles[6][10] = 15 as any;
-  tiles[6][12] = 15 as any;
-  tiles[6][14] = 15 as any;
-  tiles[16][10] = 15 as any;
-  tiles[16][12] = 15 as any;
-  tiles[16][14] = 15 as any;
+  // Additional workstation partitions
+  for (let x = 20; x <= 24; x++) {
+    setWall(tiles, x, 11);
+  }
+  setDoor(tiles, 22, 11, true); // Second access door
 
-  // East Corridor Guard Turrets
+  // === NORTH WORKSHOP AREA ===
+  // Workshop buildings north of upper conveyor
+  for (let x = 10; x <= 16; x++) {
+    setWall(tiles, x, 4);
+    setWall(tiles, x, 6);
+  }
+  for (let y = 4; y <= 6; y++) {
+    setWall(tiles, 10, y);
+    setWall(tiles, 16, y);
+  }
+  setDoor(tiles, 13, 4, true); // Workshop entrance
+
+  for (let x = 18; x <= 24; x++) {
+    setWall(tiles, x, 4);
+    setWall(tiles, x, 6);
+  }
+  for (let y = 4; y <= 6; y++) {
+    setWall(tiles, 18, y);
+    setWall(tiles, 24, y);
+  }
+  setDoor(tiles, 21, 4, true); // Second workshop entrance
+
+  // === SOUTH MAINTENANCE CORRIDOR ===
+  // Cooling maintenance corridor south of lower conveyor
+  for (let x = 10; x <= 24; x++) {
+    setWall(tiles, x, 17);
+    setWall(tiles, x, 19);
+  }
+  for (let y = 17; y <= 19; y++) {
+    setWall(tiles, 10, y);
+    setWall(tiles, 24, y);
+  }
+  setDoor(tiles, 17, 17, true); // Maintenance corridor entrance
+  setDoor(tiles, 17, 19, true); // Maintenance corridor exit
+
+  // === WEST ALLEY / BACKSTREET ===
+  // Dark alley with steam vents and barricades
+  for (let y = 10; y <= 24; y++) {
+    setWall(tiles, 8, y);
+  }
+  // Alley partitions
+  for (let x = 9; x <= 11; x++) setWall(tiles, x, 12);
+  for (let x = 9; x <= 11; x++) setWall(tiles, x, 16);
+  for (let x = 9; x <= 11; x++) setWall(tiles, x, 20);
+  setDoor(tiles, 10, 12, true);
+  setDoor(tiles, 10, 16, true);
+  setDoor(tiles, 10, 20, true);
+
+  // === EAST CORRIDOR ===
+  // Guard corridor leading to sub-core vault
+  for (let y = 16; y <= 26; y++) {
+    setWall(tiles, 26, y);
+  }
+  // Turret positions in corridor
   tiles[20][26] = 11 as any; // TURRET 1
   tiles[24][26] = 11 as any; // TURRET 2
 
-  // East Sub-Core Vault
+  // === EAST SUB-CORE VAULT ===
   for (let x = 28; x <= 38; x++) {
     setWall(tiles, x, 17);
     setWall(tiles, x, 27);
@@ -399,6 +548,50 @@ export function buildSector2Map(): SectorMap {
   // Core Forcefield gate at x=28, y=22
   tiles[22][28] = FORCEFIELD;
 
+  // Interior vault partitions
+  for (let x = 32; x <= 36; x++) {
+    setWall(tiles, x, 20);
+    setWall(tiles, x, 24);
+  }
+  for (let y = 20; y <= 24; y++) {
+    setWall(tiles, 32, y);
+    setWall(tiles, 36, y);
+  }
+  setDoor(tiles, 34, 20, true); // Vault inner door
+
+  // ELEVATOR to Tzorg Citadel
+  tiles[22][35] = 9 as any; // ELEVATOR to Citadel
+
+  // === DECORATIVE TILES ===
+  // 西側黑市暗巷蒸氣孔與掩體 (Steam vents and barricades in west alley)
+  tiles[16][3] = 16 as any; // STEAM_VENT
+  tiles[20][4] = 16 as any; // STEAM_VENT
+  tiles[24][3] = 16 as any; // STEAM_VENT
+  tiles[18][5] = 17 as any; // REBEL_BARRICADE
+  tiles[12][9] = 16 as any; // STEAM_VENT in alley
+  tiles[18][9] = 16 as any; // STEAM_VENT in alley
+  tiles[22][9] = 16 as any; // STEAM_VENT in alley
+  tiles[20][10] = 17 as any; // REBEL_BARRICADE in alley
+
+  // 中央機房高密度伺服器機櫃 (Server racks in central area)
+  tiles[6][10] = 15 as any; // SERVER_RACK
+  tiles[6][12] = 15 as any; // SERVER_RACK
+  tiles[6][14] = 15 as any; // SERVER_RACK
+  tiles[16][10] = 15 as any; // SERVER_RACK
+  tiles[16][12] = 15 as any; // SERVER_RACK
+  tiles[16][14] = 15 as any; // SERVER_RACK
+  tiles[18][10] = 15 as any; // SERVER_RACK
+  tiles[18][12] = 15 as any; // SERVER_RACK
+  tiles[18][14] = 15 as any; // SERVER_RACK
+
+  // Additional server racks in maintenance corridor
+  tiles[18][11] = 15 as any; // SERVER_RACK
+  tiles[18][13] = 15 as any; // SERVER_RACK
+  tiles[18][15] = 15 as any; // SERVER_RACK
+
+  // Sewer ladder to Sub-Sector Zero
+  tiles[25][2] = 9 as any; // ELEVATOR / Sewer ladder to Sub-Sector Zero
+
   const coreForcefieldPositions: Position[] = [
     { x: 28, y: 22 },
   ];
@@ -406,7 +599,7 @@ export function buildSector2Map(): SectorMap {
   const terminals = {
     TERMINAL_FAB_SECURITY: {
       id: 'TERMINAL_FAB_SECURITY',
-      position: { x: 15, y: 6 },
+      position: { x: 15, y: 5 },
       type: 'FORCEFIELD',
       securityLevel: 'MEDIUM' as unknown as SecurityLevel,
       forcefieldId: 'CORE_FF',
