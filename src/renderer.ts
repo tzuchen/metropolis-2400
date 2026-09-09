@@ -1216,45 +1216,130 @@ export class GameRenderer {
     const alpha = isVisible ? 1 : 0.4;
     ctx.globalAlpha = alpha;
 
-    // 1. 繪製與該分區一般牆壁完全一致的底色與紋理
-    drawTileSprite(ctx, 'WALL', sx, sy, tileSize, isVisible, now, sector);
+    const blockType = block?.blockType;
 
-    if (!block.revealed) {
-      // 未推開前：極其細微的暗色擬真接縫與底部微弱磨擦縫隙
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+    if (blockType === 'crate') {
+      // Heavy industrial cargo crate
+      // Dark gunmetal body
+      ctx.fillStyle = '#1e2430';
+      ctx.fillRect?.(sx, sy, tileSize, tileSize);
+      ctx.fillStyle = '#2b3548';
+      ctx.fillRect?.(sx + 2, sy + 2, tileSize - 4, tileSize - 4);
+
+      // Diagonal yellow/black hazard warning stripes
+      ctx.save?.();
+      ctx.beginPath?.();
+      ctx.rect?.(sx + 4, sy + 4, tileSize - 8, tileSize - 8);
+      ctx.clip?.();
+      ctx.strokeStyle = '#ffea00';
+      ctx.lineWidth = 4;
+      for (let i = -tileSize; i < tileSize * 2; i += 12) {
+        ctx.beginPath?.();
+        ctx.moveTo?.(sx + i, sy);
+        ctx.lineTo?.(sx + i + tileSize, sy + tileSize);
+        ctx.stroke?.();
+      }
+      ctx.restore?.();
+
+      // Outer metal frame with corner bolts
+      ctx.strokeStyle = '#4a5568';
+      ctx.lineWidth = 2;
+      ctx.strokeRect?.(sx + 1, sy + 1, tileSize - 2, tileSize - 2);
+      ctx.fillStyle = '#718096';
+      const boltSize = 3;
+      ctx.fillRect?.(sx + 3, sy + 3, boltSize, boltSize);
+      ctx.fillRect?.(sx + tileSize - 3 - boltSize, sy + 3, boltSize, boltSize);
+      ctx.fillRect?.(sx + 3, sy + tileSize - 3 - boltSize, boltSize, boltSize);
+      ctx.fillRect?.(sx + tileSize - 3 - boltSize, sy + tileSize - 3 - boltSize, boltSize, boltSize);
+
+      // Central cargo grip handle
+      ctx.fillStyle = '#1a202c';
+      ctx.fillRect?.(sx + tileSize / 2 - 10, sy + tileSize / 2 - 4, 20, 8);
+      ctx.strokeStyle = '#a0aec0';
+      ctx.lineWidth = 1;
+      ctx.strokeRect?.(sx + tileSize / 2 - 10, sy + tileSize / 2 - 4, 20, 8);
+
+    } else if (blockType === 'server_rack') {
+      // Sleek cyber server rack
+      // Dark chassis
+      ctx.fillStyle = '#0d1117';
+      ctx.fillRect?.(sx, sy, tileSize, tileSize);
+
+      // Cyan accent border
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.6)';
       ctx.lineWidth = 1;
       ctx.strokeRect?.(sx + 1, sy + 1, tileSize - 2, tileSize - 2);
 
-      // 底部微弱磨擦縫隙
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-      ctx.fillRect?.(sx + 2, sy + tileSize - 3, tileSize - 4, 2);
+      // Horizontal stacked server blade units
+      const bladeCount = 4;
+      const bladeH = (tileSize - 8) / bladeCount;
+      for (let i = 0; i < bladeCount; i++) {
+        const by = sy + 4 + i * bladeH;
+        ctx.fillStyle = '#161b22';
+        ctx.fillRect?.(sx + 3, by + 1, tileSize - 6, bladeH - 2);
+        
+        // Cooling ventilation slits
+        ctx.fillStyle = '#010409';
+        for (let s = 0; s < 3; s++) {
+          ctx.fillRect?.(sx + 5, by + 3 + s * 3, tileSize - 10, 1);
+        }
 
-      // 若全視力激活，顯示極淡的青色線框輔助提示
-      if (this.isOmniVisionActive) {
-        ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect?.(sx + 3, sy + 3, tileSize - 6, tileSize - 6);
+        // Animated blinking status LED indicator lights
+        const ledPhase = Math.sin(now * 0.005 + i * 1.5);
+        let ledColor = '#00ff88'; // green
+        if (ledPhase > 0.5) ledColor = '#00e5ff'; // cyan
+        else if (ledPhase < -0.5) ledColor = '#ffea00'; // amber
+        
+        ctx.fillStyle = ledColor;
+        ctx.shadowColor = ledColor;
+        ctx.shadowBlur = 4;
+        ctx.beginPath?.();
+        ctx.arc?.(sx + tileSize - 6, by + bladeH / 2, 1.5, 0, Math.PI * 2);
+        ctx.fill?.();
+        ctx.shadowBlur = 0;
       }
-    } else {
-      // 推開後：顯示已推開的淡綠色邊框與角落小綠點
-      ctx.strokeStyle = 'rgba(0, 255, 136, 0.6)';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect?.(sx + 1, sy + 1, tileSize - 2, tileSize - 2);
 
-      // 角落小綠點
-      ctx.fillStyle = 'rgba(0, 255, 136, 0.8)';
-      ctx.beginPath?.();
-      ctx.arc?.(sx + 6, sy + 6, 2, 0, Math.PI * 2);
-      ctx.fill?.();
-      ctx.beginPath?.();
-      ctx.arc?.(sx + tileSize - 6, sy + 6, 2, 0, Math.PI * 2);
-      ctx.fill?.();
-      ctx.beginPath?.();
-      ctx.arc?.(sx + 6, sy + tileSize - 6, 2, 0, Math.PI * 2);
-      ctx.fill?.();
-      ctx.beginPath?.();
-      ctx.arc?.(sx + tileSize - 6, sy + tileSize - 6, 2, 0, Math.PI * 2);
-      ctx.fill?.();
+    } else {
+      // 'disguised_wall' or undefined: keep existing logic
+      drawTileSprite(ctx, 'WALL', sx, sy, tileSize, isVisible, now, sector);
+
+      if (!block.revealed) {
+        // 未推開前：極其細微的暗色擬真接縫與底部微弱磨擦縫隙
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect?.(sx + 1, sy + 1, tileSize - 2, tileSize - 2);
+
+        // 底部微弱磨擦縫隙
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect?.(sx + 2, sy + tileSize - 3, tileSize - 4, 2);
+
+        // 若全視力激活，顯示極淡的青色線框輔助提示
+        if (this.isOmniVisionActive) {
+          ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect?.(sx + 3, sy + 3, tileSize - 6, tileSize - 6);
+        }
+      } else {
+        // 推開後：顯示已推開的淡綠色邊框與角落小綠點
+        ctx.strokeStyle = 'rgba(0, 255, 136, 0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect?.(sx + 1, sy + 1, tileSize - 2, tileSize - 2);
+
+        // 角落小綠點
+        ctx.fillStyle = 'rgba(0, 255, 136, 0.8)';
+        ctx.beginPath?.();
+        ctx.arc?.(sx + 6, sy + 6, 2, 0, Math.PI * 2);
+        ctx.fill?.();
+        ctx.beginPath?.();
+        ctx.arc?.(sx + tileSize - 6, sy + 6, 2, 0, Math.PI * 2);
+        ctx.fill?.();
+        ctx.beginPath?.();
+        ctx.arc?.(sx + 6, sy + tileSize - 6, 2, 0, Math.PI * 2);
+        ctx.fill?.();
+        ctx.beginPath?.();
+        ctx.arc?.(sx + tileSize - 6, sy + tileSize - 6, 2, 0, Math.PI * 2);
+        ctx.fill?.();
+      }
     }
 
     ctx.globalAlpha = 1;

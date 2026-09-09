@@ -147,6 +147,8 @@ export function hasLineOfSight(map: SectorMap, from: Position, to: Position): bo
     if (!first) {
       if (x === x1 && y === y1) break;
       if (!isTransparent(getTile(map, { x, y }))) return false;
+      const pushableBlocks = (map as any).pushableBlocks;
+      if (Array.isArray(pushableBlocks) && pushableBlocks.some((b: any) => b.x === x && b.y === y)) return false;
     }
     first = false;
     const e2 = 2 * err;

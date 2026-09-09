@@ -6,9 +6,18 @@ export interface PushableBlock {
   y: number;
   name: string;
   nameZh?: string;
+  blockType?: 'disguised_wall' | 'crate' | 'server_rack';
   secretDoor?: { x: number; y: number };
   revealed: boolean;
   revealedTile?: number | string;
+  secretSurprise?: {
+    type: 'credits' | 'energy' | 'item';
+    amount?: number;
+    item?: GroundItem;
+    messageZh?: string;
+    messageEn?: string;
+    claimed?: boolean;
+  };
 }
 import { buildSector1Map, buildSector2Map, calculateFOV, disableForcefield, getTile, isWalkable, toggleDoor } from './map';
 import { hasSavedGame, saveGameState, loadGameState } from './saveLoad';
@@ -617,9 +626,40 @@ export class GameEngine {
           y: 18,
           name: 'Disguised Armor Wall Panel',
           nameZh: '偽裝滑動裝甲牆',
+          blockType: 'disguised_wall',
           secretDoor: { x: 16, y: 17 },
           revealed: false,
           revealedTile: 4,
+        },
+        {
+          id: 'crate-sec1-alley',
+          x: 20,
+          y: 15,
+          name: 'Reinforced Cargo Crate',
+          nameZh: '加固物流重裝箱',
+          blockType: 'crate',
+          revealed: false,
+          secretSurprise: {
+            type: 'credits',
+            amount: 150,
+            messageZh: '【發現隱密補給】移開重裝箱後，在箱底夾層發現了 150 信用點！',
+            messageEn: '[SUPPLY CACHE] Pushed cargo crate to uncover 150 Credits in a secret compartment!',
+          },
+        },
+        {
+          id: 'crate-sec1-rack',
+          x: 33,
+          y: 23,
+          name: 'Data Relay Server Rack',
+          nameZh: '數據中繼伺服器機櫃',
+          blockType: 'server_rack',
+          revealed: false,
+          secretSurprise: {
+            type: 'energy',
+            amount: 60,
+            messageZh: '【發現後備電源】移開伺服器機櫃後，成功接入備用能源電池 (+60 EN)！',
+            messageEn: '[BACKUP POWER] Tapped into backup power cells behind the server rack (+60 EN)!',
+          },
         },
       ];
     }
@@ -631,9 +671,44 @@ export class GameEngine {
           y: 5,
           name: 'Movable Industrial Wall Section',
           nameZh: '偽裝冷卻重裝牆',
+          blockType: 'disguised_wall',
           secretDoor: { x: 27, y: 5 },
           revealed: false,
           revealedTile: 4,
+        },
+        {
+          id: 'crate-sec2-rack',
+          x: 18,
+          y: 16,
+          name: 'Overmind Sub-Core Server Rack',
+          nameZh: '主腦子核心伺服機櫃',
+          blockType: 'server_rack',
+          revealed: false,
+          secretSurprise: {
+            type: 'item',
+            item: {
+              id: 'item-emp-disruptor-cache',
+              name: 'EMP Disruptor',
+              itemType: 'EMP_GRENADE',
+              description: '高能量 EMP 干擾器',
+              iconColor: '#00f0ff',
+            } as unknown as GroundItem,
+          },
+        },
+        {
+          id: 'crate-sec2-crate',
+          x: 16,
+          y: 18,
+          name: 'Heavy Fabrication Container',
+          nameZh: '重型機件製造貨櫃',
+          blockType: 'crate',
+          revealed: false,
+          secretSurprise: {
+            type: 'credits',
+            amount: 200,
+            messageZh: '【發現走私晶片】推開製造貨櫃後，搜刮出價值 200 信用點的黑市物資！',
+            messageEn: '[BLACK MARKET CACHE] Recovered 200 Credits worth of components!',
+          },
         },
       ];
     }
@@ -645,9 +720,48 @@ export class GameEngine {
           y: 5,
           name: 'Loose Drainage Brick Wall',
           nameZh: '鬆動的下水道石砌牆',
+          blockType: 'disguised_wall',
           secretDoor: { x: 30, y: 5 },
           revealed: false,
           revealedTile: 4,
+        },
+        {
+          id: 'crate-sewer-crate',
+          x: 10,
+          y: 10,
+          name: 'Reinforced Drainage Cargo Crate',
+          nameZh: '加固下水道儲運箱',
+          blockType: 'crate',
+          revealed: false,
+          secretSurprise: {
+            type: 'item',
+            item: {
+              id: 'item-nanite-medkit-cache',
+              name: 'Nanite Medkit',
+              itemType: 'MEDKIT',
+              description: '軍用奈米急救包',
+              iconColor: '#00ff88',
+            } as unknown as GroundItem,
+          },
+        },
+      ];
+    }
+    if (id === 'sector-citadel') {
+      return [
+        {
+          id: 'crate-citadel-rack',
+          x: 12,
+          y: 15,
+          name: 'Citadel Mainframe Buffer Unit',
+          nameZh: '堡壘主機緩衝機櫃',
+          blockType: 'server_rack',
+          revealed: false,
+          secretSurprise: {
+            type: 'energy',
+            amount: 80,
+            messageZh: '【戰術能量補給】抽取了 80 點高純度超導能量！',
+            messageEn: '[TACTICAL RECHARGE] Siphoned 80 energy units from the mainframe buffer!',
+          },
         },
       ];
     }
@@ -1061,6 +1175,24 @@ export class GameEngine {
 
   private findRobotAt(x: number, y: number): Robot | null {
     return this.robots.find((r) => r.isAlive && r.x === x && r.y === y) || null;
+  }
+
+  findPushableBlockOnLine(from: Position, to: Position): PushableBlock | null {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const steps = Math.max(Math.abs(dx), Math.abs(dy));
+    if (steps === 0) return null;
+    const sx = dx / steps;
+    const sy = dy / steps;
+    let x = from.x;
+    let y = from.y;
+    for (let i = 1; i <= steps; i++) {
+      x = Math.round(from.x + sx * i);
+      y = Math.round(from.y + sy * i);
+      const block = this.pushableBlocks.find((b) => b.x === x && b.y === y);
+      if (block) return block;
+    }
+    return null;
   }
 
   updateFOV(): void {
@@ -1791,6 +1923,7 @@ export class GameEngine {
         // Check if there is a target in the direction
         let hitRobot: Robot | null = null;
         let hitCanister: Hazard | null = null;
+        let hitBlock: PushableBlock | null = null;
         const maxRange = (this.player.equippedWeapon as any)?.range ?? 5;
         for (let range = 1; range <= maxRange; range++) {
           const tx = this.player.x + dx * range;
@@ -1798,6 +1931,12 @@ export class GameEngine {
           const tTile = getTile(this.map, { x: tx, y: ty });
           const tName = String(tTile).toUpperCase();
           if (tName === 'WALL' || tTile === 2) break;
+
+          const foundBlock = this.pushableBlocks.find((b) => b.x === tx && b.y === ty);
+          if (foundBlock) {
+            hitBlock = foundBlock;
+            break;
+          }
 
           const found = this.robots.find((r) => r.isAlive && r.x === tx && r.y === ty);
           if (found) {
@@ -1812,7 +1951,7 @@ export class GameEngine {
           }
         }
 
-        if (hitRobot || hitCanister) {
+        if (hitRobot || hitCanister || hitBlock) {
           this.fireEquippedWeapon({ dx, dy });
           return;
         }
@@ -1851,12 +1990,15 @@ export class GameEngine {
           soundFX.door();
           this.pushFloatingText(this.player.x, this.player.y, 'HEAVY PUSH', '#ffea00');
           const isZh = this.language === 'zh';
-          this.pushMessage(
-            isZh
-              ? '機械轟鳴聲中，厚重的牆體緩緩滑動。'
-              : 'With a mechanical rumble, the heavy wall panel slides open.',
-            'info'
-          );
+          let pushMsg = '';
+          if (pushableBlock.blockType === 'server_rack') {
+            pushMsg = isZh ? '伺服器機櫃發出電流聲，緩緩滑開。' : 'The server rack hums with static as it slides open.';
+          } else if (pushableBlock.blockType === 'crate') {
+            pushMsg = isZh ? '沉重的貨櫃發出金屬摩擦聲，被推開了一格。' : 'The heavy crate grinds against the floor as you push it.';
+          } else {
+            pushMsg = isZh ? '機械轟鳴聲中，厚重的牆體緩緩滑動。' : 'With a mechanical rumble, the heavy wall panel slides open.';
+          }
+          this.pushMessage(pushMsg, 'info');
 
           if (pushableBlock.secretDoor && !pushableBlock.revealed && (pushableBlock.x !== oldX || pushableBlock.y !== oldY)) {
             pushableBlock.revealed = true;
@@ -1880,6 +2022,32 @@ export class GameEngine {
               'success'
             );
             this.gainExp(50, 'SECRET_DISCOVERY');
+          }
+
+          if (pushableBlock.secretSurprise && !pushableBlock.secretSurprise.claimed) {
+            pushableBlock.secretSurprise.claimed = true;
+            const surprise = pushableBlock.secretSurprise;
+            if (surprise.type === 'credits') {
+              const amt = surprise.amount || 0;
+              this.player.credits += amt;
+              this.pushFloatingText(this.player.x, this.player.y, `+${amt} CR`, '#ffea00');
+              soundFX.pickup();
+              this.pushMessage((isZh ? surprise.messageZh : surprise.messageEn) || (isZh ? '發現隱密物資！' : 'Discovered secret supplies!'), 'success');
+              this.gainExp(35, 'SECRET_CACHE');
+            } else if (surprise.type === 'energy') {
+              const amt = surprise.amount || 0;
+              this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + amt);
+              this.pushFloatingText(this.player.x, this.player.y, `+${amt} EN`, '#00f0ff');
+              soundFX.pickup();
+              this.pushMessage((isZh ? surprise.messageZh : surprise.messageEn) || (isZh ? '發現隱密物資！' : 'Discovered secret supplies!'), 'success');
+              this.gainExp(35, 'SECRET_CACHE');
+            } else if (surprise.type === 'item' && surprise.item) {
+              this.groundItems.push({ ...surprise.item, x: oldX, y: oldY } as GroundItem);
+              this.pushFloatingText(oldX, oldY, surprise.item.name, '#00f0ff');
+              soundFX.pickup();
+              this.pushMessage(isZh ? '【發現物資】移開障礙物後，發現了隱藏物資！' : '[SUPPLY FOUND] Uncovered hidden supplies behind the block!', 'success');
+              this.gainExp(45, 'SECRET_CACHE');
+            }
           }
 
           this.handlePlayerStep();
@@ -1916,7 +2084,7 @@ export class GameEngine {
 
         const standingTile = getTile(this.map, { x: nx, y: ny });
         if (Number(standingTile) === 9 || String(standingTile).toUpperCase() === 'ELEVATOR') {
-          const nextSec = getNextSectorId(this.map.id || '', nx, ny);
+          const nextSec = getNextSectorId(this.map.id ?? '', nx, ny);
           this.switchSector(nextSec);
           this.render();
           return;
@@ -2009,6 +2177,8 @@ export class GameEngine {
       this.lastBroadcastTurn = this.turnCounter;
     }
 
+    (this.map as any).pushableBlocks = this.pushableBlocks;
+
     for (const robot of this.robots) {
       if (!robot.isAlive) {
         continue;
@@ -2026,6 +2196,28 @@ export class GameEngine {
         if (this.securityLevel === 'CLEAR') {
           this.securityLevel = 'ALERT' as SecurityLevel;
         }
+        
+        const coverBlock = this.findPushableBlockOnLine({ x: robot.x, y: robot.y }, { x: this.player.x, y: this.player.y });
+        if (coverBlock) {
+          const coverTileSize = (this.renderer as any)?.tileSize || 48;
+          (this.fx as any).spawnSparks(
+            coverBlock.x * coverTileSize + coverTileSize / 2,
+            coverBlock.y * coverTileSize + coverTileSize / 2,
+            '#ffea00',
+            10
+          );
+          (this.fx as any).triggerShake(3);
+          soundFX.hit();
+          this.pushFloatingText(coverBlock.x, coverBlock.y, 'COVER BLOCKED!', '#ffea00');
+          this.pushMessage(
+            this.language === 'zh' 
+              ? `攻擊被【${coverBlock.nameZh || coverBlock.name}】擋下！` 
+              : `Attack blocked by [${coverBlock.name}]!`,
+            'info'
+          );
+          continue;
+        }
+
         let damage = result.damage ?? robot.attackPower ?? 10;
 
         // 個人能量護盾抵擋 50% 傷害
@@ -2797,14 +2989,14 @@ export class GameEngine {
       const result: any = this.activeTerminal.executeCommand(cmd, context);
 
       if (result?.disabledForcefield) {
-        const ffName = result.disabledForcefield || 'CORE_FF';
+        const ffName: string = result.disabledForcefield || 'CORE_FF';
         try {
           disableForcefield(this.map, ffName);
         } catch (err) {
           void err;
         }
         // Also try to disable the other forcefield if it exists
-        const otherFF = ffName === 'CHECKPOINT_FF' ? 'CORE_FF' : 'CHECKPOINT_FF';
+        const otherFF: string = ffName === 'CHECKPOINT_FF' ? 'CORE_FF' : 'CHECKPOINT_FF';
         try {
           disableForcefield(this.map, otherFF);
         } catch (err) {
@@ -2982,6 +3174,7 @@ export class GameEngine {
     
     let hitRobot: Robot | null = null;
     let hitCanister: Hazard | null = null;
+    let hitBlock: PushableBlock | null = null;
     let hitWall = false;
     let hitX = this.player.x + dx;
     let hitY = this.player.y + dy;
@@ -2996,6 +3189,14 @@ export class GameEngine {
       
       if (tName === 'WALL' || tTile === 2) {
         hitWall = true;
+        hitX = tx;
+        hitY = ty;
+        break;
+      }
+
+      const foundBlock = this.pushableBlocks.find((b) => b.x === tx && b.y === ty);
+      if (foundBlock) {
+        hitBlock = foundBlock;
         hitX = tx;
         hitY = ty;
         break;
@@ -3196,6 +3397,25 @@ export class GameEngine {
       }
     } else if (hitCanister) {
       this.detonateCanister(hitCanister);
+    } else if (hitBlock) {
+      this.pushFloatingText(hitX, hitY, 'BLOCKED', '#ffea00');
+      this.pushMessage('Weapon impact blocked by cover.', 'info');
+      
+      // Acoustic alert even if no hit
+      const isSuppressed = (weapon as any)?.isSuppressed === true;
+      if (!isSuppressed) {
+        this.securityLevel = 'ALERT' as SecurityLevel;
+        soundFX.alarm();
+        for (const r of this.robots) {
+          if (!r.isAlive) continue;
+          const d = Math.abs(r.x - this.player.x) + Math.abs(r.y - this.player.y);
+          if (d <= 8 && r.aiState === 'patrol') {
+            r.aiState = 'chase';
+            r.targetPos = { x: this.player.x, y: this.player.y };
+            (r as any).pursuitTurns = 6;
+          }
+        }
+      }
     } else {
       // No target, just impact effect
       this.pushFloatingText(hitX, hitY, 'IMPACT', '#00f0ff');

@@ -43,7 +43,17 @@ const isWalkableTile = (map: SectorMap, x: number, y: number): boolean => {
   if (tile == null) return false;
 
   const tStr = String(tile?.type ?? tile).toUpperCase();
-  return tStr === 'FLOOR' || tStr === '1' || tStr === 'DOOR_OPEN' || tStr === '4';
+  if (tStr !== 'FLOOR' && tStr !== '1' && tStr !== 'DOOR_OPEN' && tStr !== '4') return false;
+
+  if (
+    m.pushableBlocks &&
+    Array.isArray(m.pushableBlocks) &&
+    m.pushableBlocks.some((b: any) => b.x === x && b.y === y)
+  ) {
+    return false;
+  }
+
+  return true;
 };
 
 const hasLineOfSight = (map: SectorMap, from: Position, to: Position): boolean => {

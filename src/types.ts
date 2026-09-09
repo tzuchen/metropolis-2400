@@ -302,6 +302,17 @@ export interface PushableBlock {
   sectorId: string;
   revealed?: boolean;
   color?: string;
+  blockType?: 'disguised_wall' | 'crate' | 'server_rack';
+  secretSurprise?: {
+    type: 'item' | 'credits' | 'energy';
+    amount?: number;
+    item?: GroundItem;
+    claimed?: boolean;
+    messageZh?: string;
+    messageEn?: string;
+  };
+  hp?: number;
+  maxHp?: number;
   secretDoor?: {
     x: number;
     y: number;
