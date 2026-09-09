@@ -1999,6 +1999,10 @@ export class GameRenderer {
     ctx.fillStyle = 'rgba(15, 0, 5, 0.85)';
     ctx.fillRect?.(0, 0, width, height);
 
+    const isZh = this.language === 'zh';
+    const title = isZh ? '// 特工陣亡・生命信號中斷 //' : '// OPERATIVE ELIMINATED //';
+    const prompt = isZh ? '按 [ R ] 重啟反抗軍模擬協議  |  按 [ 9 ] 讀取快速存檔' : 'PRESS [ R ] TO RESTART  |  [ 9 ] QUICK LOAD';
+
     const pulse = 0.8 + 0.2 * Math.sin(now * 0.005);
     ctx.fillStyle = 'rgba(255, 30, 50, ' + pulse + ')';
     ctx.shadowColor = '#ff1e32';
@@ -2006,12 +2010,12 @@ export class GameRenderer {
     ctx.font = 'bold 24px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText?.('// OPERATIVE ELIMINATED //', width / 2, height / 2 - 20);
+    ctx.fillText?.(title, width / 2, height / 2 - 20);
 
     ctx.fillStyle = '#ffffff';
     ctx.shadowBlur = 0;
     ctx.font = '13px monospace';
-    ctx.fillText?.('PRESS [ R ] TO RE-INITIALIZE RESISTANCE PROTOCOL', width / 2, height / 2 + 20);
+    ctx.fillText?.(prompt, width / 2, height / 2 + 20);
 
     ctx.restore?.();
   }
@@ -2214,6 +2218,7 @@ export class GameRenderer {
 
     const p = player as any;
     const endgameChoice = String(p?.endgameChoice ?? '').toUpperCase();
+    const isZh = this.language === 'zh';
 
     let title = '★ MISSION ACCOMPLISHED ★';
     let subtitle = 'TZORG SECURITY FORCEFIELD PERFORATED // NEXUS ACCESSED';
@@ -2222,25 +2227,30 @@ export class GameRenderer {
     let shadowColor = '#00ff88';
 
     if (endgameChoice === 'OVERLOAD') {
-      title = '☢ NEXUS OVERLOAD ☢';
-      subtitle = 'THE CORE BURNS // SECTOR 1 DROPS INTO SILENCE';
-      poem = 'We fed the machine our rage and it answered in fire.\nEvery screen went white, every drone fell from the sky.\nThe city breathes again — scarred, but free.';
+      title = isZh ? '☢ 核心過載・終焉之焰 ☢' : '☢ NEXUS OVERLOAD ☢';
+      subtitle = isZh ? '核心燃燒 // 第一分區陷入死寂' : 'THE CORE BURNS // SECTOR 1 DROPS INTO SILENCE';
+      poem = isZh
+        ? '我們將憤怒餵予機器，它以火焰回應。\n每一塊螢幕泛白，每一架無人機墜落。\n城市重新呼吸——帶著傷疤，卻已自由。'
+        : 'We fed the machine our rage and it answered in fire.\nEvery screen went white, every drone fell from the sky.\nThe city breathes again — scarred, but free.';
       accentColor = '#ff4444';
       shadowColor = '#ff2200';
     } else if (endgameChoice === 'SUBVERSION') {
-      title = '◈ GHOST PROTOCOL ◈';
-      subtitle = 'TZORG MAINFRAME REWRITTEN // NO TRACE REMAINS';
-      poem = 'No explosion, no alarm — just a whisper in the wire.\nTheir own walls now speak our names in the dark.\nThe rebellion lives in code, invisible and eternal.';
+      title = isZh ? '◈ 幽影協議・無痕滲透 ◈' : '◈ GHOST PROTOCOL ◈';
+      subtitle = isZh ? '佐格主機被重寫 // 無跡可尋' : 'TZORG MAINFRAME REWRITTEN // NO TRACE REMAINS';
+      poem = isZh
+        ? '沒有爆炸，沒有警報——只有電線中的低語。\n他們自己的牆壁，如今在黑暗中唸出我們的名字。\n反抗軍活在代碼裡，無形且永恆。'
+        : 'No explosion, no alarm — just a whisper in the wire.\nTheir own walls now speak our names in the dark.\nThe rebellion lives in code, invisible and eternal.';
       accentColor = '#00e5ff';
       shadowColor = '#0088ff';
     } else if (endgameChoice === 'EVACUATION') {
-      title = '▲ EXTRACTION COMPLETE ▲';
-      subtitle = 'RESISTANCE CELL PRESERVED // SECTOR 1 ABANDONED';
-      poem = 'We left the neon streets to the machines, but carried the spark.\nSomewhere beyond the grid, new cells are forming.\nThe fight does not end — it only changes address.';
+      title = isZh ? '▲ 撤離完成・火種延續 ▲' : '▲ EXTRACTION COMPLETE ▲';
+      subtitle = isZh ? '反抗軍細胞保存 // 第一分區棄守' : 'RESISTANCE CELL PRESERVED // SECTOR 1 ABANDONED';
+      poem = isZh
+        ? '我們把霓虹街道留給機器，卻帶走了火種。\n在網格之外某處，新的細胞正在成形。\n戰鬥沒有結束——只是換了地址。'
+        : 'We left the neon streets to the machines, but carried the spark.\nSomewhere beyond the grid, new cells are forming.\nThe fight does not end — it only changes address.';
       accentColor = '#ffea00';
       shadowColor = '#ffaa00';
     } else if (endgameChoice === 'AWAKEN') {
-      const isZh = this.language === 'zh';
       title = isZh ? '★ 全民大覺醒 (THE GREAT AWAKENING) ★' : '★ THE GREAT AWAKENING ★';
       subtitle = isZh ? '五百萬人神經項圈解除 // 大都會全面光復' : 'FIVE MILLION CITIZENS LIBERATED // TOTAL RESTORATION';
       poem = isZh
@@ -2274,10 +2284,11 @@ export class GameRenderer {
       });
     }
 
+    const promptText = isZh ? '按 [ R ] 重新開始模擬  |  按 [ 9 ] 讀取快速存檔' : 'PRESS [ R ] TO RESTART  |  [ 9 ] QUICK LOAD';
     ctx.fillStyle = '#ffffff';
     ctx.shadowBlur = 0;
     ctx.font = '12px monospace';
-    ctx.fillText?.('PRESS [ R ] TO RESTART SIMULATION', width / 2, height / 2 + 70);
+    ctx.fillText?.(promptText, width / 2, height / 2 + 70);
 
     ctx.restore?.();
   }
