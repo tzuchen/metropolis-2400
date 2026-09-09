@@ -141,6 +141,22 @@ export function handleBossDeath(boss: Robot, game: any): void {
   // 給予 250 點經驗值獎勵
   game?.gainExp?.(250);
 
+  // 若當前地圖為 sector-citadel，關閉通往中央主腦核心的力場
+  const currentSector = game?.map?.id || (game?.player as any)?.currentSectorId || game?.mapId;
+  const tiles = game?.map?.tiles || game?.grid;
+  if (currentSector === 'sector-citadel' && Array.isArray(tiles)) {
+    for (let y = 14; y <= 16; y++) {
+      if (tiles[y] && tiles[y][31] !== undefined) {
+        tiles[y][31] = 1; // FLOOR
+      }
+    }
+    game?.pushFloatingText?.(31, 15, 'FORCEFIELD OFFLINE', '#00ff88');
+    const forcefieldMsg = isZh
+      ? '⚡ 力場已關閉，通往中央主腦核心終端機的通道已開啟！'
+      : '⚡ Forcefield offline. Path to the Central Overmind Core terminal is now open!';
+    game?.pushMessage?.(forcefieldMsg, 'info');
+  }
+
   const victoryMsg = isZh
     ? '🎉 首領擊破！佐格滅絕者原型機已被殲滅，傳奇戰利品【主腦根密鑰】已掉落！(+200 CR, +250 XP)'
     : '🎉 BOSS ELIMINATED! EXTERMINATOR-PRIME destroyed. Master Root Cipher dropped! (+200 CR, +250 XP)';

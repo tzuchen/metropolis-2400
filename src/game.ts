@@ -1666,6 +1666,21 @@ export class GameEngine {
         }
 
         this.tick();
+      } else if (tile === 3 || String(tile).toUpperCase() === 'DOOR_CLOSED') {
+        // Auto-open closed door when walking into it
+        if (toggleDoor(this.map, { x: nx, y: ny })) {
+          soundFX.door();
+          this.pushMessage('Airlock blast door cycled open.', 'info');
+          this.tick();
+        } else {
+          this.pushMessage('Blast door is locked. Use terminal to unlock.', 'warning');
+          this.render();
+        }
+        return;
+      } else {
+        this.pushMessage('Path blocked.', 'warning');
+        this.render();
+        return;
       }
     }
   }
