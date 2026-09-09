@@ -27,6 +27,19 @@
    - Energy-based economy: Energy Cells power weapons, shields, and cloaking cloaks.
    - Slot-based inventory: Weapons, Armor/Shield, Gadgets, Badges.
    - Cyber-implants: Upgradeable at black-market rebel clinics.
+6. **Neural Collar Surveillance & Check-in System**
+   - 100-step countdown tethering citizens to monitoring terminals.
+   - Stepped warnings (20 steps warning, 10 steps critical) and persistent ALERT trigger on expiry.
+   - Disarmable permanently via the legendary **Tzorg Master Keycard Relic** or temporarily via black-market network bribes.
+7. **Pushable Tactical Physics & Secret Chambers**
+   - Disguised wall panels concealing secret rebel bases and smuggler dens.
+   - Pushable cargo crates and mainframe racks acting as physical cover: blocks robot pathfinding, breaks line of sight, and intercepts ranged weapon projectiles (COVER BLOCKED!).
+   - Hidden surprises under pushed objects (Credits, Energy Cells, EMP Grenades, Medkits).
+8. **Dual-Column Black Market Economy & Arms Terminal ([U])**
+   - Neural cyberware augmentations ([1]-[4]).
+   - Tactical consumable replenishment ([5]-[7]).
+   - Weapon damage overclock tuning ([8]).
+   - Security network bribe clearing alerts and resetting surveillance collar timers ([9]).
 
 ## 3. Technical Architecture (Modular TypeScript Engine)
 - `src/types.ts`: Core data structures (Tile, Entity, Item, SecurityState, GameEvent).
