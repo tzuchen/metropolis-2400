@@ -1533,12 +1533,17 @@ export class GameRenderer {
     ctx.fillText?.('SEC: ' + sec, 175, 18);
 
     // 神經項圈簽到倒數 (Neural Collar Check-in Timer)
-    const chkTimer = typeof p?.checkInTimer === 'number' ? p.checkInTimer : 100;
-    let chkColor = '#00ffcc';
-    if (chkTimer <= 10) chkColor = '#ff2a4b';
-    else if (chkTimer <= 30) chkColor = '#ffea00';
-    ctx.fillStyle = chkColor;
-    ctx.fillText?.('CHK: ' + chkTimer + '/100', 255, 18);
+    if (p?.isCollarDisarmed) {
+      ctx.fillStyle = '#00ff88';
+      ctx.fillText?.('CHK: UNLOCKED [∞]', 255, 18);
+    } else {
+      const chkTimer = typeof p?.checkInTimer === 'number' ? p.checkInTimer : 100;
+      let chkColor = '#00ffcc';
+      if (chkTimer <= 10) chkColor = '#ff2a4b';
+      else if (chkTimer <= 30) chkColor = '#ffea00';
+      ctx.fillStyle = chkColor;
+      ctx.fillText?.('CHK: ' + chkTimer + '/100', 255, 18);
+    }
 
     // 玩家等級與經驗值迷你進度條 (LV.X & XP Bar)
     const level = Number(p?.level ?? 1) || 1;

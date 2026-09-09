@@ -136,6 +136,7 @@ export interface Player extends Entity {
   expToNext?: number;
   skillPoints?: number;
   checkInTimer?: number;
+  isCollarDisarmed?: boolean;
 }
 
 export type RobotAIState = 'idle' | 'patrol' | 'investigate' | 'chase' | 'attack';
@@ -276,6 +277,14 @@ export interface TerminalCommandResult {
   success?: boolean;
   message?: string;
   checkedIn?: boolean;
+  disarmCollar?: boolean;
+  output?: string;
+  disabledForcefield?: string;
+  endgameChoice?: string;
+  shouldExit?: boolean;
+  victory?: boolean;
+  clearedAlert?: boolean;
+  energyGain?: number;
 }
 
 export type EndgameChoice = 'OVERLOAD' | 'SUBVERSION' | 'EVACUATION' | 'AWAKEN' | null;

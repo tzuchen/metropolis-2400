@@ -189,6 +189,7 @@ export function createPlayer(startPos: Position): Player {
     expToNext: 100,
     skillPoints: 0,
     checkInTimer: 100,
+    isCollarDisarmed: false,
   } as unknown as Player;
 }
 

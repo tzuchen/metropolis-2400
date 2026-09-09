@@ -151,6 +151,15 @@ export function setupSubSectorZero(game: any): void {
       description: game.language === 'zh' ? 'Elena 朝思暮想的磁帶，記錄著舊時代合成波音樂。' : 'Elena\'s long-lost tape, recording old-era synthwave music.',
       iconColor: '#ff4081',
     },
+    {
+      id: 'item-master-pass',
+      name: game.language === 'zh' ? '佐格主宰萬用通行證' : 'Tzorg Master Keycard',
+      itemType: 'KEYCARD',
+      x: 32,
+      y: 5,
+      description: game.language === 'zh' ? '【傳奇密寶】佐格最高特權金鑰。持卡至任何終端機操作可發動【DISARM COLLAR】，永久解除項圈 100 步限制！' : '[LEGENDARY RELIC] Governor Master Keycard. Operate at any terminal to execute [DISARM COLLAR], permanently lifting the 100-step collar limit!',
+      iconColor: '#ffd700',
+    },
   ];
   game.npcs = [];
   game.visibleTiles.clear();

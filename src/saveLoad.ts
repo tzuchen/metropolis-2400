@@ -28,6 +28,7 @@ export interface SaveData {
     expToNext?: number;
     skillPoints?: number;
     checkInTimer?: number;
+    isCollarDisarmed?: boolean;
   };
   robots: Array<{
     id: string;
@@ -104,6 +105,7 @@ export function saveGameState(game: any): boolean {
         expToNext: game.player.expToNext ?? 100,
         skillPoints: game.player.skillPoints ?? 0,
         checkInTimer: game.player.checkInTimer ?? 100,
+        isCollarDisarmed: game.player.isCollarDisarmed ?? game.isCollarDisarmed ?? false,
       },
       robots: (game.robots || []).map((r: Robot) => ({
         id: r.id,
@@ -186,6 +188,10 @@ export function loadGameState(game: any): boolean {
     // Restore player state
     Object.assign(game.player, data.player);
     (game.player as any).currentSectorId = data.sectorId;
+    if (typeof data.player.isCollarDisarmed === 'boolean') {
+      game.player.isCollarDisarmed = data.player.isCollarDisarmed;
+      game.isCollarDisarmed = data.player.isCollarDisarmed;
+    }
 
     // Restore robots
     if (Array.isArray(data.robots)) {

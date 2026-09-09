@@ -8,6 +8,7 @@ export interface TerminalCommandResult {
   clearedAlert?: boolean;
   energyGain?: number;
   checkedIn?: boolean;
+  disarmCollar?: boolean;
   endgameChoice?: 'OVERLOAD' | 'SUBVERSION' | 'EVACUATION' | 'AWAKEN';
 }
 
@@ -96,11 +97,12 @@ export class TerminalSession {
     // 容錯支援：同時支援 context.player 巢狀結構與 context 扁平結構
     const pData = context?.player || context;
     const defeatedBoss = pData?.defeatedBoss || pData?.hasDefeatedBoss;
-    const items: string[] = pData?.items || [];
     const level: number = pData?.level || 1;
     const decryptedSlates: string[] = pData?.decryptedSlates || [];
 
     const hasContext = Boolean(context && (context.player || (context as any).items || (context as any).hasDefeatedBoss !== undefined));
+
+    const items: any[] = (context as any)?.items || pData?.items || (Array.isArray((pData as any)?.inventory) ? (pData as any).inventory.map((i: any) => i?.id || i) : []) || [];
 
     let result: TerminalCommandResult;
 
@@ -115,6 +117,7 @@ export class TerminalSession {
           '- SIPHON     : Drain power cells (+30 Energy)\n' +
           '- SCAN       : Scan sector security perimeter\n' +
           '- CHECKIN    : Neural collar check-in (reset surveillance timer)\n' +
+          '- DISARM     : Disarm neural collar with Master Pass\n' +
           '- BREACH     : Breach the Tzorg dome (Core Terminal)\n' +
           '- AWAKEN     : Trigger the true ending (Core Terminal)\n' +
           '- CLEAR      : Clear screen\n' +
@@ -183,11 +186,34 @@ export class TerminalSession {
           '- Threat Level: AUTOMATED PATROL PROTOCOL',
       };
     } else if (c === 'checkin' || c === 'check_in' || c === 'ping') {
-      result = {
-        output:
-          'NEURAL COLLAR CHECK-IN VERIFIED. Tzorg surveillance timer reset to 100 steps. Citizen status: COMPLIANT.',
-        checkedIn: true,
-      };
+      const hasMasterPass = items.some((it: any) => it === 'item-master-pass' || it?.id === 'item-master-pass') || (Array.isArray((pData as any)?.inventory) && (pData as any).inventory.some((it: any) => it?.id === 'item-master-pass'));
+      if (hasMasterPass) {
+        result = {
+          output:
+            'MASTER PASS RECOGNIZED. Neural collar disarmed. Tzorg surveillance timer reset to 100 steps. Citizen status: COMPLIANT.',
+          checkedIn: true,
+          disarmCollar: true,
+        };
+      } else {
+        result = {
+          output:
+            'NEURAL COLLAR CHECK-IN VERIFIED. Tzorg surveillance timer reset to 100 steps. Citizen status: COMPLIANT.',
+          checkedIn: true,
+        };
+      }
+    } else if (c === 'disarm' || c === 'disarm_collar' || c === 'unlock_collar' || c === 'master_pass') {
+      const hasMasterPass = items.some((it: any) => it === 'item-master-pass' || it?.id === 'item-master-pass') || (Array.isArray((pData as any)?.inventory) && (pData as any).inventory.some((it: any) => it?.id === 'item-master-pass'));
+      if (hasMasterPass) {
+        result = {
+          output:
+            'MASTER PASS ACCEPTED. Neural collar disarmed successfully. You are free from Tzorg surveillance.',
+          disarmCollar: true,
+        };
+      } else {
+        result = {
+          output: 'ACCESS DENIED: Requires Tzorg Master Keycard [item-master-pass].',
+        };
+      }
     } else if (c === 'overload') {
       if (this.isCoreTerminal()) {
         if (hasContext) {

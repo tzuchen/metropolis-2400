@@ -90,6 +90,7 @@ export class GameEngine {
   ramenQuestComplete: boolean = false;
   zeroOneWeaponForged: boolean = false;
   forcefieldDisabled: boolean = false;
+  isCollarDisarmed: boolean = false;
   private turnCounter: number = 0;
   private lastBroadcastTurn: number = 0;
   private lastBroadcastIndex: number = 0;
@@ -1092,6 +1093,11 @@ export class GameEngine {
   }
 
   performCheckIn(): void {
+    const hasMasterPass = Array.isArray((this.player as any).inventory) && (this.player as any).inventory.some((it: any) => it?.id === 'item-master-pass');
+    if (hasMasterPass && !this.isCollarDisarmed) {
+      this.disarmCollar();
+      return;
+    }
     (this.player as any).checkInTimer = 100;
     this.checkInAlertActive = false;
     this.securityLevel = 'CLEAR' as SecurityLevel;
@@ -1113,6 +1119,7 @@ export class GameEngine {
   }
 
   handlePlayerStep(): void {
+    if (this.isCollarDisarmed || (this.player as any).isCollarDisarmed) return;
     const timer = (this.player as any).checkInTimer;
     if (typeof timer === 'undefined') return;
 
@@ -2582,6 +2589,15 @@ export class GameEngine {
           this.pushFloatingText(this.player.x, this.player.y, 'PASSCODE ACQUIRED', '#ffea00');
           this.pushMessage(`Acquired [${item.name}]: Tzorg security clearance elevated.`, 'success');
         }
+      } else if (item.id === 'item-master-pass') {
+        soundFX.victory();
+        this.pushFloatingText(this.player.x, this.player.y, 'MASTER PASS!', '#ffd700');
+        this.pushMessage(
+          this.language === 'zh'
+            ? '【發現傳奇密寶】獲得了【佐格主宰萬用通行證】！請前往任意終端機操作解除項圈！'
+            : '[LEGENDARY RELIC] Acquired Tzorg Master Keycard! Access any terminal to permanently disarm collar!',
+          'success'
+        );
       } else if (item.itemType === 'DATA_SLATE') {
         const foundLog = this.storyLogs.find((l) => l.id === item.storyLogId);
         if (foundLog) {
@@ -2991,6 +3007,30 @@ export class GameEngine {
     }
   }
 
+  disarmCollar(): void {
+    this.isCollarDisarmed = true;
+    (this.player as any).isCollarDisarmed = true;
+    this.checkInAlertActive = false;
+    (this.player as any).checkInTimer = 100;
+    this.securityLevel = 'CLEAR' as SecurityLevel;
+    for (const r of this.robots) {
+      if (!r.isAlive) continue;
+      r.aiState = 'patrol';
+      r.targetPos = null;
+      (r as any).pursuitTurns = 0;
+    }
+    soundFX.victory();
+    this.pushFloatingText(this.player.x, this.player.y, 'COLLAR DISARMED!', '#00ff88');
+    this.pushMessage(
+      this.language === 'zh'
+        ? '【密寶啟動】最高特權金鑰生效！神經項圈已永久解鎖並解除監控，100 步限制完全消除！'
+        : '[RELIC ACTIVATED] Tzorg Master Pass verified! Neural collar permanently neutralized! 100-step restriction lifted!',
+      'success'
+    );
+    this.gainExp(100, 'MISSION_COMPLETE');
+    this.render();
+  }
+
   restartGame(): void {
     this.map = buildSector1Map();
     this.player = createPlayer(this.map.playerStart);
@@ -3102,6 +3142,10 @@ export class GameEngine {
         this.gainExp(60, 'HACK_SUCCESS');
         (this as any).forcefieldDisabled = true;
         this.updateNPCDialogues();
+      }
+
+      if (result?.disarmCollar) {
+        this.disarmCollar();
       }
 
       if (result?.endgameChoice) {
