@@ -188,6 +188,7 @@ export function createPlayer(startPos: Position): Player {
     exp: 0,
     expToNext: 100,
     skillPoints: 0,
+    checkInTimer: 100,
   } as unknown as Player;
 }
 

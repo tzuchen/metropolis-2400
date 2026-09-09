@@ -7,6 +7,7 @@ export interface TerminalCommandResult {
   unlockedDoor?: string;
   clearedAlert?: boolean;
   energyGain?: number;
+  checkedIn?: boolean;
   endgameChoice?: 'OVERLOAD' | 'SUBVERSION' | 'EVACUATION' | 'AWAKEN';
 }
 
@@ -106,13 +107,14 @@ export class TerminalSession {
     if (c === 'help') {
       result = {
         output:
-          'COMMANDS: HELP, STATUS, LOGS, OVERRIDE, CLEAR_ALARM, SIPHON, SCAN, OVERLOAD, SUBVERSION, EVACUATION, BREACH, AWAKEN, CLEAR, EXIT\n' +
+          'COMMANDS: HELP, STATUS, LOGS, OVERRIDE, CLEAR_ALARM, SIPHON, SCAN, CHECKIN, OVERLOAD, SUBVERSION, EVACUATION, BREACH, AWAKEN, CLEAR, EXIT\n' +
           '- STATUS     : Check terminal status & subsystems\n' +
           '- LOGS       : Read decrypted intelligence data\n' +
           '- OVERRIDE   : Bypass forcefields (or HACK)\n' +
           '- CLEAR_ALARM: Reset sector security alert to CLEAR\n' +
           '- SIPHON     : Drain power cells (+30 Energy)\n' +
           '- SCAN       : Scan sector security perimeter\n' +
+          '- CHECKIN    : Neural collar check-in (reset surveillance timer)\n' +
           '- BREACH     : Breach the Tzorg dome (Core Terminal)\n' +
           '- AWAKEN     : Trigger the true ending (Core Terminal)\n' +
           '- CLEAR      : Clear screen\n' +
@@ -179,6 +181,12 @@ export class TerminalSession {
           '- Shock Enforcers: 1 heavy unit stationed at checkpoint\n' +
           '- Hunter Killers: 1 assault unit guarding Server Vault\n' +
           '- Threat Level: AUTOMATED PATROL PROTOCOL',
+      };
+    } else if (c === 'checkin' || c === 'check_in' || c === 'ping') {
+      result = {
+        output:
+          'NEURAL COLLAR CHECK-IN VERIFIED. Tzorg surveillance timer reset to 100 steps. Citizen status: COMPLIANT.',
+        checkedIn: true,
       };
     } else if (c === 'overload') {
       if (this.isCoreTerminal()) {

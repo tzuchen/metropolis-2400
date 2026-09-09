@@ -135,6 +135,7 @@ export interface Player extends Entity {
   exp?: number;
   expToNext?: number;
   skillPoints?: number;
+  checkInTimer?: number;
 }
 
 export type RobotAIState = 'idle' | 'patrol' | 'investigate' | 'chase' | 'attack';
@@ -269,6 +270,12 @@ export interface Hazard {
   type: 'PLASMA_CANISTER' | 'STEAM_VENT';
   hp: number;
   exploded: boolean;
+}
+
+export interface TerminalCommandResult {
+  success?: boolean;
+  message?: string;
+  checkedIn?: boolean;
 }
 
 export type EndgameChoice = 'OVERLOAD' | 'SUBVERSION' | 'EVACUATION' | 'AWAKEN' | null;

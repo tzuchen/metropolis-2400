@@ -74,6 +74,7 @@ export class GameEngine {
   private lastBroadcastTurn: number = 0;
   private lastBroadcastIndex: number = 0;
   private broadcastQueue: string[] = [];
+  private checkInAlertActive: boolean = false;
   private lastSectorId: string = '';
   private lastLandmarkKey: string = '';
   storyArchiveSelectedIndex: number = 0;
@@ -121,6 +122,7 @@ export class GameEngine {
     this.render();
     this.startAnimationLoop();
     this.setupPointerEvents();
+    (this.player as any).checkInTimer = 100;
   }
 
   private setupPointerEvents(): void {
@@ -856,6 +858,7 @@ export class GameEngine {
     this.fx.spawnDashTrail(this.player.x * tileSize + tileSize / 2, this.player.y * tileSize + tileSize / 2, facing);
     this.pushFloatingText(this.player.x, this.player.y, 'CYBER DASH! -10EN', '#00ffff');
     soundFX.laser();
+    this.handlePlayerStep();
     this.tick();
 
     return true;
@@ -864,6 +867,76 @@ export class GameEngine {
   private isWalkable(x: number, y: number): boolean {
     const tile = getTile(this.map, { x, y });
     return tile !== undefined && isWalkable(tile);
+  }
+
+  performCheckIn(): void {
+    (this.player as any).checkInTimer = 100;
+    if (this.checkInAlertActive) {
+      this.checkInAlertActive = false;
+      this.securityLevel = 'CLEAR' as SecurityLevel;
+      this.pushMessage(
+        this.language === 'zh'
+          ? '神經項圈簽到成功：警報已解除，巡邏單位恢復常規模式。'
+          : 'Neural collar check-in successful: Alert cleared, patrol units returning to routine.',
+        'success'
+      );
+    } else {
+      this.pushMessage(
+        this.language === 'zh'
+          ? '神經項圈簽到成功：計時器已重置為 100 步。'
+          : 'Neural collar check-in successful: Timer reset to 100 steps.',
+        'success'
+      );
+    }
+    this.pushFloatingText(this.player.x, this.player.y, '✔ CHECKED IN (100)', '#00ff88');
+    soundFX.pickup();
+    this.render();
+  }
+
+  handlePlayerStep(): void {
+    const timer = (this.player as any).checkInTimer;
+    if (typeof timer === 'undefined' || timer <= 0) return;
+
+    const newTimer = timer - 1;
+    (this.player as any).checkInTimer = newTimer;
+
+    if (newTimer === 20) {
+      this.pushMessage(
+        this.language === 'zh'
+          ? '⚠ 神經項圈警告：剩餘 20 步未簽到，請盡快尋找終端機！'
+          : '⚠ NEURAL COLLAR WARNING: 20 steps remaining until check-in deadline. Find a terminal ASAP!',
+        'warning'
+      );
+      this.pushFloatingText(this.player.x, this.player.y, '⚠ 20 STEPS LEFT', '#ffea00');
+    } else if (newTimer === 10) {
+      this.pushMessage(
+        this.language === 'zh'
+          ? '⚠ 神經項圈緊急：剩餘 10 步！立即簽到否則觸發強制中和！'
+          : '⚠ NEURAL COLLAR CRITICAL: 10 steps remaining! Check in immediately or face forced neutralization!',
+        'danger'
+      );
+      this.pushFloatingText(this.player.x, this.player.y, '⚠ 10 STEPS LEFT', '#ff2a4b');
+    }
+
+    if (newTimer <= 0) {
+      this.checkInAlertActive = true;
+      this.securityLevel = 'ALERT' as SecurityLevel;
+      soundFX.alarm();
+      this.pushMessage(
+        this.language === 'zh'
+          ? '❌ 簽到逾期！神經項圈觸發強制警報，所有巡邏單位進入攻擊模式！'
+          : '❌ CHECK-IN OVERDUE! Neural collar triggered forced alert. All patrol units entering attack mode!',
+        'danger'
+      );
+      this.pushFloatingText(this.player.x, this.player.y, '❌ CHECKIN OVERDUE', '#ff2a4b');
+
+      for (const r of this.robots) {
+        if (!r.isAlive) continue;
+        r.aiState = 'chase';
+        r.targetPos = { x: this.player.x, y: this.player.y };
+        (r as any).pursuitTurns = 10;
+      }
+    }
   }
 
   private findRobotAt(x: number, y: number): Robot | null {
@@ -1493,6 +1566,7 @@ export class GameEngine {
         const terminal = this.findTerminalAt(tx, ty);
         if (terminal) {
           soundFX.terminal();
+          this.performCheckIn();
           this.activeTerminal = new TerminalSession(terminal);
           this.terminalInputBuffer = '';
           this.activeTerminal.input = '';
@@ -1645,6 +1719,7 @@ export class GameEngine {
         this.player.x = nx;
         this.player.y = ny;
         soundFX.step();
+        this.handlePlayerStep();
 
         // 自動拾取地面物資 (Auto-loot ground items)
         this.checkItemPickup();
@@ -2500,6 +2575,12 @@ export class GameEngine {
       const upperCmd = cmd.toUpperCase();
       if (upperCmd === 'BREACH' || upperCmd === 'HACK') {
         this.activeBreachSession = createBreachSession((this.activeTerminal as any)?.terminal?.id || 'CORE');
+        this.render();
+        return;
+      }
+
+      if (upperCmd === 'CHECKIN') {
+        this.performCheckIn();
         this.render();
         return;
       }

@@ -1381,7 +1381,15 @@ export class GameRenderer {
     if (sec === 'LOCKDOWN') secColor = '#ff1744';
 
     ctx.fillStyle = secColor;
-    ctx.fillText?.('SEC: ' + sec, 190, 18);
+    ctx.fillText?.('SEC: ' + sec, 175, 18);
+
+    // 神經項圈簽到倒數 (Neural Collar Check-in Timer)
+    const chkTimer = typeof p?.checkInTimer === 'number' ? p.checkInTimer : 100;
+    let chkColor = '#00ffcc';
+    if (chkTimer <= 10) chkColor = '#ff2a4b';
+    else if (chkTimer <= 30) chkColor = '#ffea00';
+    ctx.fillStyle = chkColor;
+    ctx.fillText?.('CHK: ' + chkTimer + '/100', 255, 18);
 
     // 玩家等級與經驗值迷你進度條 (LV.X & XP Bar)
     const level = Number(p?.level ?? 1) || 1;
@@ -1390,10 +1398,10 @@ export class GameRenderer {
     const xpRatio = Math.max(0, Math.min(1, xp / xpToNext));
 
     ctx.fillStyle = '#ffea00';
-    ctx.fillText?.('LV.' + level, 290, 18);
+    ctx.fillText?.('LV.' + level, 345, 18);
 
     // XP 進度條 (寬度 45px)
-    const xpBarX = 330;
+    const xpBarX = 385;
     const xpBarY = 14;
     const xpBarW = 45;
     const xpBarH = 8;
@@ -1412,16 +1420,16 @@ export class GameRenderer {
     const hp = Math.max(0, p?.hp ?? 100);
     const maxHp = p?.maxHp ?? 100;
     ctx.fillStyle = '#ff2a4b';
-    ctx.fillText?.('HP ' + hp + '/' + maxHp, 430, 18);
+    ctx.fillText?.('HP ' + hp + '/' + maxHp, 475, 18);
 
     const energy = Math.max(0, p?.energy ?? 100);
     const maxEnergy = p?.maxEnergy ?? 100;
     ctx.fillStyle = '#00f0ff';
-    ctx.fillText?.('EN ' + energy + '/' + maxEnergy, 520, 18);
+    ctx.fillText?.('EN ' + energy + '/' + maxEnergy, 560, 18);
 
     const credits = p?.credits ?? 0;
     ctx.fillStyle = '#ffb700';
-    ctx.fillText?.('CR: ' + credits, 610, 18);
+    ctx.fillText?.('CR: ' + credits, 645, 18);
 
     const weaponName = p?.equippedWeapon?.name || 'None';
     const weaponDmg = Number(p?.equippedWeapon?.power ?? p?.equippedWeapon?.damage ?? 0) || 0;
@@ -1440,7 +1448,7 @@ export class GameRenderer {
       weaponColor = '#8899a6';
     }
     ctx.fillStyle = weaponColor;
-    ctx.fillText?.(weaponStatusText, 680, 18);
+    ctx.fillText?.(weaponStatusText, 710, 18);
 
     let hudCursorX = 850;
     if ((this as any).activeWaypoint) {

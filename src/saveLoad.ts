@@ -25,6 +25,7 @@ export interface SaveData {
     exp?: number;
     expToNext?: number;
     skillPoints?: number;
+    checkInTimer?: number;
   };
   robots: Array<{
     id: string;
@@ -99,6 +100,7 @@ export function saveGameState(game: any): boolean {
         exp: game.player.exp ?? 0,
         expToNext: game.player.expToNext ?? 100,
         skillPoints: game.player.skillPoints ?? 0,
+        checkInTimer: game.player.checkInTimer ?? 100,
       },
       robots: (game.robots || []).map((r: Robot) => ({
         id: r.id,
