@@ -1677,6 +1677,29 @@ export class GameEngine {
           this.render();
         }
         return;
+      } else if (tile === 5 || String(tile).toUpperCase() === 'FORCEFIELD') {
+        const isZh = this.language === 'zh';
+        const sectorId = this.map?.id || '';
+        let msg = '';
+        let floatText = '';
+        if (sectorId === 'sector-2') {
+          msg = isZh 
+            ? '⚡ 電漿力場阻擋！請前往北側機房終端機 [15, 05] 輸入 OVERRIDE 關閉力場。' 
+            : '⚡ PLASMA FORCEFIELD BLOCKING! Go to North Server Room Terminal [15, 05] and type OVERRIDE to disable.';
+          floatText = isZh ? '⚡ 力場阻擋 ⚡' : '⚡ FORCEFIELD ⚡';
+        } else if (sectorId === 'sector-1') {
+          msg = isZh 
+            ? '⚡ 電漿力場阻擋！請前往檢查哨終端機 [26, 05] 輸入 OVERRIDE 關閉力場。' 
+            : '⚡ PLASMA FORCEFIELD BLOCKING! Go to Checkpoint Terminal [26, 05] and type OVERRIDE to disable.';
+          floatText = isZh ? '⚡ 力場阻擋 ⚡' : '⚡ FORCEFIELD ⚡';
+        } else {
+          msg = isZh ? '⚡ 電漿力場阻擋！' : '⚡ PLASMA FORCEFIELD BLOCKING!';
+          floatText = isZh ? '⚡ 力場 ⚡' : '⚡ FORCEFIELD ⚡';
+        }
+        this.pushMessage(msg, 'warning');
+        this.pushFloatingText(nx, ny, floatText, '#ff2a4b');
+        this.render();
+        return;
       } else {
         this.pushMessage('Path blocked.', 'warning');
         this.render();
@@ -2481,8 +2504,16 @@ export class GameEngine {
       const result: any = this.activeTerminal.executeCommand(cmd);
 
       if (result?.disabledForcefield) {
+        const ffName = result.disabledForcefield || 'CORE_FF';
         try {
-          disableForcefield(this.map, 'CHECKPOINT_FF');
+          disableForcefield(this.map, ffName);
+        } catch (err) {
+          void err;
+        }
+        // Also try to disable the other forcefield if it exists
+        const otherFF = ffName === 'CHECKPOINT_FF' ? 'CORE_FF' : 'CHECKPOINT_FF';
+        try {
+          disableForcefield(this.map, otherFF);
         } catch (err) {
           void err;
         }
@@ -2492,7 +2523,7 @@ export class GameEngine {
           this.pushMessage('MISSION UPDATE: Checkpoint 01 forcefield deactivated!', 'success');
           this.gainExp(50, 'MISSION_COMPLETE');
         }
-        this.pushMessage('CHECKPOINT_FF: Plasma barrier capacitors short-circuited. Barrier offline.', 'success');
+        this.pushMessage(`${ffName}: Plasma barrier capacitors short-circuited. Barrier offline.`, 'success');
         soundFX.victory();
         this.gainExp(60, 'HACK_SUCCESS');
         (this as any).forcefieldDisabled = true;

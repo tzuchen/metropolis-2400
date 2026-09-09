@@ -415,11 +415,11 @@ export function drawBigMapModal(
     ];
   } else if (currentSectorId === 'sector-2') {
     pois = [
+      { nameZh: 'Fab-Plex 安檢終端', nameEn: 'Fab-Plex Security Terminal', coord: '[15, 05]', color: '#00ff88' },
       { nameZh: '主伺服機房核心', nameEn: 'Server Core', coord: '[18, 08]', color: '#00e5ff' },
-      { nameZh: '高危險化學儲區', nameEn: 'Hazard Vault', coord: '[06, 16]', color: '#ffaa00' },
-      { nameZh: '黑市地下軍火巷', nameEn: 'Black Market', coord: '[22, 24]', color: '#c77dff' },
-      { nameZh: '佐格主腦終端室', nameEn: 'Overmind Apex', coord: '[34, 14]', color: '#ff0055' },
-      { nameZh: '往返 Sec-01 電梯', nameEn: 'Transit Elevator', coord: '[02, 06]', color: '#00aaff' },
+      { nameZh: '黑市地下軍火巷', nameEn: 'Black Market', coord: '[05, 17]', color: '#c77dff' },
+      { nameZh: '東南副主腦力場', nameEn: 'SE Sub-Overmind Forcefield', coord: '[28, 22]', color: '#ff3366' },
+      { nameZh: '通往 Citadel 升降梯', nameEn: 'Citadel Elevator', coord: '[35, 22]', color: '#ffea00' },
     ];
   } else if (currentSectorId === 'sector-citadel') {
     pois = [

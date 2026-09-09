@@ -112,6 +112,7 @@ export function handleSpecialInput(game: any, key: string): boolean {
           if (r.type === 'UNLOCK') {
             if (game.activeTerminal) game.activeTerminal.isHacked = true;
             disableForcefield(game.map, 'CHECKPOINT_FF');
+            disableForcefield(game.map, 'CORE_FF');
             game.pushMessage(game.language === 'zh' ? '矩陣入侵：安全力場已被強制解鎖！' : 'BREACH PROTOCOL: Security forcefield overridden!', 'success');
           }
           if (r.type === 'CREDITS') {
