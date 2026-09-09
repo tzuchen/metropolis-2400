@@ -1958,6 +1958,53 @@ export function drawItemSprite(
     ctx.beginPath();
     ctx.arc(cx + size * 0.12, cy - size * 0.06, 2.5, 0, Math.PI * 2);
     ctx.fill();
+  } else if (type === 'CONFISCATED_LOCKER') {
+    // 證物保管箱 (Confiscated Evidence Locker)
+    // 黑金防爆金屬外殼
+    ctx.fillStyle = '#0a0805';
+    ctx.fillRect(cx - size * 0.24, cy - size * 0.2, size * 0.48, size * 0.4);
+    
+    // 金黃色強化邊框
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx - size * 0.24, cy - size * 0.2, size * 0.48, size * 0.4);
+    
+    // 內部深色面板
+    ctx.fillStyle = '#1a1510';
+    ctx.fillRect(cx - size * 0.2, cy - size * 0.16, size * 0.4, size * 0.32);
+    
+    // 微光鎖頭 (Glowing Lock)
+    const lockPulse = 0.6 + 0.4 * Math.sin(time * 0.008 + (item.x || 0));
+    ctx.fillStyle = `rgba(255, 215, 0, ${lockPulse})`;
+    ctx.shadowColor = '#ffd700';
+    ctx.shadowBlur = 6 + lockPulse * 4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.08, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 鎖頭孔
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.03, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 呼吸脈動的警示符號 (Pulsing Warning Symbol)
+    const warnPulse = 0.5 + 0.5 * Math.sin(time * 0.01 + (item.x || 0));
+    ctx.fillStyle = `rgba(255, 50, 50, ${warnPulse})`;
+    ctx.shadowColor = '#ff3232';
+    ctx.shadowBlur = 8 + warnPulse * 6;
+    ctx.font = `bold ${Math.round(size * 0.25)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('!', cx, cy - size * 0.28);
+    ctx.shadowBlur = 0;
+    
+    // 四角加固鉚釘
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(cx - size * 0.22, cy - size * 0.18, 3, 3);
+    ctx.fillRect(cx + size * 0.22 - 3, cy - size * 0.18, 3, 3);
+    ctx.fillRect(cx - size * 0.22, cy + size * 0.18 - 3, 3, 3);
+    ctx.fillRect(cx + size * 0.22 - 3, cy + size * 0.18 - 3, 3, 3);
   } else {
     // 晶片／金鑰通行卡
     ctx.fillStyle = '#282005';

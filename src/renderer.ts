@@ -54,6 +54,8 @@ export class GameRenderer {
   isFullMapActive: boolean = false;
   isBigMapOpen: boolean = false;
   bigMapSelectedSector: string = 'current';
+  graffitiMuralComplete: boolean = false;
+  defeatCutscene: any = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -145,6 +147,9 @@ export class GameRenderer {
 
     // 3. 繪製街景霓虹看板層 (Cyberpunk Neon Signboard Layer)
     this.drawStreetSigns(camX, camY, visible, ctx, now);
+
+    // 3.5 繪製反抗軍塗鴉壁畫 (Graffiti Mural)
+    this.drawGraffitiMural(map, camX, camY, visible, ctx, now);
 
     // 4. 繪製反抗軍居民與 NPC 角色
     if (Array.isArray(npcs)) {
@@ -423,8 +428,12 @@ export class GameRenderer {
     }
 
     // 15. 死亡／勝利畫面橫幅 (Game Over / Victory Banner)
-    if (!player.isAlive) {
-      this.drawGameOverOverlay(width, height, ctx, now);
+    if (!player.isAlive || this.defeatCutscene) {
+      if (this.defeatCutscene) {
+        this.drawDefeatCutscene(width, height, ctx, now, this.defeatCutscene, this.language, camX, camY);
+      } else if (!player.isAlive) {
+        this.drawGameOverOverlay(width, height, ctx, now);
+      }
     } else if ((player as any).victory) {
       this.drawVictoryOverlay(player, width, height, ctx, now);
     }
@@ -565,6 +574,126 @@ export class GameRenderer {
     language?: Language
   ): void {
     drawMiniRadar(width, map, player, robots, npcs, groundItems, visible, ctx, now, isFull ?? this.isFullMapActive, language ?? this.language);
+  }
+
+  drawGraffitiMural(map: SectorMap, camX: number, camY: number, visible: Set<string>, ctx: any, now: number): void {
+    // 檢查壁畫位置是否在可見範圍內 (21, 15..17)
+    const muralX = 21;
+    const muralYStart = 15;
+    const muralYEnd = 17;
+    let anyVisible = false;
+    for (let y = muralYStart; y <= muralYEnd; y++) {
+      const key = this.key(muralX, y);
+      if (visible.has(key)) {
+        anyVisible = true;
+        break;
+      }
+    }
+    if (!anyVisible) return;
+
+    ctx.save?.();
+
+    const sx = muralX * this.tileSize - camX;
+    const sy = muralYStart * this.tileSize - camY;
+    const totalH = (muralYEnd - muralYStart + 1) * this.tileSize;
+
+    if (!this.graffitiMuralComplete) {
+      // 未完成：灰色阻燃塗料與佐格審查標籤
+      ctx.fillStyle = 'rgba(40, 40, 45, 0.9)';
+      ctx.fillRect?.(sx, sy, this.tileSize, totalH);
+
+      // 阻燃塗料紋理 (斜向灰色條紋)
+      ctx.strokeStyle = 'rgba(60, 60, 65, 0.6)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < totalH; i += 12) {
+        ctx.beginPath?.();
+        ctx.moveTo?.(sx, sy + i);
+        ctx.lineTo?.(sx + this.tileSize, sy + i + this.tileSize);
+        ctx.stroke?.();
+      }
+
+      // 佐格審查標籤 (Tzorg Censorship Label)
+      const labelW = this.tileSize - 8;
+      const labelH = 16;
+      const labelX = sx + 4;
+      const labelY = sy + totalH / 2 - labelH / 2;
+
+      ctx.fillStyle = 'rgba(20, 20, 25, 0.95)';
+      ctx.fillRect?.(labelX, labelY, labelW, labelH);
+      ctx.strokeStyle = '#ff1744';
+      ctx.lineWidth = 1;
+      ctx.strokeRect?.(labelX, labelY, labelW, labelH);
+
+      ctx.fillStyle = '#ff1744';
+      ctx.font = 'bold 8px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText?.('TZORG', labelX + labelW / 2, labelY + labelH / 2 - 4);
+      ctx.fillStyle = '#ffea00';
+      ctx.font = 'bold 7px monospace';
+      ctx.fillText?.('CENSORED', labelX + labelW / 2, labelY + labelH / 2 + 5);
+    } else {
+      // 完成：動態流光自由抗爭霓虹壁畫
+      const pulse = 0.7 + 0.3 * Math.sin(now * 0.004);
+      const pulse2 = 0.7 + 0.3 * Math.sin(now * 0.004 + Math.PI / 2);
+
+      // 背景深色底
+      ctx.fillStyle = 'rgba(5, 5, 15, 0.95)';
+      ctx.fillRect?.(sx, sy, this.tileSize, totalH);
+
+      // 霓虹粉呼吸光暈 (Neon Pink Glow)
+      ctx.fillStyle = `rgba(255, 60, 120, ${0.15 * pulse})`;
+      ctx.beginPath?.();
+      ctx.arc?.(sx + this.tileSize / 2, sy + totalH * 0.3, this.tileSize * 0.4, 0, Math.PI * 2);
+      ctx.fill?.();
+
+      // 霓虹藍呼吸光暈 (Neon Blue Glow)
+      ctx.fillStyle = `rgba(0, 150, 255, ${0.15 * pulse2})`;
+      ctx.beginPath?.();
+      ctx.arc?.(sx + this.tileSize / 2, sy + totalH * 0.7, this.tileSize * 0.4, 0, Math.PI * 2);
+      ctx.fill?.();
+
+      // 金邊框 (Gold Border)
+      ctx.strokeStyle = `rgba(255, 215, 0, ${0.6 + 0.4 * pulse})`;
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 8;
+      ctx.lineWidth = 2;
+      ctx.strokeRect?.(sx + 2, sy + 2, this.tileSize - 4, totalH - 4);
+
+      // 抗爭標語 EYE / 2400 / FREE
+      ctx.shadowBlur = 0;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // EYE
+      ctx.fillStyle = `rgba(255, 60, 120, ${0.8 + 0.2 * pulse})`;
+      ctx.font = 'bold 10px monospace';
+      ctx.fillText?.('EYE', sx + this.tileSize / 2, sy + totalH * 0.25);
+
+      // 2400
+      ctx.fillStyle = `rgba(0, 229, 255, ${0.8 + 0.2 * pulse2})`;
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText?.('2400', sx + this.tileSize / 2, sy + totalH * 0.5);
+
+      // FREE
+      ctx.fillStyle = `rgba(255, 215, 0, ${0.8 + 0.2 * pulse})`;
+      ctx.font = 'bold 10px monospace';
+      ctx.fillText?.('FREE', sx + this.tileSize / 2, sy + totalH * 0.75);
+
+      // 動態流光線條 (Flowing Light Lines)
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 * pulse})`;
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 3; i++) {
+        const lineY = sy + totalH * (0.2 + i * 0.3);
+        const offset = Math.sin(now * 0.005 + i) * 4;
+        ctx.beginPath?.();
+        ctx.moveTo?.(sx + 4, lineY + offset);
+        ctx.lineTo?.(sx + this.tileSize - 4, lineY - offset);
+        ctx.stroke?.();
+      }
+    }
+
+    ctx.restore?.();
   }
 
   getTile(map: any, x: number, y: number): any {
@@ -1218,6 +1347,14 @@ export class GameRenderer {
 
     const blockType = block?.blockType;
 
+    // 禁閉室通風柵板 / 暗門 (Detention Ventilation Grate & Secret Door)
+    if (block?.id === 'crate-detention-grate' || String(block?.name || '').includes('Ventilation')) {
+      this.drawVentilationGrate(ctx, block, sx, sy, tileSize, isVisible, now, sector);
+      ctx.globalAlpha = 1;
+      ctx.restore?.();
+      return;
+    }
+
     if (blockType === 'crate') {
       // Heavy industrial cargo crate
       // Dark gunmetal body
@@ -1344,6 +1481,138 @@ export class GameRenderer {
 
     ctx.globalAlpha = 1;
     ctx.restore?.();
+  }
+
+  // 禁閉室通風金屬柵板與暗門 (Detention Ventilation Grate & Secret Door)
+  drawVentilationGrate(ctx: any, block: any, sx: number, sy: number, tileSize: number, isVisible: boolean, now: number, sector?: string): void {
+    const revealed = !!block?.revealed;
+    const secretDoor = block?.secretDoor;
+
+    // 1. 金屬通風百葉窗橫條紋 (Metal Ventilation Louver Horizontal Stripes)
+    // 深灰金屬底板
+    ctx.fillStyle = '#1a1f28';
+    ctx.fillRect?.(sx, sy, tileSize, tileSize);
+
+    // 百葉窗橫條 (Louver Slats) - 帶陰影立體感
+    const slatCount = 6;
+    const slatGap = 3;
+    const slatH = (tileSize - slatGap * (slatCount + 1)) / slatCount;
+    for (let i = 0; i < slatCount; i++) {
+      const slatY = sy + slatGap + i * (slatH + slatGap);
+      // 百葉窗主體 (漸層模擬金屬反光)
+      const grad = ctx.createLinearGradient?.(sx, slatY, sx, slatY + slatH);
+      if (grad) {
+        grad.addColorStop(0, '#3a4250');
+        grad.addColorStop(0.5, '#2a3040');
+        grad.addColorStop(1, '#1a1f28');
+      }
+      ctx.fillStyle = grad || '#2a3040';
+      ctx.fillRect?.(sx + 4, slatY, tileSize - 8, slatH);
+      // 百葉窗頂部高光
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.fillRect?.(sx + 4, slatY, tileSize - 8, 1);
+      // 百葉窗底部陰影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.fillRect?.(sx + 4, slatY + slatH - 1, tileSize - 8, 1);
+    }
+
+    // 邊框螺絲 (Frame Bolts) - 四角與邊中
+    ctx.fillStyle = '#5a6578';
+    const boltPositions = [
+      [sx + 3, sy + 3],
+      [sx + tileSize - 6, sy + 3],
+      [sx + 3, sy + tileSize - 6],
+      [sx + tileSize - 6, sy + tileSize - 6],
+      [sx + tileSize / 2 - 1.5, sy + 2],
+      [sx + tileSize / 2 - 1.5, sy + tileSize - 5],
+    ];
+    boltPositions.forEach(([bx, by]) => {
+      ctx.beginPath?.();
+      ctx.arc?.(bx, by, 2, 0, Math.PI * 2);
+      ctx.fill?.();
+      // 螺絲十字槽
+      ctx.strokeStyle = '#2a3040';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath?.();
+      ctx.moveTo?.(bx - 1, by);
+      ctx.lineTo?.(bx + 1, by);
+      ctx.moveTo?.(bx, by - 1);
+      ctx.lineTo?.(bx, by + 1);
+      ctx.stroke?.();
+    });
+
+    // 外框金屬邊
+    ctx.strokeStyle = '#4a5568';
+    ctx.lineWidth = 2;
+    ctx.strokeRect?.(sx + 1, sy + 1, tileSize - 2, tileSize - 2);
+
+    // 2. 流動青色氣流微粒 (Flowing Cyan Airflow Particles)
+    const particleCount = 8;
+    for (let i = 0; i < particleCount; i++) {
+      const seed = i * 137.5 + now * 0.003;
+      const px = sx + 6 + ((Math.sin(seed * 0.7) * 0.5 + 0.5) * (tileSize - 12));
+      const py = sy + 6 + ((Math.cos(seed * 0.5) * 0.5 + 0.5) * (tileSize - 12));
+      const size = 1 + Math.sin(seed * 0.3) * 0.5;
+      const alpha = 0.2 + 0.2 * Math.sin(seed * 0.8);
+
+      ctx.fillStyle = `rgba(0, 229, 255, ${alpha})`;
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 3;
+      ctx.beginPath?.();
+      ctx.arc?.(px, py, size, 0, Math.PI * 2);
+      ctx.fill?.();
+    }
+    ctx.shadowBlur = 0;
+
+    // 3. 微光文字 'VENT [E]' 標記 (Glowing VENT [E] Label)
+    const pulse = 0.6 + 0.4 * Math.sin(now * 0.006);
+    ctx.fillStyle = `rgba(0, 229, 255, ${pulse})`;
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 6;
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText?.('VENT [E]', sx + tileSize / 2, sy + tileSize / 2);
+    ctx.shadowBlur = 0;
+
+    // 4. 若已揭示且存在 secretDoor，繪製綠色通風管道箭頭與脫逃提示光效
+    if (revealed && secretDoor) {
+      const sdX = Number(secretDoor.x);
+      const sdY = Number(secretDoor.y);
+      if (!Number.isNaN(sdX) && !Number.isNaN(sdY)) {
+        // 在 secretDoor 座標位置繪製 (需轉換為螢幕座標)
+        // 注意：此處 sx, sy 已是螢幕座標，secretDoor 是地圖座標
+        // 我們需要計算 secretDoor 相對於當前柵板的螢幕位置
+        // 簡化處理：在柵板右側繪製指向暗門方向的綠色箭頭
+        const arrowX = sx + tileSize - 4;
+        const arrowY = sy + tileSize / 2;
+        const arrowPulse = 0.5 + 0.5 * Math.sin(now * 0.008);
+
+        ctx.fillStyle = `rgba(0, 255, 136, ${arrowPulse})`;
+        ctx.shadowColor = '#00ff88';
+        ctx.shadowBlur = 8;
+
+        // 綠色通風管道箭頭 (指向右側暗門)
+        ctx.beginPath?.();
+        ctx.moveTo?.(arrowX - 8, arrowY - 4);
+        ctx.lineTo?.(arrowX, arrowY);
+        ctx.lineTo?.(arrowX - 8, arrowY + 4);
+        ctx.closePath?.();
+        ctx.fill?.();
+
+        // 脫逃提示光暈 (Escape Glow)
+        ctx.strokeStyle = `rgba(0, 255, 136, ${arrowPulse * 0.6})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath?.();
+        ctx.arc?.(sx + tileSize / 2, sy + tileSize / 2, tileSize * 0.4, 0, Math.PI * 2);
+        ctx.stroke?.();
+
+        // 脫逃文字提示
+        ctx.fillStyle = `rgba(0, 255, 136, ${arrowPulse})`;
+        ctx.font = 'bold 8px monospace';
+        ctx.fillText?.('ESCAPE', sx + tileSize / 2, sy + tileSize - 8);
+      }
+    }
   }
 
   drawLaserSightAndLockOn(player: Player, robots: Robot[], camX: number, camY: number, ctx: any, now: number): void {
@@ -1585,24 +1854,26 @@ export class GameRenderer {
     ctx.fillStyle = '#ffb700';
     ctx.fillText?.('CR: ' + credits, 645, 18);
 
-    const weaponName = p?.equippedWeapon?.name || 'None';
+    const isZh = this.language === 'zh';
+    const weapons = Array.isArray(p?.weapons) ? p.weapons : [];
+    const curIdx = weapons.findIndex((w: any) => w === p?.equippedWeapon || (p?.equippedWeapon && w.id === p.equippedWeapon.id));
+    const nextW = weapons.length > 1 && curIdx !== -1 ? weapons[(curIdx + 1) % weapons.length] : null;
+    const curWName = (isZh ? (p?.equippedWeapon?.nameZh || p?.equippedWeapon?.name) : p?.equippedWeapon?.name) || 'None';
+    const nextWName = nextW ? (isZh ? (nextW?.nameZh || nextW?.name) : nextW?.name) : null;
     const weaponDmg = Number(p?.equippedWeapon?.power ?? p?.equippedWeapon?.damage ?? 0) || 0;
-    const isQuantum = String(weaponName).toUpperCase().includes('QUANTUM');
+    const isQuantum = String(curWName).toUpperCase().includes('QUANTUM');
+    const isArmed = !!p?.isWeaponDrawn;
     let weaponStatusText: string;
-    let weaponColor: string;
-    if (p?.isWeaponDrawn) {
-      weaponStatusText = this.language === 'zh'
-        ? `WEAPON: [ARMED - 按空白鍵開火] [Q: ${weaponName} (${weaponDmg} DMG)]`
-        : `WEAPON: [ARMED - SPACE to fire] [Q: ${weaponName} (${weaponDmg} DMG)]`;
-      weaponColor = isQuantum ? '#b388ff' : '#ff3855';
+    if (isZh) {
+      weaponStatusText = '武器: ' + (isArmed ? '[已拔槍]' : '[已收槍]') + ' ' + curWName + ' (' + weaponDmg + ' DMG) ' + (nextWName ? '[Q換: ' + nextWName + ']' : '[Q換槍]');
     } else {
-      weaponStatusText = this.language === 'zh'
-        ? `WEAPON: [F] HOLSTERED [Q: ${weaponName}]`
-        : `WEAPON: [F] HOLSTERED [Q: ${weaponName}]`;
-      weaponColor = '#8899a6';
+      weaponStatusText = 'WEAPON: ' + (isArmed ? '[ARMED]' : '[HOLSTERED]') + ' ' + curWName + ' (' + weaponDmg + ' DMG) ' + (nextWName ? '[Q: ' + nextWName + ']' : '[Q:SWAP]');
     }
+    const weaponColor = isArmed ? (isQuantum ? '#b388ff' : '#ff3855') : '#8899a6';
+    const weaponTextWidth = ctx.measureText?.(weaponStatusText)?.width || weaponStatusText.length * 7;
+    const weaponX = Math.max(650, width - weaponTextWidth - 10);
     ctx.fillStyle = weaponColor;
-    ctx.fillText?.(weaponStatusText, 710, 18);
+    ctx.fillText?.(weaponStatusText, weaponX, 18);
 
     let hudCursorX = 850;
     if ((this as any).activeWaypoint) {
@@ -1691,7 +1962,7 @@ export class GameRenderer {
       { key: '[0]', label: 'RES', color: '#00f0ff' },
       { key: '[TAB]', label: 'MAP', color: '#00ffcc' },
       { key: '[F]', label: 'DRAW', color: '#ff3855' },
-      { key: '[Q]', label: 'SWAP', color: '#b388ff' },
+      { key: '[Q]', label: nextWName ? (this.language === 'zh' ? '換:' + nextWName : 'SWAP:' + nextWName) : 'SWAP', color: '#b388ff' },
     ];
 
     let curX = 10;
@@ -1724,6 +1995,11 @@ export class GameRenderer {
     const x = (width - boxW) / 2;
     const y = (height - boxH) / 2;
 
+    // 邊界裁切防護
+    ctx.beginPath?.();
+    ctx.rect?.(x, y, boxW, boxH);
+    ctx.clip?.();
+
     ctx.fillStyle = 'rgba(2, 10, 6, 0.95)';
     ctx.fillRect?.(x, y, boxW, boxH);
 
@@ -1739,36 +2015,79 @@ export class GameRenderer {
     const title = String(t?.title ?? t?.name ?? 'METROPOLIS // SECURE TERMINAL').toUpperCase();
     ctx.fillText?.('[ ' + title + ' ]', x + 16, y + 16);
 
-    ctx.fillStyle = '#00aa44';
+    const cmds = (typeof t?.getEffectiveCommands === 'function' ? t.getEffectiveCommands() : []).map((c: any) => typeof c === 'string' ? c : c?.cmd || '');
+    const isZh = this.language === 'zh';
+    const cmdHintText = (isZh ? '可用指令: ' : 'COMMANDS: ') + cmds.join(' | ') + (isZh ? ' [Esc 退出]' : ' [Esc TO EXIT]');
+    const maxLineW = boxW - 32;
+    const hintLines = wrapText(cmdHintText, maxLineW, (s) => (ctx.measureText ? ctx.measureText(s).width : s.length * 8));
+    ctx.fillStyle = '#00f0ff';
     ctx.font = '11px monospace';
-    ctx.fillText?.('TYPE HELP FOR COMMANDS, ESC TO DISCONNECT', x + 16, y + 36);
+    hintLines.forEach((line, index) => {
+      ctx.fillText?.(line, x + 16, y + 36 + index * 15);
+    });
 
+    const dividerY = y + 36 + hintLines.length * 15 + 2;
     ctx.strokeStyle = '#005522';
     ctx.lineWidth = 1;
     ctx.beginPath?.();
-    ctx.moveTo?.(x + 16, y + 54);
-    ctx.lineTo?.(x + boxW - 16, y + 54);
+    ctx.moveTo?.(x + 16, dividerY);
+    ctx.lineTo?.(x + boxW - 16, dividerY);
     ctx.stroke?.();
 
-    const lines: string[] = [];
+    // 歷史紀錄自動換行與拆分
     const history = t?.history ?? t?.lines ?? t?.log ?? [];
+    const allWrappedLines: string[] = [];
     if (Array.isArray(history)) {
       history.slice(-12).forEach((line: any) => {
-        lines.push(String(line?.text ?? line?.message ?? line ?? ''));
+        const rawText = String(line?.text ?? line?.message ?? line ?? '');
+        const sublines = rawText.split('\n');
+        sublines.forEach((subline) => {
+          const wrapped = wrapText(subline, maxLineW, (s) => (ctx.measureText ? ctx.measureText(s).width : s.length * 8));
+          allWrappedLines.push(...wrapped);
+        });
       });
     }
 
-    lines.forEach((line, index) => {
-      ctx.fillStyle = index === lines.length - 1 ? '#33ff88' : '#00dd55';
+    const startY = dividerY + 10;
+    const inputY = y + boxH - 28;
+    const maxVisibleLines = Math.max(1, Math.floor((inputY - 10 - startY) / 18));
+    const visibleLines = allWrappedLines.slice(-maxVisibleLines);
+
+    visibleLines.forEach((line, index) => {
+      const isLast = index === visibleLines.length - 1;
+      ctx.fillStyle = isLast ? '#33ff88' : '#00dd55';
       ctx.font = '13px monospace';
-      ctx.fillText?.(line, x + 16, y + 64 + index * 18);
+      ctx.fillText?.(line, x + 16, startY + index * 18);
     });
 
+    // 底部輸入框防溢出
     const input = String(t?.input ?? t?.buffer ?? t?.value ?? '');
     const cursor = Math.sin(now * 0.01) > 0 ? '█' : '';
+    let inputDisplay = '> ' + input + cursor;
+    const measureW = (s: string) => ctx.measureText?.(s)?.width || s.length * 8;
+    if (measureW(inputDisplay) > maxLineW) {
+      // 從前端截斷並加上省略號，確保最終結果不超出邊界
+      const prefix = '> ...';
+      const prefixW = measureW(prefix);
+      const availableW = maxLineW - prefixW;
+      // 從 input 尾部開始，找到能放下的最長子串
+      let truncatedInput = input;
+      while (truncatedInput.length > 0 && measureW(prefix + truncatedInput + cursor) > maxLineW) {
+        truncatedInput = truncatedInput.slice(0, -1);
+      }
+      inputDisplay = prefix + truncatedInput + cursor;
+      // 最終安全檢查：若仍超出，強制截斷
+      if (measureW(inputDisplay) > maxLineW) {
+        let safe = inputDisplay;
+        while (safe.length > 5 && measureW(safe) > maxLineW) {
+          safe = safe.slice(0, -1);
+        }
+        inputDisplay = safe;
+      }
+    }
     ctx.fillStyle = '#00ffff';
     ctx.font = 'bold 13px monospace';
-    ctx.fillText?.('> ' + input + cursor, x + 16, y + boxH - 28);
+    ctx.fillText?.(inputDisplay, x + 16, inputY);
 
     ctx.shadowBlur = 0;
     ctx.restore?.();
@@ -2729,5 +3048,133 @@ export class GameRenderer {
 
   drawBreachModal(session: BreachSession, width: number, height: number, ctx: any, now: number, language: Language): void {
     drawBreachModal(session, width, height, ctx, now, language);
+  }
+
+  drawDefeatCutscene(width: number, height: number, ctx: any, now: number, cutscene: any, lang: string, camX?: number, camY?: number): void {
+    if (!cutscene) return;
+    const stage = String(cutscene.stage || 'swarm');
+    const stageStartTime = Number(cutscene.stageStartTime) || now;
+    const duration = Number(cutscene.duration) || 3000;
+    const progress = Math.max(0, Math.min(1, (now - stageStartTime) / duration));
+    const isZh = lang === 'zh';
+
+    ctx.save?.();
+
+    if (stage === 'swarm') {
+      // 深紅色警戒暗角
+      const vignetteGrad = ctx.createRadialGradient?.(width / 2, height / 2, 0, width / 2, height / 2, width * 0.7);
+      if (vignetteGrad) {
+        vignetteGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        vignetteGrad.addColorStop(0.6, 'rgba(80, 0, 0, 0.3)');
+        vignetteGrad.addColorStop(1, 'rgba(120, 0, 0, 0.8)');
+        ctx.fillStyle = vignetteGrad;
+        ctx.fillRect?.(0, 0, width, height);
+      }
+
+      // 精確計算特工倒地螢幕座標
+      const downPos = cutscene.playerDownPos || { x: 0, y: 0 };
+      const actualCamX = camX !== undefined ? camX : (downPos.x * this.tileSize - width / 2);
+      const actualCamY = camY !== undefined ? camY : (downPos.y * this.tileSize - height / 2);
+      const cx = downPos.x * this.tileSize - actualCamX + this.tileSize / 2;
+      const cy = downPos.y * this.tileSize - actualCamY + this.tileSize / 2;
+
+      // 脈衝霓虹紅色收容力場圈與電弧火花 (以 cx, cy 為圓心)
+      const pulse = 0.5 + 0.5 * Math.sin(now * 0.008);
+      ctx.strokeStyle = `rgba(255, 30, 50, ${0.6 + 0.4 * pulse})`;
+      ctx.shadowColor = '#ff1e32';
+      ctx.shadowBlur = 15;
+      ctx.lineWidth = 3;
+      ctx.beginPath?.();
+      ctx.arc?.(cx, cy, 60 + pulse * 10, 0, Math.PI * 2);
+      ctx.stroke?.();
+
+      // 電弧火花
+      for (let i = 0; i < 6; i++) {
+        const angle = (i / 6) * Math.PI * 2 + now * 0.005;
+        const dist = 70 + Math.sin(now * 0.01 + i) * 15;
+        const sx = cx + Math.cos(angle) * dist;
+        const sy = cy + Math.sin(angle) * dist;
+        ctx.fillStyle = '#ff4466';
+        ctx.shadowBlur = 8;
+        ctx.beginPath?.();
+        ctx.arc?.(sx, sy, 2 + Math.random() * 2, 0, Math.PI * 2);
+        ctx.fill?.();
+      }
+      ctx.shadowBlur = 0;
+
+      // 警報橫幅
+      ctx.fillStyle = 'rgba(20, 0, 0, 0.85)';
+      ctx.fillRect?.(0, height - 80, width, 80);
+      ctx.strokeStyle = '#ff1e32';
+      ctx.lineWidth = 2;
+      ctx.strokeRect?.(0, height - 80, width, 80);
+
+      ctx.fillStyle = '#ff4466';
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const alertText = isZh
+        ? '【佐格安保】警報：目標已癱瘓！收容部隊正在壓制並執行拘捕...'
+        : '[TZORG SECURITY] Target neutralized! Enforcers engaging containment protocol...';
+      ctx.fillText?.(alertText, width / 2, height - 40);
+
+    } else if (stage === 'blur_out') {
+      // 逐漸加深黑屏與模糊暗度
+      const alpha = progress;
+      ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+      ctx.fillRect?.(0, 0, width, height);
+
+      // CRT 故障干擾橫紋
+      if (alpha > 0.3) {
+        ctx.fillStyle = `rgba(255, 0, 0, ${0.1 * alpha})`;
+        for (let i = 0; i < 10; i++) {
+          const y = (i * (height / 10) + Math.sin(now * 0.01 + i) * 5) % height;
+          ctx.fillRect?.(0, y, width, 2);
+        }
+      }
+
+      // 中央神經斷線與押送字樣
+      if (alpha > 0.5) {
+        ctx.fillStyle = `rgba(255, 100, 100, ${(alpha - 0.5) * 2})`;
+        ctx.font = 'bold 16px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const neuralText = isZh
+          ? '>> 意識神經中斷 // 押送往第一區中央禁閉室... <<'
+          : '>> NEURAL FEED LOST // TRANSPORTING TO SECTOR 1 DETENTION <<';
+        ctx.fillText?.(neuralText, width / 2, height / 2);
+      }
+
+    } else if (stage === 'wake_up') {
+      // 精細的緩慢眨眼開闔效果（上下眼皮模擬）
+      // 使用 progress 控制眼皮開啟程度，並加入輕微的抖動模擬剛醒來的狀態
+      const blinkProgress = progress;
+      const eyelidH = (1 - blinkProgress) * height * 0.35;
+      
+      // 上眼皮
+      ctx.fillStyle = 'rgba(10, 5, 5, 1)';
+      ctx.fillRect?.(0, 0, width, eyelidH);
+      
+      // 下眼皮
+      ctx.fillRect?.(0, height - eyelidH, width, eyelidH);
+
+      // 青色霓虹 HUD 重啟字樣逐漸淡出
+      if (progress > 0.3 && progress < 0.9) {
+        const hudAlpha = Math.min(1, (progress - 0.3) / 0.2) * Math.min(1, (0.9 - progress) / 0.2);
+        ctx.fillStyle = `rgba(0, 229, 255, ${hudAlpha})`;
+        ctx.shadowColor = '#00e5ff';
+        ctx.shadowBlur = 10;
+        ctx.font = 'bold 14px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const rebootText = isZh
+          ? '[ 神經系統重啟... 第一區禁閉室 ]'
+          : '[ BIOS REBOOT COMPLETE // SECTOR 1 DETENTION ]';
+        ctx.fillText?.(rebootText, width / 2, height / 2);
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    ctx.restore?.();
   }
 }

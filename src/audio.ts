@@ -314,18 +314,24 @@ export class SoundFX {
     const master = this.masterGain;
     if (!ctx || !master) return;
     const now = ctx.currentTime;
-    const duration = 0.8;
+    const duration = 1.2;
 
     const osc = ctx.createOscillator();
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(440, now);
     osc.frequency.exponentialRampToValueAtTime(30, now + duration);
 
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(500, now);
+    filter.frequency.exponentialRampToValueAtTime(60, now + duration);
+
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.setValueAtTime(0.10, now);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-    osc.connect(gain);
+    osc.connect(filter);
+    filter.connect(gain);
     gain.connect(master);
     osc.start(now);
     osc.stop(now + duration + 0.05);

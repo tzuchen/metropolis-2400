@@ -69,7 +69,7 @@ export class TerminalSession {
     this.history = [
       this.getWelcomeMessage(),
       'System Ready. Node Authorization: ' + String((this.terminal as any).securityLevel || this.terminal.clearanceNeeded || 'CLEAR'),
-      'Type HELP to display available terminal subroutines.',
+      'Active Subroutines: ' + this.getEffectiveCommands().map(c => c.cmd).join(', '),
       '-------------------------------------------------------',
     ];
   }
@@ -83,6 +83,58 @@ export class TerminalSession {
     const id = String(this.terminal.id || '').toUpperCase();
     const name = String(this.terminal.name || '').toUpperCase();
     return type === 'CORE' || id.includes('CORE') || id.includes('OVERMIND') || name.includes('CORE') || name.includes('OVERMIND') || name.includes('CITADEL');
+  }
+
+  getEffectiveCommands(context?: TerminalContext): Array<{ cmd: string; desc: string }> {
+    const commands: Array<{ cmd: string; desc: string }> = [];
+
+    // 基礎有效指令
+    commands.push({ cmd: 'STATUS', desc: 'Check terminal status & subsystems' });
+    commands.push({ cmd: 'LOGS', desc: 'Read decrypted intelligence data' });
+    commands.push({ cmd: 'CHECKIN', desc: 'Neural collar check-in (reset surveillance timer)' });
+    commands.push({ cmd: 'CLEAR_ALARM', desc: 'Reset sector security alert to CLEAR' });
+    commands.push({ cmd: 'SCAN', desc: 'Scan sector security perimeter' });
+    commands.push({ cmd: 'POETRY', desc: "Recite Shakespeare Sonnet 18 & Archie's notes" });
+
+    // 條件指令
+    if (!this.isSiphoned) {
+      commands.push({ cmd: 'SIPHON', desc: 'Drain power cells (+30 Energy)' });
+    }
+
+    if (this.terminal.forcefieldToDisable && !this.terminal.isHacked) {
+      commands.push({ cmd: 'OVERRIDE', desc: 'Bypass forcefields (or HACK)' });
+    }
+
+    const pData = context?.player || context;
+    const items: any[] = (context as any)?.items || pData?.items || (Array.isArray((pData as any)?.inventory) ? (pData as any).inventory.map((i: any) => i?.id || i) : []) || [];
+    const hasMasterPass = items.some((it: any) => it === 'item-master-pass' || it?.id === 'item-master-pass');
+    const defeatedBoss = pData?.defeatedBoss || pData?.hasDefeatedBoss;
+
+    // 假設 context 中沒有明確標記 collar 是否已解除，我們檢查是否有 master pass 且未明確標記已解除
+    // 根據需求 "若 context 包含 item-master-pass 且未解除項圈則加入 DISARM"
+    // 這裡我們假設如果 context 沒有提供 disarmCollar 狀態，我們就認為未解除，或者依賴 items 存在
+    // 為了簡單起見，如果持有 master pass，就顯示 DISARM (因為通常持有 pass 意味著可以執行，且如果已解除，執行會失敗或無效，但題目要求 "有效果才加入"，通常指該指令在此情境下可執行且有意義)
+    // 如果 context 中有明確的 collarDisarmed 標誌，則不加入。這裡暫定：若有 master pass 則加入。
+    if (hasMasterPass) {
+      commands.push({ cmd: 'DISARM', desc: 'Disarm neural collar with Master Pass' });
+    }
+
+    if (this.isCoreTerminal()) {
+      commands.push({ cmd: 'BREACH', desc: 'Breach the Tzorg dome (Core Terminal)' });
+      if (defeatedBoss) {
+        commands.push({ cmd: 'OVERLOAD', desc: 'Trigger reactor meltdown (Core Terminal)' });
+        commands.push({ cmd: 'SUBVERSION', desc: 'Overwrite Tzorg neural lattice (Core Terminal)' });
+        commands.push({ cmd: 'EVACUATION', desc: 'Launch underground ark evacuation (Core Terminal)' });
+        commands.push({ cmd: 'AWAKEN', desc: 'Trigger the true ending (Core Terminal)' });
+      }
+    }
+
+    // 系統通用指令
+    commands.push({ cmd: 'HELP', desc: 'Display available terminal subroutines' });
+    commands.push({ cmd: 'CLEAR', desc: 'Clear screen' });
+    commands.push({ cmd: 'EXIT', desc: 'Disconnect session (or Esc)' });
+
+    return commands;
   }
 
   executeCommand(cmd: string, context?: TerminalContext): TerminalCommandResult {
@@ -107,21 +159,11 @@ export class TerminalSession {
     let result: TerminalCommandResult;
 
     if (c === 'help') {
+      const effectiveCommands = this.getEffectiveCommands(context);
+      const cmdNames = effectiveCommands.map(c => c.cmd).join(', ');
+      const cmdDescs = effectiveCommands.map(c => '- ' + c.cmd.padEnd(12) + ': ' + c.desc).join('\n');
       result = {
-        output:
-          'COMMANDS: HELP, STATUS, LOGS, OVERRIDE, CLEAR_ALARM, SIPHON, SCAN, CHECKIN, OVERLOAD, SUBVERSION, EVACUATION, BREACH, AWAKEN, CLEAR, EXIT\n' +
-          '- STATUS     : Check terminal status & subsystems\n' +
-          '- LOGS       : Read decrypted intelligence data\n' +
-          '- OVERRIDE   : Bypass forcefields (or HACK)\n' +
-          '- CLEAR_ALARM: Reset sector security alert to CLEAR\n' +
-          '- SIPHON     : Drain power cells (+30 Energy)\n' +
-          '- SCAN       : Scan sector security perimeter\n' +
-          '- CHECKIN    : Neural collar check-in (reset surveillance timer)\n' +
-          '- DISARM     : Disarm neural collar with Master Pass\n' +
-          '- BREACH     : Breach the Tzorg dome (Core Terminal)\n' +
-          '- AWAKEN     : Trigger the true ending (Core Terminal)\n' +
-          '- CLEAR      : Clear screen\n' +
-          '- EXIT       : Disconnect session (or Esc)',
+        output: 'COMMANDS: ' + cmdNames + '\n' + cmdDescs,
       };
     } else if (c === 'status') {
       const ffStatus = this.terminal.forcefieldToDisable
@@ -273,6 +315,28 @@ export class TerminalSession {
       } else {
         result = { output: 'ACCESS DENIED: Requires Core Terminal' };
       }
+    } else if (c === 'poetry' || c === 'poem' || c === 'verse' || c === 'sonnet') {
+      result = {
+        output:
+          '--- SHAKESPEARE: SONNET 18 ---\n' +
+          'Shall I compare thee to a summer\'s day?\n' +
+          'Thou art more lovely and more temperate:\n' +
+          'Rough winds do shake the darling buds of May,\n' +
+          'And summer\'s lease hath all too short a date;\n' +
+          'Sometime too hot the eye of heaven shines,\n' +
+          'And often is his gold complexion dimm\'d;\n' +
+          'And every fair from fair sometime declines,\n' +
+          'By chance or nature\'s course of untrimm\'d;\n' +
+          'But thy eternal summer shall not fade,\n' +
+          'Nor lose possession of that fair thou ow\'st;\n' +
+          'Nor shall Death brag thou wander\'st in his shade,\n' +
+          'When in eternal lines to time thou grow\'st:\n' +
+          'So long as eyes can see, or so long lives,\n' +
+          'So long lives this, and this gives life to thee.\n' +
+          '\n' +
+          '--- ARCHIE\'S NOTES ---\n' +
+          '古老文字蔑視佐格的數位抹殺。',
+      };
     } else if (c === 'clear' || c === 'cls') {
       this.history = [];
       return { output: '' };

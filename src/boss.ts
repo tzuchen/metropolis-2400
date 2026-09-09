@@ -146,8 +146,13 @@ export function handleBossDeath(boss: Robot, game: any): void {
   const tiles = game?.map?.tiles || game?.grid;
   if (currentSector === 'sector-citadel' && Array.isArray(tiles)) {
     for (let y = 14; y <= 16; y++) {
-      if (tiles[y] && tiles[y][31] !== undefined) {
-        tiles[y][31] = 1; // FLOOR
+      if (tiles[y]) {
+        if (tiles[y][31] !== undefined) {
+          tiles[y][31] = 1; // FLOOR
+        }
+        if (tiles[y][33] !== undefined) {
+          tiles[y][33] = 1; // FLOOR
+        }
       }
     }
     game?.pushFloatingText?.(31, 15, 'FORCEFIELD OFFLINE', '#00ff88');
@@ -155,6 +160,27 @@ export function handleBossDeath(boss: Robot, game: any): void {
       ? '⚡ 力場已關閉，通往中央主腦核心終端機的通道已開啟！'
       : '⚡ Forcefield offline. Path to the Central Overmind Core terminal is now open!';
     game?.pushMessage?.(forcefieldMsg, 'info');
+
+    // 觸發緊急蜂擁圍攻機制
+    soundFX.alarm();
+    if (typeof game.triggerCitadelHorde === 'function') {
+      game.triggerCitadelHorde();
+    } else {
+      game.isCitadelHordeActive = true;
+    }
+
+    const hordeMsg1 = isZh
+      ? '🚨【緊急警報】佐格中央主腦啟動自毀淨化圍剿！無盡禁衛軍正從四面八方湧入！'
+      : '🚨 EMERGENCY ALERT: Central Overmind initiated self-destruct purge! Endless guards are swarming from all directions!';
+    const hordeMsg2 = isZh
+      ? '⚠️ 敵軍數量無限且無法全數消滅！特工雷文，立刻衝向東側核心終端機執行主腦指令！'
+      : '⚠️ Enemy forces are infinite and cannot be fully eliminated! Agent Raven, rush to the Eastern Core Terminal immediately!';
+    game?.pushMessage?.(hordeMsg1, 'danger');
+    game?.pushMessage?.(hordeMsg2, 'danger');
+
+    if (game.player) {
+      game?.pushFloatingText?.(game.player.x, game.player.y, 'EMERGENCY HORDE!', '#ff0033');
+    }
   }
 
   const victoryMsg = isZh

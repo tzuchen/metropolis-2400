@@ -7,6 +7,11 @@ export interface SaveData {
   sectorId: string;
   checkInAlertActive?: boolean;
   securityLevel?: string;
+  graffitiMuralComplete?: boolean;
+  poetryQuestComplete?: boolean;
+  isGearConfiscated?: boolean;
+  confiscatedGear?: any;
+  isCitadelHordeActive?: boolean;
   player: {
     x: number;
     y: number;
@@ -28,6 +33,8 @@ export interface SaveData {
     expToNext?: number;
     skillPoints?: number;
     checkInTimer?: number;
+    checkInMaxTimer?: number;
+    critChance?: number;
     isCollarDisarmed?: boolean;
   };
   robots: Array<{
@@ -105,6 +112,8 @@ export function saveGameState(game: any): boolean {
         expToNext: game.player.expToNext ?? 100,
         skillPoints: game.player.skillPoints ?? 0,
         checkInTimer: game.player.checkInTimer ?? 100,
+        checkInMaxTimer: game.player.checkInMaxTimer ?? 100,
+        critChance: game.player.critChance ?? 0,
         isCollarDisarmed: game.player.isCollarDisarmed ?? game.isCollarDisarmed ?? false,
       },
       robots: (game.robots || []).map((r: Robot) => ({
@@ -151,6 +160,11 @@ export function saveGameState(game: any): boolean {
       })),
       checkInAlertActive: game.checkInAlertActive ?? false,
       securityLevel: game.securityLevel,
+      graffitiMuralComplete: game.graffitiMuralComplete ?? false,
+      poetryQuestComplete: game.poetryQuestComplete ?? false,
+      isGearConfiscated: game.isGearConfiscated ?? false,
+      confiscatedGear: game.confiscatedGear ?? null,
+      isCitadelHordeActive: game.isCitadelHordeActive ?? false,
     };
 
     memoryBackup = saveData;
@@ -191,6 +205,12 @@ export function loadGameState(game: any): boolean {
     if (typeof data.player.isCollarDisarmed === 'boolean') {
       game.player.isCollarDisarmed = data.player.isCollarDisarmed;
       game.isCollarDisarmed = data.player.isCollarDisarmed;
+    }
+    if (typeof data.player.checkInMaxTimer === 'number') {
+      game.player.checkInMaxTimer = data.player.checkInMaxTimer;
+    }
+    if (typeof data.player.critChance === 'number') {
+      game.player.critChance = data.player.critChance;
     }
 
     // Restore robots
@@ -293,6 +313,27 @@ export function loadGameState(game: any): boolean {
     }
     if (data.securityLevel) {
       game.securityLevel = data.securityLevel;
+    }
+
+    // Restore quest flags
+    if (typeof data.graffitiMuralComplete === 'boolean') {
+      game.graffitiMuralComplete = data.graffitiMuralComplete;
+    }
+    if (typeof data.poetryQuestComplete === 'boolean') {
+      game.poetryQuestComplete = data.poetryQuestComplete;
+    }
+
+    // Restore gear confiscation state
+    if (typeof data.isGearConfiscated === 'boolean') {
+      game.isGearConfiscated = data.isGearConfiscated;
+    }
+    if (data.confiscatedGear !== undefined && data.confiscatedGear !== null) {
+      game.confiscatedGear = data.confiscatedGear;
+    }
+
+    // Restore citadel horde state
+    if (typeof data.isCitadelHordeActive === 'boolean') {
+      game.isCitadelHordeActive = data.isCitadelHordeActive;
     }
 
     game.isTitleScreen = false;

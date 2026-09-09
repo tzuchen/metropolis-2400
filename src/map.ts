@@ -291,6 +291,17 @@ export function buildSector1Map(): SectorMap {
   for (let y = 4; y <= 10; y += 1) setForcefield(tiles, 27, y); // Forcefield barrier
   setDoor(tiles, 29, 11, true); // Exit from checkpoint to data hub
 
+  // === DETENTION CELL BLOCK (between Checkpoint 01 and Data Hub) ===
+  for (let x = 33; x <= 38; x += 1) {
+    setWall(tiles, x, 3);
+    setWall(tiles, x, 7);
+  }
+  for (let y = 3; y <= 7; y += 1) {
+    setWall(tiles, 33, y);
+    setWall(tiles, 38, y);
+  }
+  setForcefield(tiles, 33, 5); // Energy barrier at front entrance
+
   // === DATA HUB / SERVER ROOM (SE) ===
   for (let x = 30; x <= 37; x += 1) {
     setWall(tiles, x, 16);
@@ -409,6 +420,13 @@ export function buildSector1Map(): SectorMap {
       type: 'DATA',
       securityLevel: 'HIGH' as unknown as SecurityLevel,
       log: 'Tzorg data hub log: Server room contains the central data terminal and sector surveillance archives.',
+    },
+    TERMINAL_DETENTION_SECURITY: {
+      id: 'TERMINAL_DETENTION_SECURITY',
+      position: { x: 32, y: 4 },
+      type: 'SECURITY',
+      securityLevel: 'LOW' as unknown as SecurityLevel,
+      log: 'Detention Outpost Terminal: Inmate surveillance unit. Neural collar check-in authorization online.',
     },
   } as unknown as Record<string, TerminalData>;
 

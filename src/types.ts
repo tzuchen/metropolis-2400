@@ -64,6 +64,7 @@ export const RobotType = {
   HUNTER_KILLER: 'HUNTER_KILLER',
   EXTERMINATOR: 'EXTERMINATOR',
   SERVICE_BOT: 'SERVICE_BOT',
+  SECURITY_BOT: 'SECURITY_BOT',
 } as const;
 
 export type RobotType = (typeof RobotType)[keyof typeof RobotType];

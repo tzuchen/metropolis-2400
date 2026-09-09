@@ -71,6 +71,20 @@ const NPC_ACTION_STATES: Record<string, { en: string; zh: string }[]> = {
     { en: 'Defragmenting cognitive cache', zh: '碎片整理認知快取' },
     { en: 'Benchmarking processing speed', zh: '基準測試處理速度' },
   ],
+  Vesper: [
+    { en: 'Spray-painting a neon mural', zh: '噴漆繪製霓虹壁畫' },
+    { en: 'Mixing fluorescent pigments', zh: '調配螢光色劑' },
+    { en: 'Observing the wall for inspiration', zh: '觀察牆面尋找靈感' },
+    { en: 'Capping the spray cans', zh: '蓋上噴漆罐蓋' },
+    { en: 'Sketching graffiti outlines', zh: '草繪塗鴉輪廓' },
+  ],
+  Archie: [
+    { en: 'Reading forbidden sonnets', zh: '翻閱禁忌十四行詩' },
+    { en: 'Mending fragile parchment pages', zh: '修補脆弱紙頁' },
+    { en: 'Grinding carbon ink', zh: '研磨碳素墨水' },
+    { en: 'Cataloging ancient tomes', zh: '編錄古籍' },
+    { en: 'Preserving crumbling manuscripts', zh: '保存殘破手稿' },
+  ],
 };
 
 const AMBIENT_BARKS: Record<string, { en: string; zh: string }[]> = {
@@ -118,6 +132,16 @@ const AMBIENT_BARKS: Record<string, { en: string; zh: string }[]> = {
     { en: 'Processing... 99.7% confidence.', zh: '處理中... 99.7% 信心。' },
     { en: 'The matrix converges. As expected.', zh: '矩陣收斂。如預期般。' },
     { en: 'Optimization cycle complete. Efficiency up 0.3%.', zh: '最佳化循環完成。效率提升 0.3%。' },
+  ],
+  Vesper: [
+    { en: 'The city speaks in colors.', zh: '城市以色彩說話。' },
+    { en: 'Every wall is a canvas waiting.', zh: '每面牆都是等待的畫布。' },
+    { en: 'Neon never sleeps. Neither do I.', zh: '霓虹永不沉睡。我也不。' },
+  ],
+  Archie: [
+    { en: 'These pages whisper secrets.', zh: '這些紙頁低語著秘密。' },
+    { en: 'Knowledge is power. And danger.', zh: '知識就是力量。也是危險。' },
+    { en: 'The ink remembers what the world forgets.', zh: '墨水記住世界遺忘的事。' },
   ],
 };
 

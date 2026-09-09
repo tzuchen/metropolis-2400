@@ -87,6 +87,7 @@ export function createPlayer(startPos: Position): Player {
       description: 'A futuristic pistol that fires concentrated laser beams.',
     }
   );
+  (laserPistol as any).nameZh = '高能雷射手槍';
 
   const personalShield = createItem(
     PERSONAL_SHIELD_ID,
@@ -138,6 +139,7 @@ export function createPlayer(startPos: Position): Player {
   (dartGun as any).weaponId = 'DART_GUN';
   (dartGun as any).range = 5;
   (dartGun as any).isSuppressed = true;
+  (dartGun as any).nameZh = '靜音微型飛針槍';
 
   const scatterShotgun = createItem(
     'scatter-shotgun',
@@ -153,6 +155,7 @@ export function createPlayer(startPos: Position): Player {
   (scatterShotgun as any).weaponId = 'SCATTER_SHOTGUN';
   (scatterShotgun as any).range = 3;
   (scatterShotgun as any).isSuppressed = false;
+  (scatterShotgun as any).nameZh = '散彈電漿重砲';
 
   return {
     id: 'player',
@@ -196,6 +199,7 @@ export function createPlayer(startPos: Position): Player {
 export function createRobot(type: RobotType, startPos: Position, patrolPath?: Position[]): Robot {
   const statsByType: Record<string, { hp: number; attackPower: number; scanRange: number; attackRange: number }> = {
     SCOUT_DRONE: { hp: 55, attackPower: 12, scanRange: 7, attackRange: 3 },
+    SECURITY_BOT: { hp: 100, attackPower: 18, scanRange: 5, attackRange: 2 },
     SHOCK_ENFORCER: { hp: 120, attackPower: 22, scanRange: 6, attackRange: 2 },
     HUNTER_KILLER: { hp: 180, attackPower: 32, scanRange: 9, attackRange: 5 },
     EXTERMINATOR: { hp: 300, attackPower: 45, scanRange: 8, attackRange: 5 },
@@ -234,7 +238,7 @@ export function toggleWeaponDraw(player: Player): boolean {
 }
 
 export function cycleWeapon(player: Player): Item {
-  const p = player as unknown as { weapons?: Item[]; equippedWeapon?: Item };
+  const p = player as unknown as { weapons?: Item[]; inventory?: Item[]; equippedWeapon?: Item };
   const weapons = p.weapons ?? [];
 
   if (weapons.length === 0) {
@@ -250,6 +254,19 @@ export function cycleWeapon(player: Player): Item {
   const nextWeapon = weapons[nextIndex];
 
   p.equippedWeapon = nextWeapon;
+
+  for (const weapon of weapons) {
+    (weapon as any).equipped = weapon === nextWeapon;
+  }
+
+  if (p.inventory) {
+    for (const item of p.inventory) {
+      if (item.type === WEAPON_TYPE) {
+        (item as any).equipped = item === nextWeapon;
+      }
+    }
+  }
+
   return nextWeapon;
 }
 
@@ -296,6 +313,7 @@ export function createQuantumAnnihilator(): Item {
   (item as any).weaponId = 'QUANTUM_ANNIHILATOR';
   (item as any).range = 7;
   (item as any).isSuppressed = false;
+  (item as any).nameZh = '量子殲滅重砲';
   return item;
 }
 

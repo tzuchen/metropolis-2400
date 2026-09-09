@@ -1,0 +1,148 @@
+import { GameEngine } from '../src/game';
+
+function createMockCanvas(w = 960, h = 600): any {
+  const drawnRects: Array<{ x: number; y: number; w: number; h: number; fill?: any }> = [];
+  return {
+    width: w,
+    height: h,
+    drawnRects,
+    getContext: () => ({
+      save: () => {},
+      restore: () => {},
+      fillRect: (x: number, y: number, w: number, h: number) => {
+        drawnRects.push({ x, y, w, h });
+      },
+      strokeRect: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      stroke: () => {},
+      fillText: () => {},
+      measureText: () => ({ width: 10 }),
+      arc: () => {},
+      fill: () => {},
+      closePath: () => {},
+      createLinearGradient: () => ({
+        addColorStop: () => {},
+      }),
+      createRadialGradient: () => ({
+        addColorStop: () => {},
+      }),
+    }),
+    parentElement: {
+      style: {},
+    },
+  };
+}
+
+console.log('=== 開始驗證玩家戰敗過場動畫 (Defeat Cinematic Cutscene) ===\n');
+
+const canvas = createMockCanvas(960, 600);
+const game = new GameEngine(canvas as any);
+
+// 1. 驗證直接調用 handlePlayerDefeat(true) 或 headless 模式保持向下相容
+console.log('1. 測試 headless / instant 模式向下相容...');
+game.player.hp = 0;
+game.handlePlayerDefeat(true);
+
+if (!game.player.isAlive) {
+  throw new Error('❌ Instant 模式下特工應甦醒 (isAlive 應為 true)');
+}
+if (game.player.x !== 35 || game.player.y !== 5) {
+  throw new Error(`❌ Instant 模式下特工未送至禁閉室 (35, 5)，實際為 (${game.player.x}, ${game.player.y})`);
+}
+if (!game.isGearConfiscated) {
+  throw new Error('❌ Instant 模式下裝備應被扣押');
+}
+console.log('✅ Headless / Instant 模式向下相容完全正常！');
+
+// 2. 測試過場動畫流程 (Cutscene State Machine)
+console.log('\n2. 測試過場動畫流程啟動...');
+// 重置回非禁閉室位置
+game.player.x = 20;
+game.player.y = 15;
+game.player.hp = 0;
+// 強制啟動過場流程 (startDefeatCutscene)
+game.startDefeatCutscene();
+
+if (!game.defeatCutscene) {
+  throw new Error('❌ startDefeatCutscene() 未正確初始化 defeatCutscene 物件');
+}
+if (game.defeatCutscene.stage !== 'swarm') {
+  throw new Error(`❌ 初始過場階段應為 swarm，實際為 ${game.defeatCutscene.stage}`);
+}
+console.log('✅ Stage 1 [swarm] 成功啟動，周圍機器人開始圍攻並壓制！');
+
+// 3. 測試過場期間移動鍵被鎖定
+console.log('\n3. 測試過場期間特工動作控制鎖定...');
+const startX = game.player.x;
+const startY = game.player.y;
+game.handleKeyDown('ArrowRight');
+if (game.player.x !== startX || game.player.y !== startY) {
+  throw new Error('❌ 過場動畫期間應鎖定移動');
+}
+console.log('✅ 過場期間移動輸入已成功鎖定！');
+
+// 4. 測試 Stage 1 -> Stage 2 [blur_out] (畫面漸漸模糊)
+console.log('\n4. 測試推進至 Stage 2 [blur_out] (畫面模糊)...');
+// 模擬時間推進至 swarm 結束
+const t1 = game.defeatCutscene.startTime + (game.defeatCutscene.duration || 2000) + 100;
+game.updateDefeatCutscene(t1);
+
+if (!game.defeatCutscene || game.defeatCutscene.stage !== 'blur_out') {
+  throw new Error(`❌ 時間超過後應推進至 blur_out 階段，實際為 ${game.defeatCutscene?.stage}`);
+}
+console.log('✅ 成功進入 Stage 2 [blur_out]，畫面開始模糊與黑屏轉場！');
+
+// 5. 測試 Stage 2 -> Stage 3 [wake_up] (黑屏傳送至禁閉室，再漸漸清楚醒來)
+console.log('\n5. 測試推進至 Stage 3 [wake_up] (禁閉室醒來，畫面漸漸由模糊變清楚)...');
+// 模擬時間推進至 blur_out 結束
+const t2 = game.defeatCutscene.stageStartTime + (game.defeatCutscene.duration || 2000) + 100;
+game.updateDefeatCutscene(t2);
+
+if (!game.defeatCutscene || game.defeatCutscene.stage !== 'wake_up') {
+  throw new Error(`❌ 模糊黑屏後應進入 wake_up 階段，實際為 ${game.defeatCutscene?.stage}`);
+}
+if (game.player.x !== 35 || game.player.y !== 5) {
+  throw new Error(`❌ wake_up 時特工應已在禁閉室 (35, 5)，實際為 (${game.player.x}, ${game.player.y})`);
+}
+if (!game.isGearConfiscated) {
+  throw new Error('❌ 進入禁閉室時裝備應已扣押至證物箱');
+}
+console.log('✅ 特工已在禁閉室醒來 (35, 5)，畫面進入 Stage 3 [wake_up] 逐漸由模糊變清晰！');
+
+// 6. 測試 Stage 3 結束，玩家恢復控制
+console.log('\n6. 測試過場結束並恢復控制...');
+const t3 = game.defeatCutscene.stageStartTime + (game.defeatCutscene.duration || 2200) + 100;
+game.updateDefeatCutscene(t3);
+
+if (game.defeatCutscene !== null) {
+  throw new Error('❌ wake_up 完成後 defeatCutscene 應為 null');
+}
+console.log('✅ 過場完全結束，特工完全甦醒並恢復正常遊戲控制！');
+
+// 7. 測試跳過過場功能 (Space / Escape)
+console.log('\n7. 測試 [Escape] 跳過過場功能...');
+game.player.hp = 0;
+game.startDefeatCutscene();
+if (!game.defeatCutscene) throw new Error('過場未啟動');
+game.handleKeyDown('Escape');
+if (game.defeatCutscene !== null) {
+  throw new Error('❌ 按下 Escape 應能直接跳過過場');
+}
+if (game.player.x !== 35 || game.player.y !== 5) {
+  throw new Error('❌ 跳過過場後應正確傳送到禁閉室 (35, 5)');
+}
+console.log('✅ [Escape] 快捷跳過過場功能正常！');
+
+// 8. 測試 Renderer 繪製過場無異常
+console.log('\n8. 測試 Renderer 繪製各階段過場畫面...');
+game.startDefeatCutscene();
+game.render(); // swarm
+game.updateDefeatCutscene(game.defeatCutscene!.startTime + game.defeatCutscene!.duration + 100);
+game.render(); // blur_out
+game.updateDefeatCutscene(game.defeatCutscene!.stageStartTime + game.defeatCutscene!.duration + 100);
+game.render(); // wake_up
+console.log('✅ 各階段過場畫面 Renderer 繪製正常，無拋出異常！');
+
+console.log('\n🎉 所有玩家戰敗圍捕、模糊轉場與禁閉室甦醒測試全數通過！');

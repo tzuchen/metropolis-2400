@@ -88,6 +88,10 @@ export function drawCustomNPCSprite(
     drawZeroOne(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
   } else if (id.includes('elena') || role.includes('ELENA') || role.includes('ARCHIVIST')) {
     drawElena(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
+  } else if (id.includes('vesper') || role.includes('VESPER') || role.includes('GRAFFITI')) {
+    drawVesper(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
+  } else if (id.includes('archie') || role.includes('ARCHIE') || role.includes('LIBRARIAN')) {
+    drawArchie(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
   } else {
     // 預設/Jax：暗巷情報商
     drawJax(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
@@ -343,6 +347,42 @@ function drawElenaEffects(ctx: any, cx: number, cy: number, size: number, time: 
     ctx.shadowBlur = 4;
     ctx.font = '10px monospace';
     ctx.fillText('♪', x, noteY);
+  }
+  ctx.shadowBlur = 0;
+}
+
+function drawVesperEffects(ctx: any, cx: number, cy: number, size: number, time: number) {
+  // 螢光噴漆微粒飄散
+  for (let i = 0; i < 4; i++) {
+    const angle = time * 0.01 + i * (Math.PI * 2 / 4);
+    const radius = size * 0.15 + Math.sin(time * 0.02 + i) * 5;
+    const x = cx + size * 0.15 + Math.cos(angle) * radius;
+    const y = cy + size * 0.05 + Math.sin(angle) * radius * 0.5;
+    const alpha = 0.5 + 0.5 * Math.sin(time * 0.03 + i);
+    
+    ctx.fillStyle = `rgba(0, 230, 118, ${alpha})`;
+    ctx.shadowColor = '#00e676';
+    ctx.shadowBlur = 4;
+    ctx.beginPath();
+    ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+}
+
+function drawArchieEffects(ctx: any, cx: number, cy: number, size: number, time: number) {
+  // 金色墨光微粒從書頁飄出
+  for (let i = 0; i < 3; i++) {
+    const y = cy + size * 0.05 - ((time * 0.02 + i * 10) % 20);
+    const alpha = Math.max(0, 1 - (cy + size * 0.05 - y) / 20);
+    const x = cx + Math.sin(time * 0.005 + i * 2) * 5;
+    
+    ctx.fillStyle = `rgba(255, 213, 79, ${alpha * 0.8})`;
+    ctx.shadowColor = '#ffd54f';
+    ctx.shadowBlur = 4;
+    ctx.beginPath();
+    ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+    ctx.fill();
   }
   ctx.shadowBlur = 0;
 }
@@ -831,7 +871,109 @@ function drawElena(ctx: any, cx: number, cy: number, size: number, color: string
   drawElenaEffects(ctx, cx, cy, size, time);
 }
 
-// 9. Jax / 預設 (暗巷情報商): 暗巷帽T、亮黃護目鏡、斜挎信用點晶片包
+// 9. Vesper (街頭塗鴉者): 螢光連帽外套、防毒護目鏡、手持高壓噴漆罐與螢光微粒特效
+function drawVesper(ctx: any, cx: number, cy: number, size: number, color: string, time: number, headOffsetX: number, headOffsetY: number, bodyScaleY: number) {
+  // 街頭運動鞋
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(cx - size * 0.16, cy + size * 0.22, size * 0.11, size * 0.16);
+  ctx.fillRect(cx + size * 0.05, cy + size * 0.22, size * 0.11, size * 0.16);
+
+  // 螢光綠連帽外套 (Hoodie)
+  ctx.fillStyle = '#00c853';
+  ctx.fillRect(cx - size * 0.2, cy - size * 0.12, size * 0.4, size * 0.36);
+  
+  // 連帽 (Hood) 拉鍊細節
+  ctx.fillStyle = '#009624';
+  ctx.fillRect(cx - size * 0.02, cy - size * 0.1, 4, size * 0.3);
+
+  // 手持高壓噴漆罐 (右手)
+  ctx.fillStyle = '#ffea00';
+  ctx.fillRect(cx + size * 0.12, cy + size * 0.05, 8, 14);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(cx + size * 0.12, cy + size * 0.05, 8, 3); // 噴漆罐頂部
+
+  // 臉部膚色
+  ctx.fillStyle = '#e0a98b';
+  ctx.beginPath();
+  ctx.arc(cx + headOffsetX, cy - size * 0.22 + headOffsetY, size * 0.13, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 黑色短髮
+  ctx.fillStyle = '#212121';
+  ctx.beginPath();
+  ctx.arc(cx + headOffsetX, cy - size * 0.26 + headOffsetY, size * 0.14, Math.PI, Math.PI * 2);
+  ctx.fill();
+
+  // 防毒護目鏡 (Goggles) - 螢光綠邊框
+  ctx.fillStyle = '#00e676';
+  ctx.shadowColor = '#00e676';
+  ctx.shadowBlur = 5;
+  ctx.fillRect(cx + headOffsetX - size * 0.08, cy - size * 0.23 + headOffsetY, size * 0.16, 4);
+  ctx.shadowBlur = 0;
+
+  // 特效：螢光噴漆微粒
+  drawVesperEffects(ctx, cx, cy, size, time);
+}
+
+// 10. Archie (禁忌古籍藏書家): 金絲圓框眼鏡、深棕學者長袍、手捧金邊古籍/手抄卷、金色墨光微粒
+function drawArchie(ctx: any, cx: number, cy: number, size: number, color: string, time: number, headOffsetX: number, headOffsetY: number, bodyScaleY: number) {
+  // 黑色皮鞋
+  ctx.fillStyle = '#1b1b1b';
+  ctx.fillRect(cx - size * 0.16, cy + size * 0.22, size * 0.11, size * 0.16);
+  ctx.fillRect(cx + size * 0.05, cy + size * 0.22, size * 0.11, size * 0.16);
+
+  // 深棕學者長袍 (Robe)
+  ctx.fillStyle = '#3e2723';
+  ctx.fillRect(cx - size * 0.2, cy - size * 0.12, size * 0.4, size * 0.38);
+  
+  // 長袍領口金邊
+  ctx.fillStyle = '#ffd54f';
+  ctx.fillRect(cx - size * 0.1, cy - size * 0.1, size * 0.2, 2);
+
+  // 手捧金邊古籍 (雙手)
+  ctx.fillStyle = '#8d6e63';
+  ctx.fillRect(cx - size * 0.1, cy + size * 0.05, size * 0.2, size * 0.12);
+  // 書頁
+  ctx.fillStyle = '#fff9c4';
+  ctx.fillRect(cx - size * 0.08, cy + size * 0.06, size * 0.16, size * 0.1);
+  // 金邊裝飾
+  ctx.strokeStyle = '#ffd54f';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(cx - size * 0.1, cy + size * 0.05, size * 0.2, size * 0.12);
+
+  // 臉部膚色
+  ctx.fillStyle = '#f0be9d';
+  ctx.beginPath();
+  ctx.arc(cx + headOffsetX, cy - size * 0.22 + headOffsetY, size * 0.13, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 灰白長髮
+  ctx.fillStyle = '#9e9e9e';
+  ctx.beginPath();
+  ctx.arc(cx + headOffsetX, cy - size * 0.26 + headOffsetY, size * 0.14, Math.PI * 0.8, Math.PI * 2.2);
+  ctx.fill();
+  // 長鬍子
+  ctx.fillStyle = '#bdbdbd';
+  ctx.fillRect(cx + headOffsetX - 4, cy - size * 0.17 + headOffsetY, 8, 10);
+
+  // 金絲圓框眼鏡
+  ctx.strokeStyle = '#ffd54f';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx + headOffsetX - 4, cy - size * 0.22 + headOffsetY, 3, 0, Math.PI * 2);
+  ctx.arc(cx + headOffsetX + 4, cy - size * 0.22 + headOffsetY, 3, 0, Math.PI * 2);
+  ctx.stroke();
+  // 眼鏡橋
+  ctx.beginPath();
+  ctx.moveTo(cx + headOffsetX - 1, cy - size * 0.22 + headOffsetY);
+  ctx.lineTo(cx + headOffsetX + 1, cy - size * 0.22 + headOffsetY);
+  ctx.stroke();
+
+  // 特效：金色墨光微粒
+  drawArchieEffects(ctx, cx, cy, size, time);
+}
+
+// 11. Jax / 預設 (暗巷情報商): 暗巷帽T、亮黃護目鏡、斜挎信用點晶片包
 function drawJax(ctx: any, cx: number, cy: number, size: number, color: string, time: number) {
   // 街頭帆布鞋
   ctx.fillStyle = '#101720';

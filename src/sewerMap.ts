@@ -160,6 +160,15 @@ export function setupSubSectorZero(game: any): void {
       description: game.language === 'zh' ? '【傳奇密寶】佐格最高特權金鑰。持卡至任何終端機操作可發動【DISARM COLLAR】，永久解除項圈 100 步限制！' : '[LEGENDARY RELIC] Governor Master Keycard. Operate at any terminal to execute [DISARM COLLAR], permanently lifting the 100-step collar limit!',
       iconColor: '#ffd700',
     },
+    {
+      id: 'item-unburnt-folio',
+      name: game.language === 'zh' ? '未焚毀的古籍殘頁' : 'The Unburnt Folio',
+      itemType: 'KEYCARD',
+      x: 8,
+      y: 22,
+      description: game.language === 'zh' ? '從佐格焚化爐中倖存的十四行詩古籍殘頁。交給 Sector 1 的藏書家 Archie 可強化心靈意志、提升項圈步數上限。' : 'A surviving sonnet folio from Tzorg incinerators. Give to Archie the Archivist in Sector 1 to strengthen mental will and increase collar step limit.',
+      iconColor: '#ffd166',
+    },
   ];
   game.npcs = [];
   game.visibleTiles.clear();

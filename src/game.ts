@@ -1,24 +1,4 @@
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard, Language, LaserBeam } from './types';
-
-export interface PushableBlock {
-  id: string;
-  x: number;
-  y: number;
-  name: string;
-  nameZh?: string;
-  blockType?: 'disguised_wall' | 'crate' | 'server_rack';
-  secretDoor?: { x: number; y: number };
-  revealed: boolean;
-  revealedTile?: number | string;
-  secretSurprise?: {
-    type: 'credits' | 'energy' | 'item';
-    amount?: number;
-    item?: GroundItem;
-    messageZh?: string;
-    messageEn?: string;
-    claimed?: boolean;
-  };
-}
+import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard, Language, LaserBeam, PushableBlock } from './types';
 import { buildSector1Map, buildSector2Map, calculateFOV, disableForcefield, getTile, isWalkable, toggleDoor } from './map';
 import { hasSavedGame, saveGameState, loadGameState } from './saveLoad';
 import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise, installAugment, cycleWeapon, createQuantumAnnihilator } from './entities';
@@ -91,6 +71,19 @@ export class GameEngine {
   zeroOneWeaponForged: boolean = false;
   forcefieldDisabled: boolean = false;
   isCollarDisarmed: boolean = false;
+  graffitiMuralComplete: boolean = false;
+  poetryQuestComplete: boolean = false;
+  isGearConfiscated: boolean = false;
+  confiscatedGear: any = null;
+  isCitadelHordeActive: boolean = false;
+  defeatCutscene: {
+    stage: 'swarm' | 'blur_out' | 'wake_up';
+    startTime: number;
+    stageStartTime: number;
+    duration: number;
+    playerDownPos: { x: number; y: number };
+    swarmRobots: Robot[];
+  } | null = null;
   private turnCounter: number = 0;
   private lastBroadcastTurn: number = 0;
   private lastBroadcastIndex: number = 0;
@@ -570,6 +563,16 @@ export class GameEngine {
         amount: 1,
         iconColor: '#00f0ff',
       },
+      {
+        id: 'item-chromatic-aerosol',
+        name: '超光譜量子色劑',
+        itemType: 'KEYCARD',
+        x: 23,
+        y: 5,
+        description: '超光譜量子色劑：Vesper 的塗鴉創作材料。',
+        amount: 1,
+        iconColor: '#ff00ff',
+      },
     ];
   }
 
@@ -622,20 +625,38 @@ export class GameEngine {
     if (id === 'sector-1') {
       return [
         {
+          id: 'crate-detention-grate',
+          x: 36,
+          y: 4,
+          initialX: 36,
+          initialY: 4,
+          sectorId: 'sector-1',
+          name: 'Loose Ventilation Metal Grate',
+          nameZh: '鬆動的通風金屬柵板',
+          blockType: 'crate',
+          secretDoor: { x: 36, y: 3, revealedTile: 4 },
+          revealed: false,
+        },
+        {
           id: 'crate-sec1-secret',
           x: 16,
           y: 18,
+          initialX: 16,
+          initialY: 18,
+          sectorId: 'sector-1',
           name: 'Disguised Armor Wall Panel',
           nameZh: '偽裝滑動裝甲牆',
           blockType: 'disguised_wall',
-          secretDoor: { x: 16, y: 17 },
+          secretDoor: { x: 16, y: 17, revealedTile: 4 },
           revealed: false,
-          revealedTile: 4,
         },
         {
           id: 'crate-sec1-alley',
           x: 20,
           y: 15,
+          initialX: 20,
+          initialY: 15,
+          sectorId: 'sector-1',
           name: 'Reinforced Cargo Crate',
           nameZh: '加固物流重裝箱',
           blockType: 'crate',
@@ -651,6 +672,9 @@ export class GameEngine {
           id: 'crate-sec1-rack',
           x: 33,
           y: 23,
+          initialX: 33,
+          initialY: 23,
+          sectorId: 'sector-1',
           name: 'Data Relay Server Rack',
           nameZh: '數據中繼伺服器機櫃',
           blockType: 'server_rack',
@@ -670,17 +694,22 @@ export class GameEngine {
           id: 'crate-sec2-secret',
           x: 26,
           y: 5,
+          initialX: 26,
+          initialY: 5,
+          sectorId: 'sector-2',
           name: 'Movable Industrial Wall Section',
           nameZh: '偽裝冷卻重裝牆',
           blockType: 'disguised_wall',
-          secretDoor: { x: 27, y: 5 },
+          secretDoor: { x: 27, y: 5, revealedTile: 4 },
           revealed: false,
-          revealedTile: 4,
         },
         {
           id: 'crate-sec2-rack',
           x: 18,
           y: 16,
+          initialX: 18,
+          initialY: 16,
+          sectorId: 'sector-2',
           name: 'Overmind Sub-Core Server Rack',
           nameZh: '主腦子核心伺服機櫃',
           blockType: 'server_rack',
@@ -700,6 +729,9 @@ export class GameEngine {
           id: 'crate-sec2-crate',
           x: 16,
           y: 18,
+          initialX: 16,
+          initialY: 18,
+          sectorId: 'sector-2',
           name: 'Heavy Fabrication Container',
           nameZh: '重型機件製造貨櫃',
           blockType: 'crate',
@@ -719,17 +751,22 @@ export class GameEngine {
           id: 'crate-sewer-secret',
           x: 29,
           y: 5,
+          initialX: 29,
+          initialY: 5,
+          sectorId: 'sub-sector-0',
           name: 'Loose Drainage Brick Wall',
           nameZh: '鬆動的下水道石砌牆',
           blockType: 'disguised_wall',
-          secretDoor: { x: 30, y: 5 },
+          secretDoor: { x: 30, y: 5, revealedTile: 4 },
           revealed: false,
-          revealedTile: 4,
         },
         {
           id: 'crate-sewer-crate',
           x: 10,
           y: 10,
+          initialX: 10,
+          initialY: 10,
+          sectorId: 'sub-sector-0',
           name: 'Reinforced Drainage Cargo Crate',
           nameZh: '加固下水道儲運箱',
           blockType: 'crate',
@@ -753,6 +790,9 @@ export class GameEngine {
           id: 'crate-citadel-rack',
           x: 12,
           y: 15,
+          initialX: 12,
+          initialY: 15,
+          sectorId: 'sector-citadel',
           name: 'Citadel Mainframe Buffer Unit',
           nameZh: '堡壘主機緩衝機櫃',
           blockType: 'server_rack',
@@ -868,15 +908,15 @@ export class GameEngine {
 
   private applyRevealedPushableBlocks(): void {
     for (const block of this.pushableBlocks) {
-      if (block.revealed && block.secretDoor && block.revealedTile !== undefined) {
+      if (block.revealed && block.secretDoor && block.secretDoor.revealedTile !== undefined) {
         const tile = getTile(this.map, { x: block.secretDoor.x, y: block.secretDoor.y });
-        if (tile !== undefined && tile !== block.revealedTile) {
+        if (tile !== undefined && tile !== block.secretDoor.revealedTile) {
           // Set the tile to revealedTile (4 = DOOR_OPEN)
           const mapData = (this.map as any).tiles || (this.map as any).grid;
           if (Array.isArray(mapData)) {
             const row = mapData[block.secretDoor.y];
             if (Array.isArray(row)) {
-              row[block.secretDoor.x] = block.revealedTile;
+              row[block.secretDoor.x] = block.secretDoor.revealedTile;
             }
           }
         }
@@ -1098,7 +1138,8 @@ export class GameEngine {
       this.disarmCollar();
       return;
     }
-    (this.player as any).checkInTimer = 100;
+    const maxTimer = (this.player as any).checkInMaxTimer || 100;
+    (this.player as any).checkInTimer = maxTimer;
     this.checkInAlertActive = false;
     this.securityLevel = 'CLEAR' as SecurityLevel;
     for (const r of this.robots) {
@@ -1109,11 +1150,11 @@ export class GameEngine {
     }
     this.pushMessage(
       this.language === 'zh'
-        ? '神經項圈簽到成功：警報已解除，計時器重置為 100 步，巡邏單位恢復常規模式。'
-        : 'Neural collar check-in successful: Alert cleared, timer reset to 100 steps, patrol units returning to routine.',
+        ? `神經項圈簽到成功：警報已解除，計時器重置為 ${maxTimer} 步，巡邏單位恢復常規模式。`
+        : `Neural collar check-in successful: Alert cleared, timer reset to ${maxTimer} steps, patrol units returning to routine.`,
       'success'
     );
-    this.pushFloatingText(this.player.x, this.player.y, '✔ CHECKED IN (100)', '#00ff88');
+    this.pushFloatingText(this.player.x, this.player.y, `✔ CHECKED IN (${maxTimer})`, '#00ff88');
     soundFX.pickup();
     this.render();
   }
@@ -1283,7 +1324,9 @@ export class GameEngine {
   render(): void {
     try {
     this.fx.update(16);
+    this.updateDefeatCutscene(Date.now());
     (this.renderer as any).fx = this.fx;
+    (this.renderer as any).defeatCutscene = this.defeatCutscene;
     (this.renderer as any).activeWaypoint = this.activeWaypoint;
     const bossNear = this.robots.some((r) => r.isAlive && r.robotType === 'EXTERMINATOR' && Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 9);
     const hostileNearby = this.robots.some(
@@ -1310,6 +1353,7 @@ export class GameEngine {
     (this.renderer as any).bigMapSelectedSector = this.bigMapSelectedSector;
     (this.renderer as any).storyArchiveSelectedIndex = this.storyArchiveSelectedIndex;
     (this.renderer as any).pushableBlocks = this.pushableBlocks;
+    (this.renderer as any).graffitiMuralComplete = this.graffitiMuralComplete;
     (this.player as any).victory = this.victory;
     (this.player as any).hasDefeatedBoss = this.robots.some((r) => !r.isAlive && isBossRobot(r));
     (this.player as any).storyLogs = this.storyLogs;
@@ -1343,6 +1387,15 @@ export class GameEngine {
   }
 
   handleKeyDown(key: string): void {
+    if (this.defeatCutscene) {
+      if (key === 'Escape' || key === 'Esc' || key === ' ' || key === 'Space' || key === 'Enter') {
+        this.executeDetentionRelocation(true);
+        this.defeatCutscene = null;
+        this.render();
+        return;
+      }
+      return;
+    }
     if (this.activeBreachSession) {
       if (key === 'Escape' || key === 'Esc') {
         this.activeBreachSession = null;
@@ -1551,8 +1604,14 @@ export class GameEngine {
         const weapon = cycleWeapon(this.player);
         soundFX.terminal();
         const isSup = (weapon as any).isSuppressed;
-        this.pushFloatingText(this.player.x, this.player.y, weapon.name, isSup ? '#00ff88' : '#00f0ff');
-        this.pushMessage('ARMAMENT SWITCH: Equipped [' + weapon.name + '] (' + weapon.power + ' DMG, ' + weapon.energyCost + ' EN' + (isSup ? ' | SUPPRESSED' : '') + ').', 'info');
+        const isZh = this.language === 'zh';
+        const wName = isZh ? ((weapon as any).nameZh || weapon.name) : weapon.name;
+        this.pushFloatingText(this.player.x, this.player.y, wName, isSup ? '#00ff88' : '#00f0ff');
+        this.pushMessage(
+          isZh
+            ? '【武器切換】已裝備 [' + wName + ']（威力: ' + weapon.power + ' DMG，耗能: ' + weapon.energyCost + ' EN' + (isSup ? ' | 靜音消音' : '') + '）。'
+            : 'ARMAMENT SWITCH: Equipped [' + weapon.name + '] (' + weapon.power + ' DMG, ' + weapon.energyCost + ' EN' + (isSup ? ' | SUPPRESSED' : '') + ').'
+        , 'info');
         this.render();
         return;
       }
@@ -1719,6 +1778,59 @@ export class GameEngine {
           }
         }
 
+        if (npc.id === 'npc-vesper') {
+          const inventory = (this.player as any).inventory;
+          if (Array.isArray(inventory)) {
+            const aerosolIndex = inventory.findIndex((it: any) => it?.id === 'item-chromatic-aerosol');
+            if (aerosolIndex !== -1 && !this.graffitiMuralComplete) {
+              inventory.splice(aerosolIndex, 1);
+              this.graffitiMuralComplete = true;
+              const p = this.player as any;
+              if (!p.augments) p.augments = {};
+              p.augments['GRAFFITI_POWER_BOOST'] = true;
+              if (!p.graffitiBuffApplied) {
+                if (this.player.equippedWeapon) {
+                  this.player.equippedWeapon.power = (this.player.equippedWeapon.power || 0) + 5;
+                }
+                p.critChance = (p.critChance || 0) + 0.15;
+                p.graffitiBuffApplied = true;
+              }
+              soundFX.pickup();
+              this.pushFloatingText(this.player.x, this.player.y, 'MURAL COMPLETE!', '#ff00ff');
+              this.pushMessage(
+                isZh
+                  ? 'Vesper: 感謝你，雷文。這面牆現在有了靈魂。你的攻擊力與暴擊率提升了！'
+                  : 'Vesper: Thank you, Raven. This wall now has a soul. Your attack power and crit chance increased!',
+                'success'
+              );
+              this.updateNPCDialogues();
+            }
+          }
+        }
+
+        if (npc.id === 'npc-archie') {
+          const inventory = (this.player as any).inventory;
+          if (Array.isArray(inventory)) {
+            const folioIndex = inventory.findIndex((it: any) => it?.id === 'item-unburnt-folio');
+            if (folioIndex !== -1 && !this.poetryQuestComplete) {
+              inventory.splice(folioIndex, 1);
+              this.poetryQuestComplete = true;
+              const p = this.player as any;
+              p.checkInMaxTimer = (p.checkInMaxTimer || 100) + 25;
+              p.checkInTimer = p.checkInMaxTimer;
+              soundFX.pickup();
+              this.pushFloatingText(this.player.x, this.player.y, 'POETRY RESTORED!', '#ffea00');
+              this.pushMessage(
+                isZh
+                  ? 'Archie: 多謝你幫我找回詩集！我的簽到時間上限提升了 25 步，計時器已重置。'
+                  : 'Archie: Thanks for recovering my poetry folio! My check-in timer limit increased by 25 steps and the timer has been reset.',
+                'success'
+              );
+              this.updateNPCDialogues();
+            }
+          }
+        }
+
         if (nextIndex < list.length) {
           this.activeDialogue.textIndex = nextIndex;
           soundFX.terminal();
@@ -1771,8 +1883,14 @@ export class GameEngine {
       const weapon = cycleWeapon(this.player);
       soundFX.terminal();
       const isSup = (weapon as any).isSuppressed;
-      this.pushFloatingText(this.player.x, this.player.y, weapon.name, isSup ? '#00ff88' : '#00f0ff');
-      this.pushMessage('ARMAMENT SWITCH: Equipped [' + weapon.name + '] (' + weapon.power + ' DMG, ' + weapon.energyCost + ' EN' + (isSup ? ' | SUPPRESSED' : '') + ').', 'info');
+      const isZh = this.language === 'zh';
+      const wName = isZh ? ((weapon as any).nameZh || weapon.name) : weapon.name;
+      this.pushFloatingText(this.player.x, this.player.y, wName, isSup ? '#00ff88' : '#00f0ff');
+      this.pushMessage(
+        isZh
+          ? '【武器切換】已裝備 [' + wName + ']（威力: ' + weapon.power + ' DMG，耗能: ' + weapon.energyCost + ' EN' + (isSup ? ' | 靜音消音' : '') + '）。'
+          : 'ARMAMENT SWITCH: Equipped [' + weapon.name + '] (' + weapon.power + ' DMG, ' + weapon.energyCost + ' EN' + (isSup ? ' | SUPPRESSED' : '') + ').'
+      , 'info');
       this.render();
       return;
     } else if (key === 'c' || key === 'C') {
@@ -1787,7 +1905,68 @@ export class GameEngine {
       this.tick();
       return;
     } else if (key === 'e' || key === 'E') {
+      // Check for pushable blocks with secret doors nearby
       const dirs: [number, number][] = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+      let foundBlock: PushableBlock | null = null;
+      for (const [ox, oy] of dirs) {
+        const tx = this.player.x + ox;
+        const ty = this.player.y + oy;
+        const block = this.pushableBlocks.find((b) => b.x === tx && b.y === ty && !b.revealed && b.secretDoor);
+        if (block) {
+          foundBlock = block;
+          break;
+        }
+      }
+
+      if (foundBlock) {
+        const moveDirs: [number, number][] = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+        let moved = false;
+        for (const [mx, my] of moveDirs) {
+          const nx = foundBlock.x + mx;
+          const ny = foundBlock.y + my;
+          const mapWidth = Number((this.map as any).width) || 0;
+          const mapHeight = Number((this.map as any).height) || 0;
+          if (nx < 0 || nx >= mapWidth || ny < 0 || ny >= mapHeight) continue;
+          const targetTile = getTile(this.map, { x: nx, y: ny });
+          if (targetTile === undefined || !isWalkable(targetTile)) continue;
+          if (this.robots.some((r) => r.isAlive && r.x === nx && r.y === ny)) continue;
+          if (this.npcs.some((n) => n.isAlive && n.x === nx && n.y === ny)) continue;
+          if (this.pushableBlocks.some((b) => b !== foundBlock && b.x === nx && b.y === ny)) continue;
+
+          foundBlock.x = nx;
+          foundBlock.y = ny;
+          foundBlock.revealed = true;
+
+          if (foundBlock.secretDoor && foundBlock.secretDoor.revealedTile !== undefined) {
+            const mapData = (this.map as any).tiles || (this.map as any).grid;
+            if (Array.isArray(mapData)) {
+              const row = mapData[foundBlock.secretDoor.y];
+              if (Array.isArray(row)) {
+                row[foundBlock.secretDoor.x] = foundBlock.secretDoor.revealedTile;
+              }
+            }
+          }
+
+          soundFX.victory();
+          this.pushFloatingText(foundBlock.secretDoor?.x ?? foundBlock.x, foundBlock.secretDoor?.y ?? foundBlock.y, 'VENT OPEN!', '#00ff88');
+          this.pushMessage(
+            this.language === 'zh'
+              ? `【拆開柵板】你拆開了【${foundBlock.nameZh || foundBlock.name}】，顯現出通風暗門！`
+              : `[PRY OPEN] You pried open the [${foundBlock.name}], revealing the ventilation secret door!`,
+            'success'
+          );
+          this.gainExp(50, 'SECRET_DISCOVERY');
+          moved = true;
+          break;
+        }
+
+        if (moved) {
+          this.tick();
+          this.render();
+          return;
+        }
+      }
+
       for (const [ox, oy] of dirs) {
         const tx = this.player.x + ox;
         const ty = this.player.y + oy;
@@ -1992,11 +2171,33 @@ export class GameEngine {
         const blockingHazard = this.hazards.find((h) => !h.exploded && h.x === bx && h.y === by);
         const blockingBlock = this.pushableBlocks.find((b) => b !== pushableBlock && b.x === bx && b.y === by);
 
-        if (inBounds && targetWalkable && !blockingRobot && !blockingNPC && !blockingHazard && !blockingBlock) {
+        // Special case: Detention Grate pushed Up from below — allow sliding right instead
+        let finalBx = bx;
+        let finalBy = by;
+        let allowPush = inBounds && targetWalkable && !blockingRobot && !blockingNPC && !blockingHazard && !blockingBlock;
+
+        if (pushableBlock.id === 'crate-detention-grate' && dx === 0 && dy === -1 && !allowPush) {
+          const altX = pushableBlock.x + 1;
+          const altY = pushableBlock.y;
+          const altInBounds = altX >= 0 && altX < mapWidth && altY >= 0 && altY < mapHeight;
+          const altTile = altInBounds ? getTile(this.map, { x: altX, y: altY }) : undefined;
+          const altWalkable = altTile !== undefined && isWalkable(altTile);
+          const altBlockingRobot = this.robots.find((r) => r.isAlive && r.x === altX && r.y === altY);
+          const altBlockingNPC = this.npcs.find((n) => n.isAlive && n.x === altX && n.y === altY);
+          const altBlockingBlock = this.pushableBlocks.find((b) => b !== pushableBlock && b.x === altX && b.y === altY);
+
+          if (altInBounds && altWalkable && !altBlockingRobot && !altBlockingNPC && !altBlockingBlock) {
+            finalBx = altX;
+            finalBy = altY;
+            allowPush = true;
+          }
+        }
+
+        if (allowPush) {
           const oldX = pushableBlock.x;
           const oldY = pushableBlock.y;
-          pushableBlock.x = bx;
-          pushableBlock.y = by;
+          pushableBlock.x = finalBx;
+          pushableBlock.y = finalBy;
           this.player.x = nx;
           this.player.y = ny;
           soundFX.door();
@@ -2019,7 +2220,7 @@ export class GameEngine {
             if (Array.isArray(mapData)) {
               const row = mapData[sd.y];
               if (Array.isArray(row)) {
-                row[sd.x] = pushableBlock.revealedTile ?? 4;
+                row[sd.x] = sd.revealedTile ?? 4;
               }
             }
             soundFX.victory();
@@ -2175,6 +2376,9 @@ export class GameEngine {
     // Update NPC autonomous behavior
     this.updateNPCs();
 
+    // Citadel Horde endless reinforcement logic
+    this.updateCitadelHorde();
+
     // Check environmental observations (conveyor, plasma barrier, bionic canopy, landmarks)
     this.checkEnvironmentalObservations();
 
@@ -2290,9 +2494,7 @@ export class GameEngine {
         }
 
         if (this.player.hp <= 0) {
-          this.player.isAlive = false;
-          soundFX.powerDown();
-          this.pushMessage('MISSION FAILED: Operative neutralized by Tzorg forces.', 'danger');
+          this.handlePlayerDefeat();
         }
       }
     }
@@ -2370,14 +2572,17 @@ export class GameEngine {
   private useEMPGrenade(): void {
     if ((this.player.consumables?.empGrenades ?? 0) > 0) {
       this.player.consumables!.empGrenades -= 1;
+      soundFX.emp();
       soundFX.explosion();
       const empTileSize = (this.renderer as any)?.tileSize || 48;
+      const blastRadius = 4;
+      const ringRadius = blastRadius * empTileSize + 25;
       (this.fx as any).spawnEmpRing(
         this.player.x * empTileSize + empTileSize / 2,
-        this.player.y * empTileSize + empTileSize / 2
+        this.player.y * empTileSize + empTileSize / 2,
+        ringRadius
       );
       (this.fx as any).triggerShake(6);
-      const blastRadius = 4;
       let stunnedCount = 0;
 
       for (const r of this.robots) {
@@ -2387,13 +2592,22 @@ export class GameEngine {
           r.stunnedTurns = 4;
           r.aiState = 'idle';
           this.pushFloatingText(r.x, r.y, '⚡STUNNED (4T)⚡', '#00f0ff');
+          (this.fx as any).spawnSparks(
+            r.x * empTileSize + empTileSize / 2,
+            r.y * empTileSize + empTileSize / 2,
+            '#00f0ff',
+            12
+          );
           stunnedCount++;
         }
       }
 
-      this.pushFloatingText(this.player.x, this.player.y, 'EMP BLAST!', '#c77dff');
+      this.pushFloatingText(this.player.x, this.player.y, '⚡EMP SHOCKWAVE⚡', '#c77dff');
+      const isZh = this.language === 'zh';
       this.pushMessage(
-        `EMP Disruptor detonated! ${stunnedCount} robot(s) short-circuited for 4 turns!`,
+        isZh
+          ? `【EMP 震撼彈引爆】大範圍電磁脈衝震波席捲周遭！${stunnedCount} 隻機器人電路短路癱瘓 4 回合！`
+          : `EMP Disruptor detonated! Electromagnetic shockwave short-circuited ${stunnedCount} robot(s) for 4 turns!`,
         'success'
       );
       this.tick();
@@ -2508,13 +2722,13 @@ export class GameEngine {
     canister.exploded = true;
     canister.hp = 0;
     soundFX.explosion();
+    soundFX.emp();
     this.pushFloatingText(canister.x, canister.y, 'PLASMA DETONATION!', '#ff6d00');
     const canisterTileSize = (this.renderer as any)?.tileSize || 48;
-    (this.fx as any).spawnExplosion(
-      canister.x * canisterTileSize + canisterTileSize / 2,
-      canister.y * canisterTileSize + canisterTileSize / 2,
-      26
-    );
+    const centerX = canister.x * canisterTileSize + canisterTileSize / 2;
+    const centerY = canister.y * canisterTileSize + canisterTileSize / 2;
+    const blastRadius = canisterTileSize * 2 + 9;
+    (this.fx as any).spawnPlasmaCanisterExplosion(centerX, centerY, blastRadius);
     (this.fx as any).triggerShake(10);
 
     for (const r of this.robots) {
@@ -2537,9 +2751,290 @@ export class GameEngine {
       this.pushFloatingText(this.player.x, this.player.y, '-20', '#ff1744');
       this.pushMessage('Plasma explosion! -20 HP from blast damage.', 'danger');
       if (this.player.hp <= 0) {
-        this.player.isAlive = false;
-        soundFX.powerDown();
-        this.pushMessage('MISSION FAILED: Operative killed by plasma explosion.', 'danger');
+        this.handlePlayerDefeat();
+      }
+    }
+  }
+
+  handlePlayerDefeat(instant: boolean = (typeof window === 'undefined')): void {
+    if (instant) {
+      this.executeDetentionRelocation(true);
+      return;
+    }
+    this.startDefeatCutscene();
+  }
+
+  private executeDetentionRelocation(showMessages: boolean = true): void {
+    // Confiscate gear
+    const p = this.player as any;
+    this.confiscatedGear = {
+      weapons: Array.isArray(p.weapons) ? [...p.weapons] : [],
+      equippedWeapon: p.equippedWeapon ? { ...p.equippedWeapon } : null,
+      inventory: Array.isArray(p.inventory) ? [...p.inventory] : [],
+      consumables: p.consumables ? { ...p.consumables } : null,
+      augments: p.augments ? { ...p.augments } : null,
+      equippedShield: p.equippedShield ? { ...p.equippedShield } : null,
+    };
+    this.isGearConfiscated = true;
+
+    // Clear player gear
+    p.weapons = [];
+    p.equippedWeapon = null;
+    p.inventory = [];
+    p.consumables = { medkits: 0, batteries: 0, empGrenades: 0 };
+    p.augments = {};
+    p.equippedShield = null;
+
+    // Revive at 40% HP
+    this.player.hp = Math.round(this.player.maxHp * 0.4);
+    this.player.isAlive = true;
+
+    // Clear alert and reset robots
+    this.securityLevel = 'CLEAR' as SecurityLevel;
+    this.checkInAlertActive = false;
+    for (const r of this.robots) {
+      if (!r.isAlive) continue;
+      r.aiState = 'patrol';
+      r.targetPos = null;
+      (r as any).pursuitTurns = 0;
+    }
+
+    // Switch to sector-1 detention cell
+    this.switchSector('sector-1');
+    this.resetDetentionCell();
+    this.player.x = 35;
+    this.player.y = 5;
+    this.updateFOV();
+
+    // Spawn confiscated locker in guard room
+    const lockerIndex = this.groundItems.findIndex((it) => it.id === 'item-confiscated-locker');
+    const lockerItem: GroundItem = {
+      id: 'item-confiscated-locker',
+      name: 'Tzorg Evidence Locker',
+      itemType: 'KEYCARD' as const,
+      x: 32,
+      y: 6,
+      description: '佐格證物保管箱：內含被扣押的個人裝備與武器。',
+      amount: 1,
+      iconColor: '#ff2a4b',
+    };
+    if (lockerIndex !== -1) {
+      this.groundItems[lockerIndex] = lockerItem;
+    } else {
+      this.groundItems.push(lockerItem);
+    }
+    // Sync to sector-1 ground items
+    if (this.sectorGroundItems['sector-1']) {
+      const secLockerIndex = this.sectorGroundItems['sector-1'].findIndex((it) => it.id === 'item-confiscated-locker');
+      if (secLockerIndex !== -1) {
+        this.sectorGroundItems['sector-1'][secLockerIndex] = lockerItem;
+      } else {
+        this.sectorGroundItems['sector-1'].push(lockerItem);
+      }
+    }
+
+    if (showMessages) {
+      this.pushFloatingText(this.player.x, this.player.y, 'DETENTION CELL', '#ff2a4b');
+      this.pushMessage(
+        this.language === 'zh'
+          ? '【禁閉室】你被佐格安保單位扣押。所有裝備已被移送至守衛室 (32, 6) 證物保管箱。'
+          : '[DETENTION CELL] You have been detained by Tzorg security. All gear has been moved to the Evidence Locker at Guard Room (32, 6).',
+        'danger'
+      );
+      this.pushMessage(
+        this.language === 'zh'
+          ? '【脫逃提示】右上角 (36, 4) 為【鬆動的通風金屬柵板】！可按 [E] 拆開或推動它以顯現通風暗門！'
+          : '[ESCAPE HINT] Top-right (36, 4) is a [Loose Ventilation Metal Grate]! Press [E] to pry it open or push it to reveal the ventilation secret door!',
+        'info'
+      );
+      this.pushFloatingText(36, 4, 'LOOSE VENT [E]', '#00ff88');
+    }
+    this.render();
+  }
+
+  private startDefeatCutscene(): void {
+    this.player.isAlive = false;
+    (this.player as any).isWeaponDrawn = false;
+    this.laserBeams = [];
+    soundFX.powerDown();
+
+    // Find nearest robots for swarm
+    const swarmRobots: Robot[] = [];
+    const sortedRobots = this.robots
+      .filter((r) => r.isAlive)
+      .sort((a, b) => {
+        const distA = Math.abs(a.x - this.player.x) + Math.abs(a.y - this.player.y);
+        const distB = Math.abs(b.x - this.player.x) + Math.abs(b.y - this.player.y);
+        return distA - distB;
+      });
+    
+    const px = this.player.x;
+    const py = this.player.y;
+    // Define adjacent positions for surrounding
+    const adjacentPositions: { x: number; y: number }[] = [
+      { x: px + 1, y: py },
+      { x: px - 1, y: py },
+      { x: px, y: py + 1 },
+      { x: px, y: py - 1 },
+      { x: px + 1, y: py + 1 },
+      { x: px - 1, y: py - 1 },
+      { x: px + 1, y: py - 1 },
+      { x: px - 1, y: py + 1 }
+    ];
+
+    let posIndex = 0;
+    for (const r of sortedRobots.slice(0, 4)) {
+      const dist = Math.abs(r.x - px) + Math.abs(r.y - py);
+      if (dist <= 10) {
+        // Find a valid adjacent position
+        let targetPos = null;
+        while (posIndex < adjacentPositions.length) {
+          const candidate = adjacentPositions[posIndex];
+          const tile = getTile(this.map, candidate);
+          const isTileWalkable = tile !== undefined && isWalkable(tile);
+          const isOccupied = this.robots.some(other => other.isAlive && other !== r && other.x === candidate.x && other.y === candidate.y);
+          
+          if (isTileWalkable && !isOccupied) {
+            targetPos = candidate;
+            posIndex++;
+            break;
+          }
+          posIndex++;
+        }
+        
+        if (targetPos) {
+          r.x = targetPos.x;
+          r.y = targetPos.y;
+        }
+      }
+      r.aiState = 'chase';
+      r.targetPos = { x: px, y: py };
+      swarmRobots.push(r);
+    }
+
+    this.defeatCutscene = {
+      stage: 'swarm',
+      startTime: Date.now(),
+      stageStartTime: Date.now(),
+      duration: 2200,
+      playerDownPos: { x: this.player.x, y: this.player.y },
+      swarmRobots,
+    };
+
+    this.pushMessage(
+      this.language === 'zh' ? '【被擊倒】佐格安保單位正在壓制你……' : '[DOWNED] Tzorg security units are subduing you...',
+      'danger'
+    );
+    this.render();
+  }
+
+  private updateDefeatCutscene(now: number): void {
+    if (!this.defeatCutscene) return;
+    const cs = this.defeatCutscene;
+    const elapsed = now - cs.stageStartTime;
+
+    if (cs.stage === 'swarm') {
+      if (elapsed >= cs.duration) {
+        cs.stage = 'blur_out';
+        cs.stageStartTime = now;
+        cs.duration = 1600;
+      }
+    } else if (cs.stage === 'blur_out') {
+      if (elapsed >= cs.duration) {
+        this.executeDetentionRelocation(false);
+        cs.stage = 'wake_up';
+        cs.stageStartTime = now;
+        cs.duration = 1400;
+      }
+    } else if (cs.stage === 'wake_up') {
+      if (elapsed >= cs.duration) {
+        this.defeatCutscene = null;
+        this.pushMessage(
+          this.language === 'zh'
+            ? '【脫逃提示】右上角 (36, 4) 為【鬆動的通風金屬柵板】！可按 [E] 拆開或推動它以顯現通風暗門！'
+            : '[ESCAPE HINT] Top-right (36, 4) is a [Loose Ventilation Metal Grate]! Press [E] to pry it open or push it to reveal the ventilation secret door!',
+          'info'
+        );
+        this.pushFloatingText(36, 4, 'LOOSE VENT [E]', '#00ff88');
+        this.render();
+      }
+    }
+  }
+
+  recoverConfiscatedGear(): void {
+    if (!this.isGearConfiscated || !this.confiscatedGear) return;
+    const p = this.player as any;
+    const gear = this.confiscatedGear;
+
+    // Restore weapons
+    if (Array.isArray(gear.weapons)) {
+      p.weapons = [...gear.weapons];
+    }
+    if (gear.equippedWeapon) {
+      p.equippedWeapon = { ...gear.equippedWeapon };
+    }
+
+    // Restore inventory
+    if (Array.isArray(gear.inventory)) {
+      p.inventory = [...gear.inventory];
+    }
+
+    // Restore consumables
+    if (gear.consumables) {
+      p.consumables = { ...gear.consumables };
+    }
+
+    // Restore augments
+    if (gear.augments) {
+      p.augments = { ...gear.augments };
+    }
+
+    // Restore shield
+    if (gear.equippedShield) {
+      p.equippedShield = { ...gear.equippedShield };
+    }
+
+    this.isGearConfiscated = false;
+    this.confiscatedGear = null;
+
+    // Remove the confiscated locker from ground items
+    const lockerIdx = this.groundItems.findIndex((it) => it.id === 'item-confiscated-locker');
+    if (lockerIdx !== -1) {
+      this.groundItems.splice(lockerIdx, 1);
+    }
+    if (this.sectorGroundItems['sector-1']) {
+      const secLockerIdx = this.sectorGroundItems['sector-1'].findIndex((it) => it.id === 'item-confiscated-locker');
+      if (secLockerIdx !== -1) {
+        this.sectorGroundItems['sector-1'].splice(secLockerIdx, 1);
+      }
+    }
+
+    soundFX.pickup();
+    this.pushFloatingText(this.player.x, this.player.y, 'GEAR RECOVERED!', '#00ff88');
+    this.pushMessage(
+      this.language === 'zh'
+        ? '【裝備找回】你從佐格證物保管箱中取回了所有被扣押的武器、裝備與補給品！'
+        : '[GEAR RECOVERED] You retrieved all confiscated weapons, equipment, and supplies from the Tzorg evidence locker!',
+      'success'
+    );
+    this.render();
+  }
+
+  resetDetentionCell(): void {
+    const block = this.pushableBlocks.find((b) => b.id === 'crate-detention-grate');
+    if (block) {
+      block.revealed = false;
+      block.x = 36;
+      block.y = 4;
+      // Restore the secret door tile back to wall
+      if (block.secretDoor) {
+        const mapData = (this.map as any).tiles || (this.map as any).grid;
+        if (Array.isArray(mapData)) {
+          const row = mapData[block.secretDoor.y];
+          if (Array.isArray(row)) {
+            row[block.secretDoor.x] = block.secretDoor.originalTile ?? 2; // WALL
+          }
+        }
       }
     }
   }
@@ -2548,6 +3043,12 @@ export class GameEngine {
     const itemIndex = this.groundItems.findIndex((it) => it.x === this.player.x && it.y === this.player.y);
     if (itemIndex !== -1) {
       const item = this.groundItems.splice(itemIndex, 1)[0];
+      if (item.id === 'item-confiscated-locker') {
+        this.recoverConfiscatedGear();
+        this.resetDetentionCell();
+        soundFX.pickup();
+        return;
+      }
       if (item.itemType === 'MEDKIT') {
         this.player.consumables!.medkits = (this.player.consumables?.medkits ?? 0) + (item.amount || 1);
         this.pushFloatingText(this.player.x, this.player.y, '+1 MEDKIT', '#00ff88');
@@ -2935,11 +3436,13 @@ export class GameEngine {
           'Raven, I\'m Jax. I run the black market in this district. You\'ve got a reputation.',
           'Tzorg\'s got a security memo out on you. They\'re scared of what you\'ll do to their mainframes.',
           'EMP shock modules are my specialty. Hit a patrol from behind while they\'re stunned for massive damage.',
+          'Watch out for those yellow-black striped plasma canisters. They flash blue before exploding. 2-tile radius, 70 damage to bots, but 20 self-damage if you\'re close.',
         ];
         (jax as any).dialogueZh = [
           '雷文，我是傑克斯。我經營這片區的黑市。你很有名氣。',
           '佐格對你發布了安全備忘錄。他們害怕你會對他們的主機做什麼。',
           'EMP 衝擊模組是我的專長。趁巡邏隊暈眩時從背後攻擊，可造成巨額傷害。',
+          '小心那些黃黑斜紋的電漿鋼瓶。爆炸前會閃藍光。範圍 2 格，對機器人造成 70 點傷害，但如果你靠太近會自傷 20 點。',
         ];
       }
     }
@@ -2974,6 +3477,62 @@ export class GameEngine {
           '雷文，我是 Zero-One。我是唯一能鍛造量子殲滅重砲的工程師。',
           `組件狀態：量子約束核心 ${coreStatus} | 主機矩陣晶片 ${chipStatus}。`,
           '一旦兩者齊備，我就能鍛造出能擊碎佐格第二階段護盾的武器。',
+        ];
+      }
+    }
+
+    // ---- npc-vesper ----
+    const vesper = this.npcs.find((n) => n.id === 'npc-vesper');
+    if (vesper) {
+      if (this.graffitiMuralComplete) {
+        vesper.dialogue = [
+          'Raven, the mural is complete. The chromatic aerosol sang when it touched the wall.',
+          'Your attacks now carry the weight of our resistance. +5 Power, +15% Crit Chance.',
+          'Art is not just decoration. It is a weapon against the grey silence of Tzorg.',
+        ];
+        (vesper as any).dialogueZh = [
+          '雷文，塗鴉完成了。超光譜量子色劑觸碰牆壁時在歌唱。',
+          '你的攻擊現在帶著我們反抗的重量。攻擊力 +5，暴擊率 +15%。',
+          '藝術不只是裝飾。它是對抗佐格灰色寂靜的武器。',
+        ];
+      } else {
+        vesper.dialogue = [
+          'Raven, I need the Chromatic Aerosol to finish my mural on the Sector 2 wall.',
+          'It is hidden somewhere in the Fab-Plex. Without it, the colors will fade.',
+          'Bring it to me and I will bless your weapon with the spirit of resistance.',
+        ];
+        (vesper as any).dialogueZh = [
+          '雷文，我需要超光譜量子色劑來完成我在第二區牆壁上的塗鴉。',
+          '它藏在製造複合體的某處。沒有它，顏色會褪去。',
+          '帶給我，我會用反抗的精神祝福你的武器。',
+        ];
+      }
+    }
+
+    // ---- npc-archie ----
+    const archie = this.npcs.find((n) => n.id === 'npc-archie');
+    if (archie) {
+      if (this.poetryQuestComplete) {
+        archie.dialogue = [
+          'Raven, my unburnt folio is safe. The words are whole again.',
+          'My check-in timer limit has increased by 25 steps. I can breathe easier now.',
+          'Poetry is memory. Memory is resistance. Thank you, operative.',
+        ];
+        (archie as any).dialogueZh = [
+          '雷文，我的未焚詩集安全了。文字重歸完整。',
+          '我的簽到時間上限提升了 25 步。現在我可以喘口氣了。',
+          '詩歌是記憶。記憶是反抗。謝謝你，特工。',
+        ];
+      } else {
+        archie.dialogue = [
+          'Raven, I lost my unburnt folio in the purge. It contains my last poems.',
+          'If you find it, bring it to me. It is hidden in the Sub-Sector Zero sewers.',
+          'In return, I will extend your check-in timer limit by 25 steps.',
+        ];
+        (archie as any).dialogueZh = [
+          '雷文，我在清剿中弄丟了我的未焚詩集。裡面有我最後的詩。',
+          '若你找到它，帶給我。它藏在零號下水道的深處。',
+          '作為回報，我會將你的簽到時間上限延長 25 步。',
         ];
       }
     }
@@ -3152,6 +3711,10 @@ export class GameEngine {
         this.endgameChoice = result.endgameChoice;
         (this.player as any).endgameChoice = result.endgameChoice;
         this.victory = true;
+        this.isCitadelHordeActive = false;
+        for (const r of this.robots) {
+          r.isAlive = false;
+        }
         soundFX.victory();
         this.pushMessage('OPERATION PROMETHEUS: [' + result.endgameChoice + '] protocol executed.', 'success');
         this.pushFloatingText(this.player.x, this.player.y, 'ENDGAME: ' + result.endgameChoice, '#00ff88');
@@ -3471,7 +4034,7 @@ export class GameEngine {
             description: 'Salvaged power capacitor from destroyed chassis.',
             amount: 1,
             iconColor: '#00f0ff',
-          });
+          } as GroundItem);
         } else if (dropRoll < 0.7) {
           this.groundItems.push({
             id: `drop-${Date.now()}`,
@@ -3482,7 +4045,7 @@ export class GameEngine {
             description: 'Tzorg encoded currency token.',
             amount: 45,
             iconColor: '#ffea00',
-          });
+          } as GroundItem);
         }
 
         this.pushFloatingText(hitRobot.x, hitRobot.y, '+50 CR', '#ffaa00');
@@ -3623,6 +4186,67 @@ export class GameEngine {
     }
 
     return null;
+  }
+
+  triggerCitadelHorde(): void {
+    this.isCitadelHordeActive = true;
+    const hordePositions: Position[] = [
+      { x: 19, y: 7 },
+      { x: 19, y: 21 },
+      { x: 25, y: 6 },
+      { x: 25, y: 22 },
+      { x: 31, y: 7 },
+      { x: 31, y: 21 },
+      { x: 18, y: 14 },
+      { x: 32, y: 13 },
+    ];
+    const types: RobotType[] = ['HUNTER_KILLER', 'SHOCK_ENFORCER', 'SCOUT_DRONE'];
+    const count = 8 + Math.floor(Math.random() * 3); // 8-10
+    for (let i = 0; i < count; i++) {
+      const pos = hordePositions[i % hordePositions.length];
+      const type = types[i % types.length];
+      const robot = createRobot(type, pos, [pos]);
+      robot.aiState = 'chase';
+      robot.targetPos = { x: this.player.x, y: this.player.y };
+      (robot as any).alertCooldown = 999;
+      this.robots.push(robot);
+    }
+    this.pushMessage('CITADEL HORDE: Reinforcements swarming the arena!', 'danger');
+    this.render();
+  }
+
+  private updateCitadelHorde(): void {
+    if (!this.isCitadelHordeActive || this.victory || this.map?.id !== 'sector-citadel') return;
+
+    // Lock all alive robots onto the player
+    for (const r of this.robots) {
+      if (!r.isAlive) continue;
+      r.aiState = 'chase';
+      r.targetPos = { x: this.player.x, y: this.player.y };
+    }
+
+    const aliveCount = this.robots.filter((r) => r.isAlive).length;
+    const shouldSpawn = aliveCount < 8 || (this.turnCounter % 2 === 0 && aliveCount < 14);
+    if (shouldSpawn) {
+      const spawnPositions: Position[] = [
+        { x: 19, y: 7 },
+        { x: 19, y: 21 },
+        { x: 25, y: 6 },
+        { x: 25, y: 22 },
+        { x: 31, y: 7 },
+        { x: 31, y: 21 },
+        { x: 18, y: 14 },
+        { x: 32, y: 13 },
+      ];
+      const types: RobotType[] = ['HUNTER_KILLER', 'SHOCK_ENFORCER', 'SCOUT_DRONE'];
+      const pos = spawnPositions[Math.floor(Math.random() * spawnPositions.length)];
+      const type = types[Math.floor(Math.random() * types.length)];
+      const robot = createRobot(type, pos, [pos]);
+      robot.aiState = 'chase';
+      robot.targetPos = { x: this.player.x, y: this.player.y };
+      (robot as any).alertCooldown = 999;
+      this.robots.push(robot);
+    }
   }
 }
 

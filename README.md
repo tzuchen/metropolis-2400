@@ -5,8 +5,8 @@
 | 環境 | 網址 | 說明 |
 | :--- | :--- | :--- |
 | **GitHub Pages** | [https://tzuchen.github.io/metropolis-2400/](https://tzuchen.github.io/metropolis-2400/) | 公開版，隨時可玩 |
-| **Tailscale 內網** | [http://100.88.14.123:5173/](http://100.88.14.123:5173/) | 專屬內網 (由 `metropolis-2400.service` 常駐運行) |
-| **區域網路 (LAN)** | [http://192.168.31.128:5173/](http://192.168.31.128:5173/) | 本地網路直連 |
+| **Tailscale 內網** | [http://100.88.14.123:2400/](http://100.88.14.123:2400/) | 專屬內網 (由 `metropolis-2400.service` 常駐運行) |
+| **區域網路 (LAN)** | [http://192.168.31.128:2400/](http://192.168.31.128:2400/) | 本地網路直連 |
 
 ![Live GitHub Pages Preview](live-gh-pages-preview.png)
 
@@ -258,7 +258,7 @@ npm install
 ### Development Server
 ```bash
 npm run dev
-# Open http://localhost:5173 in your browser
+# Open http://localhost:2400 in your browser
 ```
 
 ### Build & Production Preview
