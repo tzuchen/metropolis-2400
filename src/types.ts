@@ -277,4 +277,5 @@ export interface LaserBeam {
   beamType?: 'LASER' | 'ELEC' | 'PLASMA' | 'NEEDLE' | string;
   createdAt?: number;
   duration?: number;
+  targetRobot?: Robot;
 }

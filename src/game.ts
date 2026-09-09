@@ -835,6 +835,7 @@ export class GameEngine {
     this.pushFloatingText(this.player.x, this.player.y, 'CYBER DASH! -10EN', '#00ffff');
     soundFX.laser();
     this.tick();
+
     return true;
   }
 
@@ -1650,7 +1651,7 @@ export class GameEngine {
   tick(): void {
     const now = Date.now();
     this.floatingTexts = this.floatingTexts.filter((ft) => !ft.createdAt || now - ft.createdAt < 1500);
-    this.laserBeams = this.laserBeams.filter((b) => !b.createdAt || now - b.createdAt < (b.duration || 350));
+    this.laserBeams = this.laserBeams.filter((b) => !b.createdAt || now - b.createdAt < (b.duration || 220));
     if (!this.player.isAlive) {
       this.updateFOV();
       this.render();
@@ -1746,7 +1747,7 @@ export class GameEngine {
           to: { x: this.player.x, y: this.player.y },
           color: enemyBeamColor,
           createdAt: now,
-          duration: 350,
+          duration: 220,
           beamType: enemyBeamType,
           width: enemyBeamWidth,
         });
@@ -2670,15 +2671,17 @@ export class GameEngine {
       shakeIntensity = 10;
     }
 
-    this.laserBeams.push({
+    const playerBeam = {
       from: { x: this.player.x, y: this.player.y },
       to: { x: hitX, y: hitY },
       color: beamColor,
       createdAt: Date.now(),
-      duration: 350,
+      duration: 200,
       beamType: beamType,
       width: beamWidth,
-    });
+      targetRobot: hitRobot || undefined,
+    };
+    this.laserBeams.push(playerBeam);
 
     const hitTileSize = (this.renderer as any)?.tileSize || 48;
     (this.fx as any).spawnSparks(
@@ -2841,6 +2844,21 @@ export class GameEngine {
     }
 
     this.tick();
+
+    // Update beam and floating text coordinates if the hit robot moved during tick
+    if (hitRobot && hitRobot.isAlive && (hitRobot.x !== hitX || hitRobot.y !== hitY)) {
+      playerBeam.to = { x: hitRobot.x, y: hitRobot.y };
+      // Update the most recent floating text that was created at the old hit position
+      for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+        const ft = this.floatingTexts[i];
+        if (ft.x === hitX && ft.y === hitY) {
+          ft.x = hitRobot.x;
+          ft.y = hitRobot.y;
+          break;
+        }
+      }
+    }
+
     return true;
   }
 

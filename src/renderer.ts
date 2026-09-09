@@ -250,7 +250,7 @@ export class GameRenderer {
       laserBeams.forEach((beam) => {
         if (!beam || !beam.from || !beam.to) return;
         const b = beam as any;
-        const duration = typeof b.duration === 'number' ? b.duration : 320;
+        const duration = typeof b.duration === 'number' ? b.duration : 200;
         let alpha = 1;
         let progress = 1;
         if (typeof b.createdAt === 'number') {
@@ -261,8 +261,14 @@ export class GameRenderer {
         }
         const x1 = beam.from.x * this.tileSize - camX + this.tileSize / 2;
         const y1 = beam.from.y * this.tileSize - camY + this.tileSize / 2;
-        const x2 = beam.to.x * this.tileSize - camX + this.tileSize / 2;
-        const y2 = beam.to.y * this.tileSize - camY + this.tileSize / 2;
+        let targetX = beam.to.x;
+        let targetY = beam.to.y;
+        if (b.targetRobot && b.targetRobot.isAlive !== false) {
+          targetX = Number(b.targetRobot.x);
+          targetY = Number(b.targetRobot.y);
+        }
+        const x2 = targetX * this.tileSize - camX + this.tileSize / 2;
+        const y2 = targetY * this.tileSize - camY + this.tileSize / 2;
         const color = b.color || '#ff3b3b';
         const beamType = String(b.beamType || 'LASER').toUpperCase();
         ctx.save?.();
@@ -632,7 +638,7 @@ export class GameRenderer {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const dist = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(dist, p * 1.25 * dist);
+    const headDist = Math.min(dist, p * 1.65 * dist);
     const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 48));
     const hx = x1 + (dx / dist) * headDist;
     const hy = y1 + (dy / dist) * headDist;
@@ -667,8 +673,8 @@ export class GameRenderer {
     ctx.arc?.(hx, hy, 3, 0, Math.PI * 2);
     ctx.fill?.();
 
-    // 當彈頭抵達目標時 (p >= 0.8)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (p >= 0.8) {
+    // 當彈頭抵達目標時 (p >= 0.6)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
+    if (p >= 0.6) {
       const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
       ctx.strokeStyle = color;
       ctx.shadowColor = color;
@@ -703,7 +709,7 @@ export class GameRenderer {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const len = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(len, progress * 1.35 * len);
+    const headDist = Math.min(len, progress * 1.65 * len);
     const tailDist = Math.max(0, headDist - Math.min(len * 0.45, 52));
     const hx = x1 + (dx / len) * headDist;
     const hy = y1 + (dy / len) * headDist;
@@ -767,8 +773,8 @@ export class GameRenderer {
     ctx.arc?.(hx, hy, 3, 0, Math.PI * 2);
     ctx.fill?.();
 
-    // 當彈頭抵達目標時 (progress 接近 0.85~1.0)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (progress >= 0.85) {
+    // 當彈頭抵達目標時 (progress >= 0.6)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
+    if (progress >= 0.6) {
       const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
       ctx.strokeStyle = color;
       ctx.shadowColor = color;
@@ -803,7 +809,7 @@ export class GameRenderer {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const dist = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(dist, p * 1.25 * dist);
+    const headDist = Math.min(dist, p * 1.65 * dist);
     const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 48));
     const hx = x1 + (dx / dist) * headDist;
     const hy = y1 + (dy / dist) * headDist;
@@ -847,8 +853,8 @@ export class GameRenderer {
     ctx.arc?.(hx, hy, orbRadius * 0.4, 0, Math.PI * 2);
     ctx.fill?.();
 
-    // 當彈頭抵達目標時 (p >= 0.8)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (p >= 0.8) {
+    // 當彈頭抵達目標時 (p >= 0.6)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
+    if (p >= 0.6) {
       const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
       ctx.strokeStyle = color;
       ctx.shadowColor = color;
@@ -884,7 +890,7 @@ export class GameRenderer {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const dist = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(dist, p * 1.25 * dist);
+    const headDist = Math.min(dist, p * 1.65 * dist);
     const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 48));
     const hx = x1 + (dx / dist) * headDist;
     const hy = y1 + (dy / dist) * headDist;
@@ -906,8 +912,8 @@ export class GameRenderer {
     ctx.arc?.(hx, hy, 2, 0, Math.PI * 2);
     ctx.fill?.();
 
-    // 當彈頭抵達目標時 (p >= 0.8)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (p >= 0.8) {
+    // 當彈頭抵達目標時 (p >= 0.6)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
+    if (p >= 0.6) {
       const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
       ctx.strokeStyle = color;
       ctx.shadowColor = color;
@@ -942,7 +948,7 @@ export class GameRenderer {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const dist = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(dist, p * 1.25 * dist);
+    const headDist = Math.min(dist, p * 1.65 * dist);
     const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 48));
     const hx = x1 + (dx / dist) * headDist;
     const hy = y1 + (dy / dist) * headDist;
@@ -981,8 +987,8 @@ export class GameRenderer {
     ctx.arc?.(hx, hy, 3, 0, Math.PI * 2);
     ctx.fill?.();
 
-    // 當彈頭抵達目標時 (p >= 0.8)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (p >= 0.8) {
+    // 當彈頭抵達目標時 (p >= 0.6)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
+    if (p >= 0.6) {
       const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
       ctx.strokeStyle = '#b388ff';
       ctx.shadowColor = '#b388ff';
