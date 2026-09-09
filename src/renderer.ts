@@ -88,7 +88,7 @@ export class GameRenderer {
     const ctx = this.ctx as any;
 
     ctx.save?.();
-    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const now = Date.now();
     if (this.isTitleScreen) {
       this.drawTitleScreen(width, height, ctx, now, this.hasSaveData, this.language);
       if (this.isManualOpen) {
@@ -254,10 +254,10 @@ export class GameRenderer {
         let alpha = 1;
         let progress = 1;
         if (typeof b.createdAt === 'number') {
-          const age = now - b.createdAt;
+          const age = Math.max(0, now - b.createdAt);
           if (age > duration) return;
           alpha = Math.max(0.1, 1 - age / duration);
-          progress = Math.min(1, age / duration);
+          progress = Math.min(1, Math.max(0, age / duration));
         }
         const x1 = beam.from.x * this.tileSize - camX + this.tileSize / 2;
         const y1 = beam.from.y * this.tileSize - camY + this.tileSize / 2;
@@ -628,29 +628,16 @@ export class GameRenderer {
 
   drawLaserBeam(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0, progress: number = 1): void {
     ctx.save?.();
+    const p = Math.min(1, Math.max(0, progress));
     const dx = x2 - x1;
     const dy = y2 - y1;
     const dist = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(dist, progress * 1.35 * dist);
-    const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 52));
+    const headDist = Math.min(dist, p * 1.25 * dist);
+    const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 48));
     const hx = x1 + (dx / dist) * headDist;
     const hy = y1 + (dy / dist) * headDist;
     const tx = x1 + (dx / dist) * tailDist;
     const ty = y1 + (dy / dist) * tailDist;
-
-    // 尾端與起點間保留微弱半透明電離殘影
-    if (tailDist > 0) {
-      ctx.strokeStyle = color;
-      ctx.globalAlpha = 0.3;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 4;
-      ctx.lineWidth = 1;
-      ctx.beginPath?.();
-      ctx.moveTo?.(x1, y1);
-      ctx.lineTo?.(tx, ty);
-      ctx.stroke?.();
-      ctx.globalAlpha = 1;
-    }
 
     // 發光外層光束
     ctx.strokeStyle = color;
@@ -680,8 +667,8 @@ export class GameRenderer {
     ctx.arc?.(hx, hy, 3, 0, Math.PI * 2);
     ctx.fill?.();
 
-    // 當彈頭抵達目標時 (progress 接近 0.85~1.0)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (progress >= 0.85) {
+    // 當彈頭抵達目標時 (p >= 0.8)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
+    if (p >= 0.8) {
       const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
       ctx.strokeStyle = color;
       ctx.shadowColor = color;
@@ -812,30 +799,17 @@ export class GameRenderer {
 
   drawPlasmaBeam(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0, progress: number = 1): void {
     ctx.save?.();
+    const p = Math.min(1, Math.max(0, progress));
     const dx = x2 - x1;
     const dy = y2 - y1;
     const dist = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(dist, progress * 1.35 * dist);
-    const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 52));
+    const headDist = Math.min(dist, p * 1.25 * dist);
+    const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 48));
     const hx = x1 + (dx / dist) * headDist;
     const hy = y1 + (dy / dist) * headDist;
     const tx = x1 + (dx / dist) * tailDist;
     const ty = y1 + (dy / dist) * tailDist;
     const pulse = 0.8 + 0.2 * Math.sin(now * 0.01);
-
-    // 尾端與起點間保留微弱半透明電離殘影
-    if (tailDist > 0) {
-      ctx.strokeStyle = color;
-      ctx.globalAlpha = 0.3;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 4;
-      ctx.lineWidth = 1;
-      ctx.beginPath?.();
-      ctx.moveTo?.(x1, y1);
-      ctx.lineTo?.(tx, ty);
-      ctx.stroke?.();
-      ctx.globalAlpha = 1;
-    }
 
     ctx.strokeStyle = color;
     ctx.shadowColor = color;
@@ -873,8 +847,8 @@ export class GameRenderer {
     ctx.arc?.(hx, hy, orbRadius * 0.4, 0, Math.PI * 2);
     ctx.fill?.();
 
-    // 當彈頭抵達目標時 (progress 接近 0.85~1.0)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (progress >= 0.85) {
+    // 當彈頭抵達目標時 (p >= 0.8)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
+    if (p >= 0.8) {
       const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
       ctx.strokeStyle = color;
       ctx.shadowColor = color;
@@ -906,29 +880,16 @@ export class GameRenderer {
 
   drawNeedleTracer(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0, progress: number = 1): void {
     ctx.save?.();
+    const p = Math.min(1, Math.max(0, progress));
     const dx = x2 - x1;
     const dy = y2 - y1;
     const dist = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(dist, progress * 1.35 * dist);
-    const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 52));
+    const headDist = Math.min(dist, p * 1.25 * dist);
+    const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 48));
     const hx = x1 + (dx / dist) * headDist;
     const hy = y1 + (dy / dist) * headDist;
     const tx = x1 + (dx / dist) * tailDist;
     const ty = y1 + (dy / dist) * tailDist;
-
-    // 尾端與起點間保留微弱半透明電離殘影
-    if (tailDist > 0) {
-      ctx.strokeStyle = color;
-      ctx.globalAlpha = 0.3;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 2;
-      ctx.lineWidth = 0.5;
-      ctx.beginPath?.();
-      ctx.moveTo?.(x1, y1);
-      ctx.lineTo?.(tx, ty);
-      ctx.stroke?.();
-      ctx.globalAlpha = 1;
-    }
 
     ctx.strokeStyle = color;
     ctx.shadowColor = color;
@@ -945,8 +906,8 @@ export class GameRenderer {
     ctx.arc?.(hx, hy, 2, 0, Math.PI * 2);
     ctx.fill?.();
 
-    // 當彈頭抵達目標時 (progress 接近 0.85~1.0)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (progress >= 0.85) {
+    // 當彈頭抵達目標時 (p >= 0.8)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
+    if (p >= 0.8) {
       const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
       ctx.strokeStyle = color;
       ctx.shadowColor = color;
@@ -977,30 +938,17 @@ export class GameRenderer {
 
   drawQuantumBeam(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0, progress: number = 1): void {
     ctx.save?.();
+    const p = Math.min(1, Math.max(0, progress));
     const dx = x2 - x1;
     const dy = y2 - y1;
     const dist = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(dist, progress * 1.35 * dist);
-    const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 52));
+    const headDist = Math.min(dist, p * 1.25 * dist);
+    const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 48));
     const hx = x1 + (dx / dist) * headDist;
     const hy = y1 + (dy / dist) * headDist;
     const tx = x1 + (dx / dist) * tailDist;
     const ty = y1 + (dy / dist) * tailDist;
     const pulse = 0.8 + 0.2 * Math.sin(now * 0.015);
-
-    // 尾端與起點間保留微弱半透明電離殘影
-    if (tailDist > 0) {
-      ctx.strokeStyle = '#b388ff';
-      ctx.globalAlpha = 0.3;
-      ctx.shadowColor = '#b388ff';
-      ctx.shadowBlur = 4;
-      ctx.lineWidth = 1;
-      ctx.beginPath?.();
-      ctx.moveTo?.(x1, y1);
-      ctx.lineTo?.(tx, ty);
-      ctx.stroke?.();
-      ctx.globalAlpha = 1;
-    }
 
     // 外層紫色高能反物質光束
     ctx.strokeStyle = '#b388ff';
@@ -1033,8 +981,8 @@ export class GameRenderer {
     ctx.arc?.(hx, hy, 3, 0, Math.PI * 2);
     ctx.fill?.();
 
-    // 當彈頭抵達目標時 (progress 接近 0.85~1.0)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (progress >= 0.85) {
+    // 當彈頭抵達目標時 (p >= 0.8)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
+    if (p >= 0.8) {
       const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
       ctx.strokeStyle = '#b388ff';
       ctx.shadowColor = '#b388ff';
