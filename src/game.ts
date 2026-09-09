@@ -1512,6 +1512,11 @@ export class GameEngine {
       if (key === '2') { this.buyAugment('OPTIC_HUD'); return; }
       if (key === '3') { this.buyAugment('REFLEX_BOOSTER'); return; }
       if (key === '4') { this.buyAugment('POWER_CORE'); return; }
+      if (key === '5') { this.buyConsumableItem('MEDKIT', 40); return; }
+      if (key === '6') { this.buyConsumableItem('BATTERY', 35); return; }
+      if (key === '7') { this.buyConsumableItem('EMP_GRENADE', 70); return; }
+      if (key === '8') { this.buyWeaponOverclock(150); return; }
+      if (key === '9') { this.bribeSecurityNetwork(100); return; }
       return;
     }
 
@@ -2406,6 +2411,90 @@ export class GameEngine {
       }
     }
     this.render();
+  }
+
+  buyConsumableItem(type: 'MEDKIT' | 'BATTERY' | 'EMP_GRENADE', cost: number): boolean {
+    if (this.player.credits < cost) {
+      soundFX.hit();
+      this.pushMessage('INSUFFICIENT CREDITS! Need ' + cost + ' CR.', 'danger');
+      this.render();
+      return false;
+    }
+
+    if (!this.player.consumables) {
+      this.player.consumables = { medkits: 0, batteries: 0, empGrenades: 0 };
+    }
+
+    this.player.credits -= cost;
+    soundFX.pickup();
+
+    if (type === 'MEDKIT') {
+      this.player.consumables.medkits = (this.player.consumables.medkits ?? 0) + 1;
+      this.pushFloatingText(this.player.x, this.player.y, '+1 MEDKIT', '#00ff88');
+      this.pushMessage('Purchased Nanite Medkit (-' + cost + ' CR).', 'success');
+    } else if (type === 'BATTERY') {
+      this.player.consumables.batteries = (this.player.consumables.batteries ?? 0) + 1;
+      this.pushFloatingText(this.player.x, this.player.y, '+1 BATTERY', '#00f0ff');
+      this.pushMessage('Purchased Plasma Battery (-' + cost + ' CR).', 'success');
+    } else if (type === 'EMP_GRENADE') {
+      this.player.consumables.empGrenades = (this.player.consumables.empGrenades ?? 0) + 1;
+      this.pushFloatingText(this.player.x, this.player.y, '+1 EMP GRENADE', '#c77dff');
+      this.pushMessage('Purchased EMP Disruptor (-' + cost + ' CR).', 'success');
+    }
+
+    this.render();
+    return true;
+  }
+
+  buyWeaponOverclock(cost: number): boolean {
+    if (this.player.credits < cost) {
+      soundFX.hit();
+      this.pushMessage('INSUFFICIENT CREDITS! Need ' + cost + ' CR.', 'danger');
+      this.render();
+      return false;
+    }
+
+    if (!this.player.equippedWeapon) {
+      this.pushMessage('No weapon equipped to overclock.', 'warning');
+      this.render();
+      return false;
+    }
+
+    this.player.credits -= cost;
+    this.player.equippedWeapon.power = (this.player.equippedWeapon.power ?? 20) + 5;
+    (this.player.equippedWeapon as any).overclockLevel = ((this.player.equippedWeapon as any).overclockLevel || 0) + 1;
+    soundFX.upgrade();
+    this.pushFloatingText(this.player.x, this.player.y, '+5 WEAPON DMG!', '#ffea00');
+    this.pushMessage('Weapon Overclocked! [' + this.player.equippedWeapon.name + '] Power increased to ' + this.player.equippedWeapon.power + '.', 'success');
+    this.render();
+    return true;
+  }
+
+  bribeSecurityNetwork(cost: number): boolean {
+    if (this.player.credits < cost) {
+      soundFX.hit();
+      this.pushMessage('INSUFFICIENT CREDITS! Need ' + cost + ' CR.', 'danger');
+      this.render();
+      return false;
+    }
+
+    this.player.credits -= cost;
+    this.securityLevel = 'CLEAR' as SecurityLevel;
+    this.checkInAlertActive = false;
+    (this.player as any).checkInTimer = 100;
+    
+    for (const r of this.robots) {
+      if (r.isAlive && r.aiState === 'chase') {
+        r.aiState = 'patrol';
+        (r as any).pursuitTurns = 0;
+      }
+    }
+
+    soundFX.terminal();
+    this.pushFloatingText(this.player.x, this.player.y, 'SECURITY OVERRIDE - CLEAR', '#00ff88');
+    this.pushMessage('Bribed Security Network. All alerts cleared and patrols reset.', 'success');
+    this.render();
+    return true;
   }
 
   private detonateCanister(canister: Hazard): void {

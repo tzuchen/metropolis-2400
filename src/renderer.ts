@@ -2581,8 +2581,8 @@ export class GameRenderer {
     now: number
   ): void {
     ctx.save?.();
-    const boxW = Math.min(width - 40, 720);
-    const boxH = Math.min(height - 60, 460);
+    const boxW = Math.min(width - 40, 840);
+    const boxH = Math.min(height - 40, 520);
     const x = (width - boxW) / 2;
     const y = (height - boxH) / 2;
 
@@ -2599,7 +2599,7 @@ export class GameRenderer {
     ctx.font = 'bold 14px monospace';
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
-    ctx.fillText?.('// JAX\'S BLACK MARKET CYBER-CLINIC //', x + 20, y + 16);
+    ctx.fillText?.('// JAX\'S BLACK MARKET CYBER-CLINIC & TACTICAL ARMORY //', x + 20, y + 16);
 
     const p = player as any;
     const credits = p?.credits ?? 0;
@@ -2607,16 +2607,21 @@ export class GameRenderer {
     ctx.font = 'bold 12px monospace';
     ctx.fillText?.('YOUR CREDITS: ' + credits + ' CR', x + 20, y + 38);
 
-    ctx.fillStyle = '#8aa0b2';
-    ctx.font = '10px monospace';
-    ctx.fillText?.('WARNING: UNLICENSED SURGERY. NO REFUNDS. NO GUARANTEES.', x + 20, y + 54);
-
     ctx.strokeStyle = 'rgba(199, 125, 255, 0.35)';
     ctx.lineWidth = 1;
     ctx.beginPath?.();
-    ctx.moveTo?.(x + 20, y + 70);
-    ctx.lineTo?.(x + boxW - 20, y + 70);
+    ctx.moveTo?.(x + 20, y + 54);
+    ctx.lineTo?.(x + boxW - 20, y + 54);
     ctx.stroke?.();
+
+    const colW = (boxW - 60) / 2;
+    const leftX = x + 20;
+    const rightX = x + 40 + colW;
+
+    // Left Column: Neural Augmentations
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText?.('[ NEURAL AUGMENTATIONS ]', leftX, y + 68);
 
     const augments = [
       { key: '[1]', id: 'DERMAL_ARMOR', name: 'Dermal Armor Plating', effect: 'Passive +10 DEF. Subdermal kinetic mesh.', price: 100 },
@@ -2627,41 +2632,88 @@ export class GameRenderer {
     const installed = p?.augments ?? {};
 
     augments.forEach((aug, i) => {
-      const ay = y + 84 + i * 78;
+      const ay = y + 88 + i * 78;
       const isInstalled = !!installed[aug.id];
       const canAfford = credits >= aug.price;
 
       ctx.fillStyle = isInstalled ? 'rgba(20, 40, 30, 0.75)' : 'rgba(15, 15, 30, 0.75)';
-      ctx.fillRect?.(x + 20, ay, boxW - 40, 68);
+      ctx.fillRect?.(leftX, ay, colW, 68);
       ctx.strokeStyle = isInstalled ? '#00ff88' : canAfford ? '#c77dff' : '#445566';
-      ctx.strokeRect?.(x + 20, ay, boxW - 40, 68);
+      ctx.strokeRect?.(leftX, ay, colW, 68);
 
       ctx.fillStyle = isInstalled ? '#00ff88' : '#ffffff';
       ctx.font = 'bold 12px monospace';
-      ctx.fillText?.(aug.name, x + 32, ay + 10);
+      ctx.fillText?.(aug.name, leftX + 12, ay + 10);
 
       ctx.fillStyle = '#8aa0b2';
       ctx.font = '10px monospace';
-      ctx.fillText?.(aug.effect, x + 32, ay + 28);
+      ctx.fillText?.(aug.effect, leftX + 12, ay + 28);
 
       ctx.fillStyle = isInstalled ? '#00ff88' : canAfford ? '#ffea00' : '#ff3855';
       ctx.font = 'bold 11px monospace';
-      ctx.fillText?.(isInstalled ? '[INSTALLED]' : aug.price + ' CR', x + 32, ay + 46);
+      ctx.fillText?.(isInstalled ? '[INSTALLED]' : aug.price + ' CR', leftX + 12, ay + 46);
 
       if (!isInstalled) {
         ctx.fillStyle = canAfford ? '#c77dff' : '#445566';
         ctx.font = 'bold 12px monospace';
         ctx.textAlign = 'right';
-        ctx.fillText?.(canAfford ? aug.key + ' BUY' : 'INSUFFICIENT CR', x + boxW - 32, ay + 46);
+        ctx.fillText?.(canAfford ? aug.key + ' BUY' : 'INSUFFICIENT CR', leftX + colW - 12, ay + 46);
         ctx.textAlign = 'left';
       }
+    });
+
+    // Right Column: Black Market Supplies & Services
+    ctx.fillStyle = '#ffaa00';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText?.('[ BLACK MARKET SUPPLIES & SERVICES ]', rightX, y + 68);
+
+    const medkits = p?.consumables?.medkits ?? 0;
+    const batteries = p?.consumables?.batteries ?? 0;
+    const empGrenades = p?.consumables?.empGrenades ?? 0;
+    const weaponName = p?.equippedWeapon?.name || 'Blaster';
+    const weaponPower = p?.equippedWeapon?.power ?? 20;
+
+    const supplies = [
+      { key: '[5]', name: 'Nanite Medkit', effect: `Quick-heal +50 HP (Owned: ${medkits})`, price: 40 },
+      { key: '[6]', name: 'Plasma Battery', effect: `Quick-recharge +50 EN (Owned: ${batteries})`, price: 35 },
+      { key: '[7]', name: 'EMP Disruptor', effect: `Stun area robots (Owned: ${empGrenades})`, price: 70 },
+      { key: '[8]', name: 'Weapon Overclock', effect: `+5 DMG to ${weaponName} (Current: ${weaponPower} DMG)`, price: 150 },
+      { key: '[9]', name: 'Security Bribe', effect: 'Clear alert & reset collar timer to 100', price: 100 },
+    ];
+
+    supplies.forEach((sup, i) => {
+      const sy = y + 88 + i * 78;
+      const canAfford = credits >= sup.price;
+
+      ctx.fillStyle = 'rgba(15, 15, 30, 0.75)';
+      ctx.fillRect?.(rightX, sy, colW, 68);
+      ctx.strokeStyle = canAfford ? '#ffaa00' : '#445566';
+      ctx.strokeRect?.(rightX, sy, colW, 68);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText?.(sup.name, rightX + 12, sy + 10);
+
+      ctx.fillStyle = '#8aa0b2';
+      ctx.font = '10px monospace';
+      ctx.fillText?.(sup.effect, rightX + 12, sy + 28);
+
+      ctx.fillStyle = canAfford ? '#ffea00' : '#ff3855';
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText?.(sup.price + ' CR', rightX + 12, sy + 46);
+
+      ctx.fillStyle = canAfford ? '#ffaa00' : '#445566';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText?.(canAfford ? sup.key + ' BUY' : 'INSUFFICIENT CR', rightX + colW - 12, sy + 46);
+      ctx.textAlign = 'left';
     });
 
     const pulse = 0.7 + 0.3 * Math.sin(now * 0.008);
     ctx.fillStyle = `rgba(199, 125, 255, ${pulse})`;
     ctx.font = 'bold 11px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText?.('PRESS [ 1 ]-[ 4 ] TO PURCHASE  |  PRESS [ U ] OR [ ESC ] TO LEAVE CLINIC', x + boxW / 2, y + boxH - 18);
+    ctx.fillText?.('PRESS [ 1 ]-[ 9 ] TO PURCHASE  |  PRESS [ U ] OR [ ESC ] TO EXIT', x + boxW / 2, y + boxH - 18);
 
     ctx.shadowBlur = 0;
     ctx.restore?.();
