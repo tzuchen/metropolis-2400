@@ -131,6 +131,10 @@ export interface Player extends Entity {
   };
   augments?: Record<string, boolean>;
   currentSectorId?: string;
+  level?: number;
+  exp?: number;
+  expToNext?: number;
+  skillPoints?: number;
 }
 
 export type RobotAIState = 'idle' | 'patrol' | 'investigate' | 'chase' | 'attack';

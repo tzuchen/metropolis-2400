@@ -138,9 +138,12 @@ export function handleBossDeath(boss: Robot, game: any): void {
     (game.player as any).credits += 200;
   }
 
+  // 給予 250 點經驗值獎勵
+  game?.gainExp?.(250);
+
   const victoryMsg = isZh
-    ? '🎉 首領擊破！佐格滅絕者原型機已被殲滅，傳奇戰利品【主腦根密鑰】已掉落！(+200 CR)'
-    : '🎉 BOSS ELIMINATED! EXTERMINATOR-PRIME destroyed. Master Root Cipher dropped! (+200 CR)';
+    ? '🎉 首領擊破！佐格滅絕者原型機已被殲滅，傳奇戰利品【主腦根密鑰】已掉落！(+200 CR, +250 XP)'
+    : '🎉 BOSS ELIMINATED! EXTERMINATOR-PRIME destroyed. Master Root Cipher dropped! (+200 CR, +250 XP)';
   game?.pushFloatingText?.(boss.x, boss.y, 'BOSS ELIMINATED!', '#00ff88');
   game?.pushMessage?.(victoryMsg, 'success');
 }

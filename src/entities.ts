@@ -184,6 +184,10 @@ export function createPlayer(startPos: Position): Player {
       batteries: 1,
       empGrenades: 1,
     },
+    level: 1,
+    exp: 0,
+    expToNext: 100,
+    skillPoints: 0,
   } as unknown as Player;
 }
 

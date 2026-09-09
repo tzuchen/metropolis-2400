@@ -21,6 +21,10 @@ export interface SaveData {
     weapons?: Item[];
     equippedWeapon: Item | null;
     inventory: Item[];
+    level?: number;
+    exp?: number;
+    expToNext?: number;
+    skillPoints?: number;
   };
   robots: Array<{
     id: string;
@@ -91,6 +95,10 @@ export function saveGameState(game: any): boolean {
         weapons: game.player.weapons,
         equippedWeapon: game.player.equippedWeapon,
         inventory: game.player.inventory,
+        level: game.player.level ?? 1,
+        exp: game.player.exp ?? 0,
+        expToNext: game.player.expToNext ?? 100,
+        skillPoints: game.player.skillPoints ?? 0,
       },
       robots: (game.robots || []).map((r: Robot) => ({
         id: r.id,

@@ -393,6 +393,8 @@ export function drawBigMapModal(
   ctx.font = `13px ${fontStack}`;
   ctx.fillText?.(isZh ? `當前座標 : [ X: ${player.x}, Y: ${player.y} ]` : `COORDINATES : [ X: ${player.x}, Y: ${player.y} ]`, sideX + 12, sideCurY);
   sideCurY += 16;
+  ctx.fillText?.(isZh ? '特工等級 : LV.' + (player.level || 1) + ' (' + (player.exp || 0) + '/' + (player.expToNext || 100) + ' XP)' : 'AGENT LEVEL : LV.' + (player.level || 1) + ' (' + (player.exp || 0) + '/' + (player.expToNext || 100) + ' XP)', sideX + 12, sideCurY);
+  sideCurY += 16;
   ctx.fillText?.(isZh ? `生命 / 能量 : ${player.hp} HP / ${player.energy} EN` : `HEALTH/NRG : ${player.hp} HP / ${player.energy} EN`, sideX + 12, sideCurY);
   sideCurY += 24;
 

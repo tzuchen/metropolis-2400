@@ -1383,19 +1383,45 @@ export class GameRenderer {
     ctx.fillStyle = secColor;
     ctx.fillText?.('SEC: ' + sec, 190, 18);
 
+    // 玩家等級與經驗值迷你進度條 (LV.X & XP Bar)
+    const level = Number(p?.level ?? 1) || 1;
+    const xp = Number(p?.exp ?? p?.xp ?? 0) || 0;
+    const xpToNext = Number(p?.expToNext ?? p?.xpToNext ?? 100) || 100;
+    const xpRatio = Math.max(0, Math.min(1, xp / xpToNext));
+
+    ctx.fillStyle = '#ffea00';
+    ctx.fillText?.('LV.' + level, 290, 18);
+
+    // XP 進度條 (寬度 45px)
+    const xpBarX = 330;
+    const xpBarY = 14;
+    const xpBarW = 45;
+    const xpBarH = 8;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect?.(xpBarX, xpBarY, xpBarW, xpBarH);
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillRect?.(xpBarX, xpBarY, xpBarW * xpRatio, xpBarH);
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.5)';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect?.(xpBarX, xpBarY, xpBarW, xpBarH);
+    ctx.fillStyle = '#8899a6';
+    ctx.font = '9px monospace';
+    ctx.fillText?.(xp + '/' + xpToNext, xpBarX + xpBarW + 4, 18);
+    ctx.font = 'bold 12px monospace';
+
     const hp = Math.max(0, p?.hp ?? 100);
     const maxHp = p?.maxHp ?? 100;
     ctx.fillStyle = '#ff2a4b';
-    ctx.fillText?.('HP ' + hp + '/' + maxHp, 290, 18);
+    ctx.fillText?.('HP ' + hp + '/' + maxHp, 430, 18);
 
     const energy = Math.max(0, p?.energy ?? 100);
     const maxEnergy = p?.maxEnergy ?? 100;
     ctx.fillStyle = '#00f0ff';
-    ctx.fillText?.('EN ' + energy + '/' + maxEnergy, 390, 18);
+    ctx.fillText?.('EN ' + energy + '/' + maxEnergy, 520, 18);
 
     const credits = p?.credits ?? 0;
     ctx.fillStyle = '#ffb700';
-    ctx.fillText?.('CR: ' + credits, 490, 18);
+    ctx.fillText?.('CR: ' + credits, 610, 18);
 
     const weaponName = p?.equippedWeapon?.name || 'None';
     const weaponDmg = Number(p?.equippedWeapon?.power ?? p?.equippedWeapon?.damage ?? 0) || 0;
@@ -1414,9 +1440,9 @@ export class GameRenderer {
       weaponColor = '#8899a6';
     }
     ctx.fillStyle = weaponColor;
-    ctx.fillText?.(weaponStatusText, 570, 18);
+    ctx.fillText?.(weaponStatusText, 680, 18);
 
-    let hudCursorX = 700;
+    let hudCursorX = 850;
     if ((this as any).activeWaypoint) {
       const wp = (this as any).activeWaypoint;
       const wpx = Number(wp?.x) || 0;
@@ -1688,6 +1714,56 @@ export class GameRenderer {
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
     ctx.fillText?.('// RESISTANCE TACTICAL INVENTORY & CYBERDECK //', x + 20, y + 16);
+
+    // 特工軍階稱號、等級、經驗進度與技能點數 (Agent Rank, Level, XP & Skill Points)
+    const pInv = player as any;
+    const invLevel = Number(pInv?.level ?? 1) || 1;
+    const invXp = Number(pInv?.exp ?? pInv?.xp ?? 0) || 0;
+    const invXpToNext = Number(pInv?.expToNext ?? pInv?.xpToNext ?? 100) || 100;
+    const invXpRatio = Math.max(0, Math.min(1, invXp / invXpToNext));
+    const skillPoints = Number(pInv?.skillPoints ?? 0) || 0;
+
+    // 軍階稱號 (Agent Rank Title)
+    let rankTitle = 'RECRUIT';
+    if (invLevel >= 20) rankTitle = 'LEGENDARY OPERATIVE';
+    else if (invLevel >= 15) rankTitle = 'MASTER GHOST';
+    else if (invLevel >= 10) rankTitle = 'VETERAN SHADOW';
+    else if (invLevel >= 5) rankTitle = 'SKILLED INFILTRATOR';
+    else if (invLevel >= 3) rankTitle = 'PROVEN AGENT';
+    else if (invLevel >= 2) rankTitle = 'FIELD OPERATIVE';
+
+    const isZhInv = this.language === 'zh';
+    const rankZh = isZhInv
+      ? (invLevel >= 20 ? '傳奇特工' : invLevel >= 15 ? '大師幽影' : invLevel >= 10 ? '資深暗影' : invLevel >= 5 ? '熟練滲透者' : invLevel >= 3 ? '經驗特工' : invLevel >= 2 ? '外勤特工' : '新兵')
+      : rankTitle;
+
+    // 右側賽博風格顯示
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffea00';
+    ctx.font = getTitleFont(12, isZhInv);
+    ctx.fillText?.(`[LV.${invLevel} RANK: ${rankZh}]`, x + boxW - 20, y + 16);
+
+    // XP 進度條 (右側)
+    const invXpBarW = 120;
+    const invXpBarH = 6;
+    const invXpBarX = x + boxW - 20 - invXpBarW;
+    const invXpBarY = y + 34;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect?.(invXpBarX, invXpBarY, invXpBarW, invXpBarH);
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillRect?.(invXpBarX, invXpBarY, invXpBarW * invXpRatio, invXpBarH);
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.5)';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect?.(invXpBarX, invXpBarY, invXpBarW, invXpBarH);
+    ctx.fillStyle = '#8899a6';
+    ctx.font = '9px monospace';
+    ctx.fillText?.(`XP: ${invXp}/${invXpToNext}`, x + boxW - 20, invXpBarY + 8);
+
+    // 技能點數
+    ctx.fillStyle = skillPoints > 0 ? '#00ff88' : '#445566';
+    ctx.font = getTitleFont(11, isZhInv);
+    ctx.fillText?.(`[SKILL PTS: ${skillPoints}]`, x + boxW - 20, y + 52);
+    ctx.textAlign = 'left';
 
     ctx.fillStyle = '#8899a6';
     ctx.font = getFont(11, this.language === 'zh');

@@ -770,29 +770,51 @@ export class GameEngine {
     return preset;
   }
 
-  gainExp(amount: number): void {
+  private getRankTitle(level: number): { zh: string; en: string } {
+    switch (level) {
+      case 1: return { zh: '反抗軍新手', en: 'Rebel Recruit' };
+      case 2: return { zh: '賽博滲透者', en: 'Cyber Infiltrator' };
+      case 3: return { zh: '暗影潛行者', en: 'Shadow Runner' };
+      case 4: return { zh: '矩陣特工', en: 'Matrix Spec-Ops' };
+      case 5: return { zh: '佐格終結者', en: 'Tzorg Nemesis' };
+      default: return { zh: '大都會傳奇', en: 'Legend of Metropolis' };
+    }
+  }
+
+  gainExp(amount: number, reason?: string): void {
     const p = this.player as any;
     if (typeof p.exp === 'undefined') p.exp = 0;
     if (typeof p.level === 'undefined') p.level = 1;
     if (typeof p.expToNext === 'undefined') p.expToNext = 100;
+    if (typeof p.skillPoints === 'undefined') p.skillPoints = 0;
     p.exp += amount;
     let leveledUp = false;
     while (p.exp >= p.expToNext) {
       p.exp -= p.expToNext;
       p.level += 1;
       p.expToNext = Math.round(p.expToNext * 1.5);
-      p.maxHp = (p.maxHp || 100) + 10;
+      p.maxHp = (p.maxHp || 100) + 15;
       p.hp = p.maxHp;
-      p.maxEnergy = (p.maxEnergy || 100) + 5;
+      p.maxEnergy = (p.maxEnergy || 100) + 10;
       p.energy = p.maxEnergy;
+      p.skillPoints += 1;
       leveledUp = true;
     }
     if (leveledUp) {
       soundFX.upgrade();
-      this.pushFloatingText(this.player.x, this.player.y, 'LEVEL UP!', '#00ff88');
-      this.pushMessage(`LEVEL UP! Operative reached level ${p.level}. Stats increased!`, 'success');
+      const rank = this.getRankTitle(p.level);
+      const isZh = this.language === 'zh';
+      this.pushFloatingText(this.player.x, this.player.y, `LEVEL UP! Lv.${p.level}`, '#00ff88');
+      this.pushFloatingText(this.player.x, this.player.y, isZh ? rank.zh : rank.en, '#ffea00');
+      this.pushMessage(
+        isZh
+          ? `升級！特工達到 Lv.${p.level} [${rank.zh}]。生命上限 +15，能量上限 +10，技能點 +1。`
+          : `LEVEL UP! Operative reached Lv.${p.level} [${rank.en}]. Max HP +15, Max EN +10, Skill Point +1.`,
+        'success'
+      );
     } else {
-      this.pushFloatingText(this.player.x, this.player.y, `+${amount} XP`, '#00f0ff');
+      const reasonText = reason ? ` (${reason})` : '';
+      this.pushFloatingText(this.player.x, this.player.y, `+${amount} XP${reasonText}`, '#00f0ff');
     }
     this.render();
   }
@@ -1980,6 +2002,7 @@ export class GameEngine {
           this.activeStoryLog = foundLog;
           soundFX.terminal();
           this.pushFloatingText(this.player.x, this.player.y, 'LORE UNLOCKED!', '#00e5ff');
+          this.gainExp(40, 'DATA_SLATE');
           const isZh = this.language === 'zh';
           const slateObservations: Record<string, { zh: string; en: string }> = {
             'slate-vance': {
@@ -2013,6 +2036,7 @@ export class GameEngine {
       if (scavengeObj && !scavengeObj.completed) {
         scavengeObj.completed = true;
         this.pushMessage('MISSION UPDATE: Tactical Stockpile objective complete!', 'success');
+        this.gainExp(50, 'MISSION_COMPLETE');
       }
     }
   }
@@ -2451,9 +2475,11 @@ export class GameEngine {
         if (forcefieldObj && !forcefieldObj.completed) {
           forcefieldObj.completed = true;
           this.pushMessage('MISSION UPDATE: Checkpoint 01 forcefield deactivated!', 'success');
+          this.gainExp(50, 'MISSION_COMPLETE');
         }
         this.pushMessage('CHECKPOINT_FF: Plasma barrier capacitors short-circuited. Barrier offline.', 'success');
         soundFX.victory();
+        this.gainExp(60, 'HACK_SUCCESS');
         (this as any).forcefieldDisabled = true;
         this.updateNPCDialogues();
       }
@@ -2480,6 +2506,7 @@ export class GameEngine {
         this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + result.energyGain);
         this.pushFloatingText(this.player.x, this.player.y, `+${result.energyGain} EN`, '#00f0ff');
         this.pushMessage(`Energy siphoned: +${result.energyGain} EN.`, 'success');
+        this.gainExp(25, 'ENERGY_SIPHON');
       }
 
       if (result?.shouldExit) {

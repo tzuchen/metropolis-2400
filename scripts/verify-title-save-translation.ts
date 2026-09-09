@@ -94,6 +94,10 @@ game.player.x = 10;
 game.player.y = 12;
 game.player.credits = 888;
 game.player.hp = 55;
+game.player.level = 3;
+game.player.exp = 75;
+game.player.expToNext = 225;
+game.player.skillPoints = 2;
 game.language = 'zh';
 
 // Save the game via shortcut '8'
@@ -106,6 +110,10 @@ game.player.x = 2;
 game.player.y = 2;
 game.player.credits = 50;
 game.player.hp = 20;
+game.player.level = 1;
+game.player.exp = 0;
+game.player.expToNext = 100;
+game.player.skillPoints = 0;
 game.language = 'en';
 
 // Load game via shortcut '9'
@@ -114,6 +122,10 @@ assert(game.player.x === 10, `Expected player.x to be 10, got ${game.player.x}`)
 assert(game.player.y === 12, `Expected player.y to be 12, got ${game.player.y}`);
 assert(game.player.credits === 888, `Expected player.credits to be 888, got ${game.player.credits}`);
 assert(game.player.hp === 55, `Expected player.hp to be 55, got ${game.player.hp}`);
+assert(game.player.level === 3, `Expected player.level to be 3, got ${game.player.level}`);
+assert(game.player.exp === 75, `Expected player.exp to be 75, got ${game.player.exp}`);
+assert(game.player.expToNext === 225, `Expected player.expToNext to be 225, got ${game.player.expToNext}`);
+assert(game.player.skillPoints === 2, `Expected player.skillPoints to be 2, got ${game.player.skillPoints}`);
 assert(game.language === 'zh', `Expected language to be restored to zh, got ${game.language}`);
 console.log('✅ In-game Quick Save [8] and Quick Load [9] verified!');
 
