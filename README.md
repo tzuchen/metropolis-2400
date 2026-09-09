@@ -1,5 +1,17 @@
 # 🌆 METROPOLIS 2400 // TZORG RESISTANCE PROTOCOL
 
+## 🌐 線上即時遊玩 (Live Play Online)
+
+| 環境 | 網址 | 說明 |
+| :--- | :--- | :--- |
+| **GitHub Pages** | [https://tzuchen.github.io/metropolis-2400/](https://tzuchen.github.io/metropolis-2400/) | 公開版，隨時可玩 |
+| **Tailscale 內網** | [http://100.88.14.123:5173/](http://100.88.14.123:5173/) | 專屬內網 (由 `metropolis-2400.service` 常駐運行) |
+| **區域網路 (LAN)** | [http://192.168.31.128:5173/](http://192.168.31.128:5173/) | 本地網路直連 |
+
+![Live GitHub Pages Preview](live-gh-pages-preview.png)
+
+---
+
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.0+-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![HTML5 Canvas](https://img.shields.io/badge/Graphics-Canvas_2D-E34F26?logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
@@ -115,6 +127,24 @@ Your objective:
   - **Silenced Dart Gun**: Pneumatic stealth needle thrower (25 DMG, 3 EN, Range 5). Completely **SUPPRESSED**—eliminates enemies with zero acoustic soundwave and prevents alert cascades!
   - **Scatter Plasma Shotgun**: Heavy close-quarter breach scattergun (65 DMG, 9 EN, Range 3). Devastating close-range burst damage to punch through armored Hunter-Killers.
 
+### 11. 👥 NPC 自主行動、有限範圍遊蕩與動態環境表現 (Autonomous NPC Action & Living Metropolis)
+- **有限範圍遊蕩 (Tethered Bounded Wandering)**：每位 NPC 具備專屬原點 (`homeX`, `homeY`) 與限制半徑 (`wanderRadius` 1~2格)，具備安全碰撞避免走出所屬店鋪或崗位。
+- **智慧面向 (Directional Facing)**：玩家靠近或交談 `[T]` 時，NPC 即刻停止遊蕩並自動轉向面朝特工。
+- **專屬人設動作粒子與動態特效 (Persona Action VFX)**：
+  - **Hiro**: 熬高湯蒸氣熱氣 (Steam particles)
+  - **Sylvia**: 仿生發光孢子 (Bioluminescent spores)
+  - **Doc Vance**: 醫用脈衝波紋 (Medical pulse ripples)
+  - **Kira**: 戰術雷達掃描 (Tactical radar sweep)
+  - **Ghost**: 隱形噪點 (Invisibility noise)
+  - **Elena**: 合成波粉紅音符 (Synthwave pink notes)
+  - **Jackal**: 雷射瞄具 (Laser sight)
+  - **Zero-One**: 賽博電弧 (Cyber arcs)
+  - **Jax**: 金幣反光 (Coin glints)
+- **頭頂動作輪替與微光氣泡對話 (Dynamic Barks & Action Bubbles)**：動作標籤與 `TALK [T]` 輪播，隨機觸發賽博龐克微光對話氣泡。
+- **完整支援存檔讀檔 (Save/Load Persistence)**：NPC 狀態與位置可隨遊戲進度保存與載入。
+
+![NPC Actions Preview](npc-actions-preview.png)
+
 ---
 
 ## 🎮 Controls & Keybindings (操作指南)
@@ -146,12 +176,18 @@ Your objective:
 ```text
 metropolis-2400/
 ├── index.html            # CRT frame container & tactical keybinding HUD strip
+├── vite.config.ts        # Vite build configuration
+├── .github/
+│   └── workflows/
+│       └── deploy.yml    # GitHub Pages automated deployment workflow
 ├── src/
 │   ├── types.ts          # Core interfaces (Player, Robot, NPC, GroundItem, StoryLog, etc.)
 │   ├── map.ts            # Sector 1 tilemap, door cycling, forcefields & raycast FOV
 │   ├── entities.ts       # Operative & Robot stat definitions and gear factories
 │   ├── ai.ts             # Pathfinding (BFS), line-of-sight pursuit, alarm & EMP stun logic
+│   ├── npcAI.ts          # NPC autonomous wandering, directional facing & dynamic barks logic
 │   ├── sprites.ts        # Pixel-art canvas renderers (Player, Robots, NPCs, Items, Wreckage)
+│   ├── npcSprites.ts     # NPC-specific persona action VFX & particle effects
 │   ├── renderer.ts       # CRT display engine, Mini-Radar, tactical HUD & modal dialogs
 │   ├── terminal.ts       # Security terminal shell, parser, and subroutines
 │   ├── audio.ts          # Procedural Web Audio API sound synthesizer
@@ -166,7 +202,10 @@ metropolis-2400/
 │   ├── verify-weapons.ts # Multi-weapon cycling & suppressed acoustics tests
 │   ├── verify-story.ts   # Data slate decryption & dynamic dialogue tests
 │   ├── verify-renderer.ts# Canvas drawing calls & UI verification
-│   └── verify-sprites.ts # Sprite rendering integrity tests
+│   ├── verify-sprites.ts # Sprite rendering integrity tests
+│   └── verify-npc-actions-and-movement.ts # NPC wandering, facing & VFX tests
+├── live-gh-pages-preview.png # GitHub Pages live preview screenshot
+├── npc-actions-preview.png   # NPC dynamic actions & VFX screenshot
 └── preview.png           # Live gameplay screenshot
 ```
 
