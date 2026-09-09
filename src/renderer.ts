@@ -1674,38 +1674,37 @@ export class GameRenderer {
 
     ctx.font = 'bold 11px monospace';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#00ff88';
-    ctx.fillText?.(`[1] MED: ${medCount}`, 10, height - 13);
-    ctx.fillStyle = '#00e5ff';
-    ctx.fillText?.(`[2] BAT: ${batCount}`, 95, height - 13);
-    ctx.fillStyle = '#c77dff';
-    ctx.fillText?.(`[3] EMP: ${empCount}`, 180, height - 13);
-    ctx.fillStyle = '#ffaa00';
-    ctx.fillText?.('[I] INV', 265, height - 13);
-    ctx.fillStyle = '#00ffaa';
-    ctx.fillText?.('[M] MISSIONS', 320, height - 13);
-    ctx.fillStyle = '#ffb700';
-    ctx.fillText?.('[L] ARCHIVE', 410, height - 13);
-    ctx.fillStyle = '#00f0ff';
-    ctx.fillText?.('[8] SAVE', 495, height - 13);
-    ctx.fillStyle = '#b388ff';
-    ctx.fillText?.('[9] LOAD', 555, height - 13);
-    ctx.fillStyle = '#ffea00';
-    ctx.fillText?.('[Z] ' + (this.language === 'zh' ? '中' : 'EN'), 615, height - 13);
-    ctx.fillStyle = '#00ffaa';
-    ctx.fillText?.('[B] BGM', 665, height - 13);
-    ctx.fillStyle = this.isOmniVisionActive ? '#00ffff' : '#667788';
-    ctx.fillText?.('[V] OMNI', 715, height - 13);
-    ctx.fillStyle = this.isFullMapActive ? '#ffea00' : '#667788';
-    ctx.fillText?.('[X] MAP', 770, height - 13);
-    ctx.fillStyle = '#00f0ff';
-    ctx.fillText?.('[0] RES', 825, height - 13);
-    ctx.fillStyle = '#00ffcc';
-    ctx.fillText?.('[TAB] MAP', 880, height - 13);
-    ctx.fillStyle = '#ff3855';
-    ctx.fillText?.('[F] DRAW', 940, height - 13);
-    ctx.fillStyle = '#b388ff';
-    ctx.fillText?.('[Q] SWAP', 1000, height - 13);
+    const hudItems = [
+      { key: '[1]', label: `MED: ${medCount}`, color: '#00ff88' },
+      { key: '[2]', label: `BAT: ${batCount}`, color: '#00e5ff' },
+      { key: '[3]', label: `EMP: ${empCount}`, color: '#c77dff' },
+      { key: '[I]', label: 'INV', color: '#ffaa00' },
+      { key: '[U]', label: this.language === 'zh' ? '黑市' : 'SHOP', color: '#c77dff' },
+      { key: '[M]', label: 'MISSIONS', color: '#00ffaa' },
+      { key: '[L]', label: 'ARCHIVE', color: '#ffb700' },
+      { key: '[8]', label: 'SAVE', color: '#00f0ff' },
+      { key: '[9]', label: 'LOAD', color: '#b388ff' },
+      { key: '[Z]', label: this.language === 'zh' ? '中' : 'EN', color: '#ffea00' },
+      { key: '[B]', label: 'BGM', color: '#00ffaa' },
+      { key: '[V]', label: 'OMNI', color: this.isOmniVisionActive ? '#00ffff' : '#667788' },
+      { key: '[X]', label: 'MAP', color: this.isFullMapActive ? '#ffea00' : '#667788' },
+      { key: '[0]', label: 'RES', color: '#00f0ff' },
+      { key: '[TAB]', label: 'MAP', color: '#00ffcc' },
+      { key: '[F]', label: 'DRAW', color: '#ff3855' },
+      { key: '[Q]', label: 'SWAP', color: '#b388ff' },
+    ];
+
+    let curX = 10;
+    const gap = 12;
+    hudItems.forEach((item) => {
+      const text = `${item.key} ${item.label}`;
+      const measuredWidth = ctx.measureText?.(text)?.width;
+      const textWidth = (measuredWidth && measuredWidth > 0) ? measuredWidth : text.length * 7;
+      if (curX + textWidth > width - 10) return;
+      ctx.fillStyle = item.color;
+      ctx.fillText?.(text, curX, height - 13);
+      curX += textWidth + gap;
+    });
 
     ctx.restore?.();
   }
