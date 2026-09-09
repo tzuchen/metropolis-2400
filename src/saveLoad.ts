@@ -5,6 +5,8 @@ export interface SaveData {
   timestamp: number;
   language: Language;
   sectorId: string;
+  checkInAlertActive?: boolean;
+  securityLevel?: string;
   player: {
     x: number;
     y: number;
@@ -140,6 +142,8 @@ export function saveGameState(game: any): boolean {
       })),
       exploredTiles: Array.from(game.exploredTiles || []),
       groundItems: game.groundItems || [],
+      checkInAlertActive: game.checkInAlertActive ?? false,
+      securityLevel: game.securityLevel,
     };
 
     memoryBackup = saveData;
@@ -252,6 +256,16 @@ export function loadGameState(game: any): boolean {
     // Restore language
     if (data.language) {
       game.language = data.language;
+    }
+
+    // Restore check-in alert and security level
+    if (typeof data.checkInAlertActive === 'boolean') {
+      game.checkInAlertActive = data.checkInAlertActive;
+    } else if ((game.player.checkInTimer ?? 100) <= 0) {
+      game.checkInAlertActive = true;
+    }
+    if (data.securityLevel) {
+      game.securityLevel = data.securityLevel;
     }
 
     game.isTitleScreen = false;

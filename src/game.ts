@@ -74,7 +74,7 @@ export class GameEngine {
   private lastBroadcastTurn: number = 0;
   private lastBroadcastIndex: number = 0;
   private broadcastQueue: string[] = [];
-  private checkInAlertActive: boolean = false;
+  checkInAlertActive: boolean = false;
   private lastSectorId: string = '';
   private lastLandmarkKey: string = '';
   storyArchiveSelectedIndex: number = 0;
@@ -575,7 +575,7 @@ export class GameEngine {
 
   switchSector(targetSectorId: string): void {
     const prevMapId = this.map?.id;
-    this.securityLevel = 'CLEAR' as SecurityLevel;
+    this.securityLevel = this.checkInAlertActive ? 'ALERT' as SecurityLevel : 'CLEAR' as SecurityLevel;
     this.laserBeams = [];
     bgm.setIntensity('exploration');
 
@@ -871,23 +871,20 @@ export class GameEngine {
 
   performCheckIn(): void {
     (this.player as any).checkInTimer = 100;
-    if (this.checkInAlertActive) {
-      this.checkInAlertActive = false;
-      this.securityLevel = 'CLEAR' as SecurityLevel;
-      this.pushMessage(
-        this.language === 'zh'
-          ? '神經項圈簽到成功：警報已解除，巡邏單位恢復常規模式。'
-          : 'Neural collar check-in successful: Alert cleared, patrol units returning to routine.',
-        'success'
-      );
-    } else {
-      this.pushMessage(
-        this.language === 'zh'
-          ? '神經項圈簽到成功：計時器已重置為 100 步。'
-          : 'Neural collar check-in successful: Timer reset to 100 steps.',
-        'success'
-      );
+    this.checkInAlertActive = false;
+    this.securityLevel = 'CLEAR' as SecurityLevel;
+    for (const r of this.robots) {
+      if (!r.isAlive) continue;
+      r.aiState = 'patrol';
+      r.targetPos = null;
+      (r as any).pursuitTurns = 0;
     }
+    this.pushMessage(
+      this.language === 'zh'
+        ? '神經項圈簽到成功：警報已解除，計時器重置為 100 步，巡邏單位恢復常規模式。'
+        : 'Neural collar check-in successful: Alert cleared, timer reset to 100 steps, patrol units returning to routine.',
+      'success'
+    );
     this.pushFloatingText(this.player.x, this.player.y, '✔ CHECKED IN (100)', '#00ff88');
     soundFX.pickup();
     this.render();
@@ -895,7 +892,22 @@ export class GameEngine {
 
   handlePlayerStep(): void {
     const timer = (this.player as any).checkInTimer;
-    if (typeof timer === 'undefined' || timer <= 0) return;
+    if (typeof timer === 'undefined') return;
+
+    if (timer <= 0 || this.checkInAlertActive) {
+      (this.player as any).checkInTimer = 0;
+      this.checkInAlertActive = true;
+      this.securityLevel = 'ALERT' as SecurityLevel;
+      for (const r of this.robots) {
+        if (!r.isAlive) continue;
+        if (r.aiState !== 'chase') {
+          r.aiState = 'chase';
+          r.targetPos = { x: this.player.x, y: this.player.y };
+          (r as any).pursuitTurns = 8;
+        }
+      }
+      return;
+    }
 
     const newTimer = timer - 1;
     (this.player as any).checkInTimer = newTimer;
@@ -1903,8 +1915,8 @@ export class GameEngine {
       }
     }
 
-    // 若所有追擊者已消滅，自動解除警報
-    if (this.securityLevel === 'ALERT') {
+    // 若所有追擊者已消滅，自動解除警報（神經項圈逾期時除外）
+    if (this.securityLevel === 'ALERT' && !this.checkInAlertActive) {
       const anyChasing = this.robots.some(
         (r) =>
           r.isAlive &&
@@ -2647,8 +2659,17 @@ export class GameEngine {
       }
 
       if (result?.clearedAlert) {
-        this.securityLevel = 'CLEAR' as SecurityLevel;
-        this.pushMessage('Security alert cleared. All units returning to patrol.', 'info');
+        if (this.checkInAlertActive) {
+          this.pushMessage(
+            this.language === 'zh'
+              ? '❌ 無法解除警報：神經項圈逾期未簽到！請執行 CHECKIN 指令。'
+              : '❌ Cannot clear alert: Neural collar check-in overdue! Execute CHECKIN command.',
+            'danger'
+          );
+        } else {
+          this.securityLevel = 'CLEAR' as SecurityLevel;
+          this.pushMessage('Security alert cleared. All units returning to patrol.', 'info');
+        }
       }
 
       if (result?.energyGain) {
@@ -2963,7 +2984,7 @@ export class GameEngine {
             ((r as any).aiState === 'chase' || (r as any).aiState === 'attack' || ((r as any).pursuitTurns ?? 0) > 0) &&
             Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 14
         );
-        if (!anyNearbyChasing && this.securityLevel === 'ALERT') {
+        if (!anyNearbyChasing && this.securityLevel === 'ALERT' && !this.checkInAlertActive) {
           this.securityLevel = 'CLEAR' as SecurityLevel;
           this.pushMessage('All nearby hostiles eliminated. Area secure.', 'info');
         }
