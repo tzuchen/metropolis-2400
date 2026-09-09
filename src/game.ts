@@ -5,6 +5,7 @@ export interface PushableBlock {
   x: number;
   y: number;
   name: string;
+  nameZh?: string;
   secretDoor?: { x: number; y: number };
   revealed: boolean;
   revealedTile?: number | string;
@@ -614,7 +615,8 @@ export class GameEngine {
           id: 'crate-sec1-secret',
           x: 16,
           y: 18,
-          name: 'Heavy Alloy Crate',
+          name: 'Disguised Armor Wall Panel',
+          nameZh: '偽裝滑動裝甲牆',
           secretDoor: { x: 16, y: 17 },
           revealed: false,
           revealedTile: 4,
@@ -627,7 +629,8 @@ export class GameEngine {
           id: 'crate-sec2-secret',
           x: 26,
           y: 5,
-          name: 'Magnetic Cooling Cabinet',
+          name: 'Movable Industrial Wall Section',
+          nameZh: '偽裝冷卻重裝牆',
           secretDoor: { x: 27, y: 5 },
           revealed: false,
           revealedTile: 4,
@@ -640,7 +643,8 @@ export class GameEngine {
           id: 'crate-sewer-secret',
           x: 29,
           y: 5,
-          name: 'Reinforced Sewer Steel Crate',
+          name: 'Loose Drainage Brick Wall',
+          nameZh: '鬆動的下水道石砌牆',
           secretDoor: { x: 30, y: 5 },
           revealed: false,
           revealedTile: 4,
@@ -1846,6 +1850,13 @@ export class GameEngine {
           this.player.y = ny;
           soundFX.door();
           this.pushFloatingText(this.player.x, this.player.y, 'HEAVY PUSH', '#ffea00');
+          const isZh = this.language === 'zh';
+          this.pushMessage(
+            isZh
+              ? '機械轟鳴聲中，厚重的牆體緩緩滑動。'
+              : 'With a mechanical rumble, the heavy wall panel slides open.',
+            'info'
+          );
 
           if (pushableBlock.secretDoor && !pushableBlock.revealed && (pushableBlock.x !== oldX || pushableBlock.y !== oldY)) {
             pushableBlock.revealed = true;
@@ -1862,11 +1873,10 @@ export class GameEngine {
             (this.fx as any).spawnSparks(sd.x * tileSize + tileSize / 2, sd.y * tileSize + tileSize / 2, '#00ff88', 20);
             (this.fx as any).triggerShake(6);
             this.pushFloatingText(sd.x, sd.y, 'SECRET REVEALED!', '#00ff88');
-            const isZh = this.language === 'zh';
             this.pushMessage(
               isZh
-                ? `推開${pushableBlock.name}後發現暗門！`
-                : `Pushed ${pushableBlock.name} to reveal a secret door!`,
+                ? '【發現暗門】移開' + (pushableBlock.nameZh || pushableBlock.name) + '後，顯現出一道隱密暗門！'
+                : '[SECRET REVEALED] Pushed ' + pushableBlock.name + ' to reveal a hidden door!',
               'success'
             );
             this.gainExp(50, 'SECRET_DISCOVERY');
@@ -1879,7 +1889,7 @@ export class GameEngine {
           return;
         } else {
           soundFX.hit();
-          this.pushMessage(this.language === 'zh' ? '後方受阻，無法推動！' : 'Blocked behind, cannot push!', 'warning');
+          this.pushMessage(this.language === 'zh' ? '此處牆體略有晃動，但後方受阻無法推動！' : 'This wall panel seems movable, but is blocked behind!', 'warning');
           this.render();
           return;
         }

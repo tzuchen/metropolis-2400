@@ -208,7 +208,7 @@ export class GameRenderer {
         if (Number.isNaN(bx) || Number.isNaN(by)) return;
         const key = this.key(bx, by);
         if (!visible.has(key) && !explored.has(key)) return;
-        this.drawPushableBlock(ctx, block, bx * this.tileSize - camX, by * this.tileSize - camY, this.tileSize, visible.has(key), now);
+        this.drawPushableBlock(ctx, block, bx * this.tileSize - camX, by * this.tileSize - camY, this.tileSize, visible.has(key), now, map?.id);
       });
     }
 
@@ -1211,63 +1211,52 @@ export class GameRenderer {
     ctx.restore?.();
   }
 
-  drawPushableBlock(ctx: any, block: any, sx: number, sy: number, tileSize: number, isVisible: boolean, now: number): void {
+  drawPushableBlock(ctx: any, block: any, sx: number, sy: number, tileSize: number, isVisible: boolean, now: number, sector?: string): void {
     ctx.save?.();
     const alpha = isVisible ? 1 : 0.4;
     ctx.globalAlpha = alpha;
 
-    // 1. 深色金屬機甲底座
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect?.(sx + 2, sy + 2, tileSize - 4, tileSize - 4);
+    // 1. 繪製與該分區一般牆壁完全一致的底色與紋理
+    drawTileSprite(ctx, 'WALL', sx, sy, tileSize, isVisible, now, sector);
 
-    // 2. 邊框
-    const borderColor = block.color || '#ff9e00';
-    ctx.strokeStyle = borderColor;
-    ctx.lineWidth = 2;
-    ctx.strokeRect?.(sx + 2, sy + 2, tileSize - 4, tileSize - 4);
+    if (!block.revealed) {
+      // 未推開前：極其細微的暗色擬真接縫與底部微弱磨擦縫隙
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect?.(sx + 1, sy + 1, tileSize - 2, tileSize - 2);
 
-    // 3. 內部對角強化骨架
-    ctx.strokeStyle = 'rgba(255, 158, 0, 0.3)';
-    ctx.lineWidth = 1;
-    ctx.beginPath?.();
-    ctx.moveTo?.(sx + 2, sy + 2);
-    ctx.lineTo?.(sx + tileSize - 2, sy + tileSize - 2);
-    ctx.moveTo?.(sx + tileSize - 2, sy + 2);
-    ctx.lineTo?.(sx + 2, sy + tileSize - 2);
-    ctx.stroke?.();
+      // 底部微弱磨擦縫隙
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect?.(sx + 2, sy + tileSize - 3, tileSize - 4, 2);
 
-    // 4. 中心微光脈衝磁力符號與 ⟷ 推動箭頭圖示
-    const cx = sx + tileSize / 2;
-    const cy = sy + tileSize / 2;
-    const pulse = 0.6 + 0.4 * Math.sin(now * 0.005);
+      // 若全視力激活，顯示極淡的青色線框輔助提示
+      if (this.isOmniVisionActive) {
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect?.(sx + 3, sy + 3, tileSize - 6, tileSize - 6);
+      }
+    } else {
+      // 推開後：顯示已推開的淡綠色邊框與角落小綠點
+      ctx.strokeStyle = 'rgba(0, 255, 136, 0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect?.(sx + 1, sy + 1, tileSize - 2, tileSize - 2);
 
-    // 磁力符號 (Magnet-like U shape or simple glow)
-    ctx.fillStyle = borderColor;
-    ctx.shadowColor = borderColor;
-    ctx.shadowBlur = 8 * pulse;
-    ctx.beginPath?.();
-    ctx.arc?.(cx, cy, 6, 0, Math.PI * 2);
-    ctx.fill?.();
-
-    // 推動箭頭 (Left-Right Arrows)
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowBlur = 4;
-    ctx.font = 'bold 12px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText?.('⟷', cx, cy);
-
-    // 5. 若 block.revealed 則在右上角繪製綠色已解鎖狀態小圓點
-    if (block.revealed) {
-      ctx.fillStyle = '#00ff88';
-      ctx.shadowColor = '#00ff88';
-      ctx.shadowBlur = 6;
+      // 角落小綠點
+      ctx.fillStyle = 'rgba(0, 255, 136, 0.8)';
       ctx.beginPath?.();
-      ctx.arc?.(sx + tileSize - 8, sy + 8, 4, 0, Math.PI * 2);
+      ctx.arc?.(sx + 6, sy + 6, 2, 0, Math.PI * 2);
+      ctx.fill?.();
+      ctx.beginPath?.();
+      ctx.arc?.(sx + tileSize - 6, sy + 6, 2, 0, Math.PI * 2);
+      ctx.fill?.();
+      ctx.beginPath?.();
+      ctx.arc?.(sx + 6, sy + tileSize - 6, 2, 0, Math.PI * 2);
+      ctx.fill?.();
+      ctx.beginPath?.();
+      ctx.arc?.(sx + tileSize - 6, sy + tileSize - 6, 2, 0, Math.PI * 2);
       ctx.fill?.();
     }
 
-    ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
     ctx.restore?.();
   }
