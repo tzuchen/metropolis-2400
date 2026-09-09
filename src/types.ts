@@ -290,3 +290,24 @@ export interface LaserBeam {
   duration?: number;
   targetRobot?: Robot;
 }
+
+export interface PushableBlock {
+  id: string;
+  x: number;
+  y: number;
+  initialX: number;
+  initialY: number;
+  name: string;
+  nameZh: string;
+  sectorId: string;
+  revealed?: boolean;
+  color?: string;
+  secretDoor?: {
+    x: number;
+    y: number;
+    revealedTile: TileType;
+    originalTile?: TileType;
+    messageZh?: string;
+    messageEn?: string;
+  };
+}

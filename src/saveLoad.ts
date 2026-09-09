@@ -61,6 +61,7 @@ export interface SaveData {
   missionObjectives: Array<{ id: string; completed: boolean }>;
   exploredTiles: string[];
   groundItems: any[];
+  pushableBlocks?: any[];
 }
 
 let memoryBackup: SaveData | null = null;
@@ -142,6 +143,10 @@ export function saveGameState(game: any): boolean {
       })),
       exploredTiles: Array.from(game.exploredTiles || []),
       groundItems: game.groundItems || [],
+      pushableBlocks: (game.pushableBlocks || []).map((b: any) => ({
+        ...b,
+        secretDoor: b.secretDoor ? { ...b.secretDoor } : undefined,
+      })),
       checkInAlertActive: game.checkInAlertActive ?? false,
       securityLevel: game.securityLevel,
     };
@@ -251,6 +256,22 @@ export function loadGameState(game: any): boolean {
     // Restore ground items
     if (Array.isArray(data.groundItems)) {
       game.groundItems = data.groundItems;
+    }
+
+    // Restore pushable blocks
+    if (Array.isArray(data.pushableBlocks)) {
+      game.pushableBlocks = data.pushableBlocks.map((b: any) => ({
+        ...b,
+        secretDoor: b.secretDoor ? { ...b.secretDoor } : undefined,
+      }));
+      for (const block of game.pushableBlocks) {
+        if (block.revealed && block.secretDoor) {
+          const mapData = (game.map as any).tiles || (game.map as any).grid;
+          if (Array.isArray(mapData) && Array.isArray(mapData[block.secretDoor.y])) {
+            mapData[block.secretDoor.y][block.secretDoor.x] = block.revealedTile ?? 4;
+          }
+        }
+      }
     }
 
     // Restore language

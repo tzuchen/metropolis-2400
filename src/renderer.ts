@@ -198,6 +198,20 @@ export class GameRenderer {
       });
     }
 
+    // 4.7 繪製可推動物體 (Pushable Blocks)
+    const pushableBlocks = (this as any).pushableBlocks;
+    if (Array.isArray(pushableBlocks)) {
+      pushableBlocks.forEach((block: any) => {
+        if (!block) return;
+        const bx = Number(block.x);
+        const by = Number(block.y);
+        if (Number.isNaN(bx) || Number.isNaN(by)) return;
+        const key = this.key(bx, by);
+        if (!visible.has(key) && !explored.has(key)) return;
+        this.drawPushableBlock(ctx, block, bx * this.tileSize - camX, by * this.tileSize - camY, this.tileSize, visible.has(key), now);
+      });
+    }
+
     // 5. 繪製已被摧毀的機器人殘骸
     if (Array.isArray(robots)) {
       robots.forEach((robot) => {
@@ -1194,6 +1208,67 @@ export class GameRenderer {
       ctx.fillRect?.(0, height - 80, width, 80);
     }
 
+    ctx.restore?.();
+  }
+
+  drawPushableBlock(ctx: any, block: any, sx: number, sy: number, tileSize: number, isVisible: boolean, now: number): void {
+    ctx.save?.();
+    const alpha = isVisible ? 1 : 0.4;
+    ctx.globalAlpha = alpha;
+
+    // 1. 深色金屬機甲底座
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect?.(sx + 2, sy + 2, tileSize - 4, tileSize - 4);
+
+    // 2. 邊框
+    const borderColor = block.color || '#ff9e00';
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 2;
+    ctx.strokeRect?.(sx + 2, sy + 2, tileSize - 4, tileSize - 4);
+
+    // 3. 內部對角強化骨架
+    ctx.strokeStyle = 'rgba(255, 158, 0, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath?.();
+    ctx.moveTo?.(sx + 2, sy + 2);
+    ctx.lineTo?.(sx + tileSize - 2, sy + tileSize - 2);
+    ctx.moveTo?.(sx + tileSize - 2, sy + 2);
+    ctx.lineTo?.(sx + 2, sy + tileSize - 2);
+    ctx.stroke?.();
+
+    // 4. 中心微光脈衝磁力符號與 ⟷ 推動箭頭圖示
+    const cx = sx + tileSize / 2;
+    const cy = sy + tileSize / 2;
+    const pulse = 0.6 + 0.4 * Math.sin(now * 0.005);
+
+    // 磁力符號 (Magnet-like U shape or simple glow)
+    ctx.fillStyle = borderColor;
+    ctx.shadowColor = borderColor;
+    ctx.shadowBlur = 8 * pulse;
+    ctx.beginPath?.();
+    ctx.arc?.(cx, cy, 6, 0, Math.PI * 2);
+    ctx.fill?.();
+
+    // 推動箭頭 (Left-Right Arrows)
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 4;
+    ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText?.('⟷', cx, cy);
+
+    // 5. 若 block.revealed 則在右上角繪製綠色已解鎖狀態小圓點
+    if (block.revealed) {
+      ctx.fillStyle = '#00ff88';
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 6;
+      ctx.beginPath?.();
+      ctx.arc?.(sx + tileSize - 8, sy + 8, 4, 0, Math.PI * 2);
+      ctx.fill?.();
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
     ctx.restore?.();
   }
 

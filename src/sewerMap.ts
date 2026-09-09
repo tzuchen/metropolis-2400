@@ -67,6 +67,16 @@ export function buildSubSectorZeroMap(): SectorMap {
   tiles[22][28] = TileType.FORCEFIELD;
   tiles[23][28] = TileType.FORCEFIELD;
 
+  // 6. 走私者暗室結構 (Smuggler's Hidden Room)
+  for (let x = 30; x <= 34; x++) {
+    tiles[3][x] = TileType.WALL;
+    tiles[6][x] = TileType.WALL;
+  }
+  for (let y = 3; y <= 6; y++) {
+    tiles[y][30] = TileType.WALL;
+    tiles[y][34] = TileType.WALL;
+  }
+
   // 6. 下水道排污主控終端機 (Sewer Pump Terminal)
   tiles[14][14] = TileType.TERMINAL;
 

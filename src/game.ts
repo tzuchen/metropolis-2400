@@ -1,4 +1,14 @@
 import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard, Language, LaserBeam } from './types';
+
+export interface PushableBlock {
+  id: string;
+  x: number;
+  y: number;
+  name: string;
+  secretDoor?: { x: number; y: number };
+  revealed: boolean;
+  revealedTile?: number | string;
+}
 import { buildSector1Map, buildSector2Map, calculateFOV, disableForcefield, getTile, isWalkable, toggleDoor } from './map';
 import { hasSavedGame, saveGameState, loadGameState } from './saveLoad';
 import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise, installAugment, cycleWeapon, createQuantumAnnihilator } from './entities';
@@ -79,6 +89,8 @@ export class GameEngine {
   private lastLandmarkKey: string = '';
   storyArchiveSelectedIndex: number = 0;
   sectorGroundItems: Record<string, GroundItem[]> = {};
+  pushableBlocks: PushableBlock[] = [];
+  sectorPushableBlocks: Record<string, PushableBlock[]> = {};
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -100,6 +112,7 @@ export class GameEngine {
     this.groundItems = this.createSectorItems();
     this.missionObjectives = this.createSectorObjectives();
     this.hazards = this.createSectorHazards();
+    this.pushableBlocks = this.createSectorPushableBlocks('sector-1');
     this.isAugmentShopOpen = false;
     this.isInventoryOpen = false;
     this.isMissionLogOpen = false;
@@ -491,6 +504,16 @@ export class GameEngine {
         amount: 1,
         iconColor: '#ffea00',
       },
+      {
+        id: 'item-blackmarket-tactical',
+        name: '黑市特工戰術寶箱',
+        itemType: 'CREDIT_CHIP',
+        x: 16,
+        y: 15,
+        description: '黑市特工戰術寶箱：+200 CR / 治療 40 HP',
+        amount: 200,
+        iconColor: '#ffea00',
+      },
     ];
   }
 
@@ -525,6 +548,16 @@ export class GameEngine {
         description: 'Electro-magnetic disruptor grenade. Stuns all robots in radius 4 for 4 turns.',
         amount: 1,
         iconColor: '#c77dff',
+      },
+      {
+        id: 'item-tzorg-plasma-capacitor',
+        name: '佐格原型等離子電容',
+        itemType: 'BATTERY',
+        x: 29,
+        y: 5,
+        description: '佐格原型等離子電容：+60 EN',
+        amount: 1,
+        iconColor: '#00f0ff',
       },
     ];
   }
@@ -573,6 +606,50 @@ export class GameEngine {
     ];
   }
 
+  private createSectorPushableBlocks(sectorId?: string): PushableBlock[] {
+    const id = sectorId || this.map?.id || 'sector-1';
+    if (id === 'sector-1') {
+      return [
+        {
+          id: 'crate-sec1-secret',
+          x: 16,
+          y: 18,
+          name: 'Heavy Alloy Crate',
+          secretDoor: { x: 16, y: 17 },
+          revealed: false,
+          revealedTile: 4,
+        },
+      ];
+    }
+    if (id === 'sector-2') {
+      return [
+        {
+          id: 'crate-sec2-secret',
+          x: 26,
+          y: 5,
+          name: 'Magnetic Cooling Cabinet',
+          secretDoor: { x: 27, y: 5 },
+          revealed: false,
+          revealedTile: 4,
+        },
+      ];
+    }
+    if (id === 'sub-sector-0') {
+      return [
+        {
+          id: 'crate-sewer-secret',
+          x: 29,
+          y: 5,
+          name: 'Reinforced Sewer Steel Crate',
+          secretDoor: { x: 30, y: 5 },
+          revealed: false,
+          revealedTile: 4,
+        },
+      ];
+    }
+    return [];
+  }
+
   switchSector(targetSectorId: string): void {
     const prevMapId = this.map?.id;
     this.securityLevel = this.checkInAlertActive ? 'ALERT' as SecurityLevel : 'CLEAR' as SecurityLevel;
@@ -582,6 +659,7 @@ export class GameEngine {
     // Save current sector's ground items before switching
     if (prevMapId) {
       this.sectorGroundItems[prevMapId] = this.groundItems;
+      this.sectorPushableBlocks[prevMapId] = this.pushableBlocks;
     }
 
     if (targetSectorId === 'sector-citadel') {
@@ -589,6 +667,8 @@ export class GameEngine {
       if (this.sectorGroundItems['sector-citadel']) {
         this.groundItems = this.sectorGroundItems['sector-citadel'];
       }
+      this.pushableBlocks = this.sectorPushableBlocks['sector-citadel'] || this.createSectorPushableBlocks('sector-citadel');
+      this.applyRevealedPushableBlocks();
       bgm.setIntensity('combat');
       return;
     }
@@ -605,6 +685,8 @@ export class GameEngine {
       if (this.sectorGroundItems['sub-sector-0']) {
         this.groundItems = this.sectorGroundItems['sub-sector-0'];
       }
+      this.pushableBlocks = this.sectorPushableBlocks['sub-sector-0'] || this.createSectorPushableBlocks('sub-sector-0');
+      this.applyRevealedPushableBlocks();
       return;
     }
     if (targetSectorId === 'sector-2') {
@@ -632,6 +714,8 @@ export class GameEngine {
       ];
       this.npcs = this.createSector2NPCs();
       this.groundItems = this.sectorGroundItems['sector-2'] || this.createSector2Items();
+      this.pushableBlocks = this.sectorPushableBlocks['sector-2'] || this.createSectorPushableBlocks('sector-2');
+      this.applyRevealedPushableBlocks();
       this.visibleTiles.clear();
       this.exploredTiles.clear();
       this.updateFOV();
@@ -652,12 +736,32 @@ export class GameEngine {
       this.hazards = this.createSectorHazards();
       this.npcs = this.createSectorNPCs();
       this.groundItems = this.sectorGroundItems['sector-1'] || this.createSectorItems();
+      this.pushableBlocks = this.sectorPushableBlocks['sector-1'] || this.createSectorPushableBlocks('sector-1');
+      this.applyRevealedPushableBlocks();
       this.visibleTiles.clear();
       this.exploredTiles.clear();
       this.updateFOV();
       soundFX.door();
       this.pushFloatingText(this.player.x, this.player.y, 'SECTOR 1: STREETS', '#00f0ff');
       this.pushMessage('TRANSIT COMPLETE: Returned to Sector 1 Metropolis.', 'info');
+    }
+  }
+
+  private applyRevealedPushableBlocks(): void {
+    for (const block of this.pushableBlocks) {
+      if (block.revealed && block.secretDoor && block.revealedTile !== undefined) {
+        const tile = getTile(this.map, { x: block.secretDoor.x, y: block.secretDoor.y });
+        if (tile !== undefined && tile !== block.revealedTile) {
+          // Set the tile to revealedTile (4 = DOOR_OPEN)
+          const mapData = (this.map as any).tiles || (this.map as any).grid;
+          if (Array.isArray(mapData)) {
+            const row = mapData[block.secretDoor.y];
+            if (Array.isArray(row)) {
+              row[block.secretDoor.x] = block.revealedTile;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -1062,6 +1166,7 @@ export class GameEngine {
     this.renderer.isBigMapOpen = this.isBigMapOpen;
     (this.renderer as any).bigMapSelectedSector = this.bigMapSelectedSector;
     (this.renderer as any).storyArchiveSelectedIndex = this.storyArchiveSelectedIndex;
+    (this.renderer as any).pushableBlocks = this.pushableBlocks;
     (this.player as any).victory = this.victory;
     (this.player as any).hasDefeatedBoss = this.robots.some((r) => !r.isAlive && isBossRobot(r));
     (this.player as any).storyLogs = this.storyLogs;
@@ -1714,6 +1819,69 @@ export class GameEngine {
            // Fire at the wall
            this.fireEquippedWeapon({ dx, dy });
            return;
+        }
+      }
+
+      // 檢查是否走向可推動物體
+      const pushableBlock = this.pushableBlocks.find((b) => b.x === nx && b.y === ny);
+      if (pushableBlock) {
+        const bx = nx + dx;
+        const by = ny + dy;
+        const mapWidth = Number((this.map as any).width) || 0;
+        const mapHeight = Number((this.map as any).height) || 0;
+        const inBounds = bx >= 0 && bx < mapWidth && by >= 0 && by < mapHeight;
+        const targetTile = inBounds ? getTile(this.map, { x: bx, y: by }) : undefined;
+        const targetWalkable = targetTile !== undefined && isWalkable(targetTile);
+        const blockingRobot = this.robots.find((r) => r.isAlive && r.x === bx && r.y === by);
+        const blockingNPC = this.npcs.find((n) => n.isAlive && n.x === bx && n.y === by);
+        const blockingHazard = this.hazards.find((h) => !h.exploded && h.x === bx && h.y === by);
+        const blockingBlock = this.pushableBlocks.find((b) => b !== pushableBlock && b.x === bx && b.y === by);
+
+        if (inBounds && targetWalkable && !blockingRobot && !blockingNPC && !blockingHazard && !blockingBlock) {
+          const oldX = pushableBlock.x;
+          const oldY = pushableBlock.y;
+          pushableBlock.x = bx;
+          pushableBlock.y = by;
+          this.player.x = nx;
+          this.player.y = ny;
+          soundFX.door();
+          this.pushFloatingText(this.player.x, this.player.y, 'HEAVY PUSH', '#ffea00');
+
+          if (pushableBlock.secretDoor && !pushableBlock.revealed && (pushableBlock.x !== oldX || pushableBlock.y !== oldY)) {
+            pushableBlock.revealed = true;
+            const sd = pushableBlock.secretDoor;
+            const mapData = (this.map as any).tiles || (this.map as any).grid;
+            if (Array.isArray(mapData)) {
+              const row = mapData[sd.y];
+              if (Array.isArray(row)) {
+                row[sd.x] = pushableBlock.revealedTile ?? 4;
+              }
+            }
+            soundFX.victory();
+            const tileSize = (this.renderer as any)?.tileSize || 48;
+            (this.fx as any).spawnSparks(sd.x * tileSize + tileSize / 2, sd.y * tileSize + tileSize / 2, '#00ff88', 20);
+            (this.fx as any).triggerShake(6);
+            this.pushFloatingText(sd.x, sd.y, 'SECRET REVEALED!', '#00ff88');
+            const isZh = this.language === 'zh';
+            this.pushMessage(
+              isZh
+                ? `推開${pushableBlock.name}後發現暗門！`
+                : `Pushed ${pushableBlock.name} to reveal a secret door!`,
+              'success'
+            );
+            this.gainExp(50, 'SECRET_DISCOVERY');
+          }
+
+          this.handlePlayerStep();
+          this.checkItemPickup();
+          this.tick();
+          this.render();
+          return;
+        } else {
+          soundFX.hit();
+          this.pushMessage(this.language === 'zh' ? '後方受阻，無法推動！' : 'Blocked behind, cannot push!', 'warning');
+          this.render();
+          return;
         }
       }
 

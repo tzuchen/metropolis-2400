@@ -266,6 +266,7 @@ export function buildSector1Map(): SectorMap {
   // Building B (south side of street)
   for (let y = 14; y <= 17; y += 1) setWall(tiles, 14, y);
   for (let y = 14; y <= 17; y += 1) setWall(tiles, 18, y);
+  for (let x = 14; x <= 18; x += 1) setWall(tiles, x, 14);
   for (let x = 14; x <= 18; x += 1) setWall(tiles, x, 17);
 
   // === ALLEY / BACKSTREET (vertical, x=20) ===
@@ -535,6 +536,16 @@ export function buildSector2Map(): SectorMap {
   // Turret positions in corridor
   tiles[20][26] = 11 as any; // TURRET 1
   tiles[24][26] = 11 as any; // TURRET 2
+
+  // === SECRET R&D CHAMBER ===
+  for (let x = 27; x <= 31; x++) {
+    setWall(tiles, x, 3);
+    setWall(tiles, x, 6);
+  }
+  for (let y = 3; y <= 6; y++) {
+    setWall(tiles, 27, y);
+    setWall(tiles, 31, y);
+  }
 
   // === EAST SUB-CORE VAULT ===
   for (let x = 28; x <= 38; x++) {

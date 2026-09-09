@@ -57,6 +57,7 @@ export function drawManualModal(
             '[ E ]：手動開關門鎖。  [ T ]：居民對話 / 終端機接入。',
             '[ TAB ]：開啟/關閉全域戰術大地圖。  [ 8 / F5 ]：即時存檔。  [ 9 / F9 ]：即時讀檔。',
             '[ Z ]：中英切換。',
+            '[ 推動重型貨箱 ]：朝合金貨箱或冷卻機櫃走動即可推動（後方需無障礙）；推開後將顯現隱密暗門與黑市密室！',
           ],
         },
         {
@@ -98,6 +99,7 @@ export function drawManualModal(
             '[ E ] : Toggle door state.  [ T ] : Interact with NPCs / Terminals.',
             '[ TAB ] : Open/Close Tactical Big Map.  [ 8 / F5 ] : Quick Save.  [ 9 / F9 ] : Quick Load.',
             '[ Z ] : Toggle EN/ZH.',
+            '[ Pushing Heavy Objects ] : Move towards alloy crates or coolant racks to push them; shifting them can reveal secret doors and hidden black-market stashes!',
           ],
         },
         {
