@@ -10,6 +10,21 @@ export interface TerminalCommandResult {
   endgameChoice?: 'OVERLOAD' | 'SUBVERSION' | 'EVACUATION' | 'AWAKEN';
 }
 
+export interface TerminalContext {
+  player?: {
+    defeatedBoss?: boolean;
+    hasDefeatedBoss?: boolean;
+    items?: string[];
+    level?: number;
+    decryptedSlates?: string[];
+  };
+  defeatedBoss?: boolean;
+  hasDefeatedBoss?: boolean;
+  items?: string[];
+  level?: number;
+  decryptedSlates?: string[];
+}
+
 export class TerminalSession {
   terminal: TerminalData;
   history: string[] = [];
@@ -64,10 +79,11 @@ export class TerminalSession {
   private isCoreTerminal(): boolean {
     const type = String((this.terminal as any).type || '').toUpperCase();
     const id = String(this.terminal.id || '').toUpperCase();
-    return type === 'CORE' || id.includes('CORE') || id.includes('OVERMIND');
+    const name = String(this.terminal.name || '').toUpperCase();
+    return type === 'CORE' || id.includes('CORE') || id.includes('OVERMIND') || name.includes('CORE') || name.includes('OVERMIND') || name.includes('CITADEL');
   }
 
-  executeCommand(cmd: string): TerminalCommandResult {
+  executeCommand(cmd: string, context?: TerminalContext): TerminalCommandResult {
     const raw = cmd.trim();
     const c = raw.toLowerCase();
 
@@ -75,6 +91,15 @@ export class TerminalSession {
     if (raw.length > 0) {
       this.history.push('> ' + raw);
     }
+
+    // 容錯支援：同時支援 context.player 巢狀結構與 context 扁平結構
+    const pData = context?.player || context;
+    const defeatedBoss = pData?.defeatedBoss || pData?.hasDefeatedBoss;
+    const items: string[] = pData?.items || [];
+    const level: number = pData?.level || 1;
+    const decryptedSlates: string[] = pData?.decryptedSlates || [];
+
+    const hasContext = Boolean(context && (context.player || (context as any).items || (context as any).hasDefeatedBoss !== undefined));
 
     let result: TerminalCommandResult;
 
@@ -157,13 +182,23 @@ export class TerminalSession {
       };
     } else if (c === 'overload') {
       if (this.isCoreTerminal()) {
-        result = {
-          output:
-            'CORE TERMINAL OVERLOAD INITIATED: 核融過載 - Reactor meltdown sequence engaged.\n' +
-            'The Tzorg Overmind will be destroyed in a nuclear fusion cascade.',
-          endgameChoice: 'OVERLOAD',
-          shouldExit: true,
-        };
+        if (hasContext) {
+          result = {
+            output:
+              'CORE TERMINAL OVERLOAD INITIATED: 核融過載 - Reactor meltdown sequence engaged.\n' +
+              'The Tzorg Overmind will be destroyed in a nuclear fusion cascade.',
+            endgameChoice: 'OVERLOAD',
+            shouldExit: true,
+          };
+        } else {
+          result = {
+            output:
+              'CORE TERMINAL OVERLOAD INITIATED: 核融過載 - Reactor meltdown sequence engaged.\n' +
+              'The Tzorg Overmind will be destroyed in a nuclear fusion cascade.',
+            endgameChoice: 'OVERLOAD',
+            shouldExit: true,
+          };
+        }
       } else {
         result = { output: 'ACCESS DENIED: Requires Core Terminal' };
       }

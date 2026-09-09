@@ -2213,7 +2213,7 @@ export class GameRenderer {
 
   drawVictoryOverlay(player: Player, width: number, height: number, ctx: any, now: number): void {
     ctx.save?.();
-    ctx.fillStyle = 'rgba(0, 20, 15, 0.85)';
+    ctx.fillStyle = 'rgba(0, 20, 15, 0.95)';
     ctx.fillRect?.(0, 0, width, height);
 
     const p = player as any;
@@ -2260,6 +2260,7 @@ export class GameRenderer {
       shadowColor = '#00ffaa';
     }
 
+    // 1. 頂部標題與副標題 (帶光暈與脈衝)
     const pulse = 0.8 + 0.2 * Math.sin(now * 0.005);
     ctx.fillStyle = accentColor;
     ctx.shadowColor = shadowColor;
@@ -2268,27 +2269,148 @@ export class GameRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.globalAlpha = pulse;
-    ctx.fillText?.(title, width / 2, height / 2 - 50);
+    ctx.fillText?.(title, width / 2, 40);
     ctx.globalAlpha = 1;
 
     ctx.fillStyle = '#00f0ff';
     ctx.font = '14px monospace';
-    ctx.fillText?.(subtitle, width / 2, height / 2 - 20);
+    ctx.fillText?.(subtitle, width / 2, 65);
 
-    if (poem) {
-      ctx.fillStyle = '#c0d4de';
-      ctx.font = 'italic 12px monospace';
-      const poemLines = poem.split('\n');
-      poemLines.forEach((line, i) => {
-        ctx.fillText?.(line, width / 2, height / 2 + 5 + i * 18);
+    // 2. 左側區塊：詩篇敘事與夥伴後日談
+    const leftX = 40;
+    const leftW = width * 0.45;
+    let leftY = 100;
+
+    // 詩篇敘事
+    ctx.fillStyle = accentColor;
+    ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText?.(isZh ? '【 終局詩篇 】' : '[ EPILOGUE POEM ]', leftX, leftY);
+    leftY += 20;
+
+    ctx.fillStyle = '#c0d4de';
+    ctx.font = 'italic 12px monospace';
+    const poemLines = poem.split('\n');
+    poemLines.forEach((line) => {
+      ctx.fillText?.(line, leftX, leftY);
+      leftY += 18;
+    });
+    leftY += 10;
+
+    // 反抗軍夥伴後日談
+    ctx.fillStyle = accentColor;
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText?.(isZh ? '【 反抗軍夥伴後日談 】' : '[ COMPANION EPILOGUES ]', leftX, leftY);
+    leftY += 20;
+
+    const companions = [
+      {
+        name: isZh ? '文斯博士 (Doc Vance)' : 'Doc Vance',
+        text: isZh
+          ? '「我終於不再只是個逃犯。在廢墟中重建醫療站，我終於找到了贖罪的方式。」'
+          : '"I am no longer just a fugitive. Rebuilding the medical station in the ruins, I found my redemption."'
+      },
+      {
+        name: isZh ? '基拉 (Kira)' : 'Kira',
+        text: isZh
+          ? '「戰火平息後，我將為每一位犧牲的反抗軍點起霓虹燈。他們的名字將永遠閃爍。」'
+          : '"After the war, I will light a neon sign for every fallen rebel. Their names will shine forever."'
+      },
+      {
+        name: isZh ? '希爾維亞 (Sylvia)' : 'Sylvia',
+        text: isZh
+          ? '「我的工坊將成為自由者的避風港。這裡不再製造武器，而是製造希望。」'
+          : '"My workshop will be a sanctuary for the free. No more weapons here, only hope."'
+      }
+    ];
+
+    companions.forEach((comp) => {
+      ctx.fillStyle = '#00e5ff';
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText?.(comp.name, leftX, leftY);
+      leftY += 16;
+
+      ctx.fillStyle = '#a0b4b8';
+      ctx.font = '11px monospace';
+      const wrappedLines = wrapText(comp.text, leftW - 20, (s) => (ctx.measureText ? ctx.measureText(s).width : s.length * 8));
+      wrappedLines.forEach((line) => {
+        ctx.fillText?.(line, leftX, leftY);
+        leftY += 14;
       });
+      leftY += 8;
+    });
+
+    // 3. 右側區塊：特工終局檔案與戰果評級
+    const rightX = width * 0.55;
+    const rightW = width * 0.45 - 40;
+    let rightY = 100;
+
+    ctx.fillStyle = accentColor;
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText?.(isZh ? '【 特工終局檔案 】' : '[ OPERATIVE DOSSIER ]', rightX, rightY);
+    rightY += 20;
+
+    // 統計顯示
+    const level = Number(p?.level ?? 1) || 1;
+    let rankTitle = 'RECRUIT';
+    if (level >= 20) rankTitle = 'LEGENDARY OPERATIVE';
+    else if (level >= 15) rankTitle = 'MASTER GHOST';
+    else if (level >= 10) rankTitle = 'VETERAN SHADOW';
+    else if (level >= 5) rankTitle = 'SKILLED INFILTRATOR';
+    else if (level >= 3) rankTitle = 'PROVEN AGENT';
+    else if (level >= 2) rankTitle = 'FIELD OPERATIVE';
+
+    const rankZh = isZh
+      ? (level >= 20 ? '傳奇特工' : level >= 15 ? '大師幽影' : level >= 10 ? '資深暗影' : level >= 5 ? '熟練滲透者' : level >= 3 ? '經驗特工' : level >= 2 ? '外勤特工' : '新兵')
+      : rankTitle;
+
+    ctx.fillStyle = '#ffea00';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText?.(isZh ? `等級：LV.${level} | 軍階：${rankZh}` : `LEVEL: LV.${level} | RANK: ${rankTitle}`, rightX, rightY);
+    rightY += 20;
+
+    // 情報晶片解密度
+    const storyLogs = (p as any)?.storyLogs ?? [];
+    const readCount = Array.isArray(storyLogs) ? storyLogs.filter((l: any) => l.read).length : 0;
+    const totalLogs = Array.isArray(storyLogs) ? storyLogs.length : 4;
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillText?.(isZh ? `情報晶片解密度：${readCount}/${totalLogs}` : `INTEL SLATES DECRYPTED: ${readCount}/${totalLogs}`, rightX, rightY);
+    rightY += 20;
+
+    // 首領討伐狀態
+    const bossDefeated = (p as any)?.hasDefeatedBoss || (p as any)?.bossDefeated || false;
+    ctx.fillStyle = bossDefeated ? '#00ff88' : '#ff3855';
+    ctx.fillText?.(isZh ? `首領討伐狀態：${bossDefeated ? '已討伐' : '未討伐'}` : `BOSS STATUS: ${bossDefeated ? 'DEFEATED' : 'NOT DEFEATED'}`, rightX, rightY);
+    rightY += 20;
+
+    // 裝備神兵
+    const weaponName = p?.equippedWeapon?.name || 'None';
+    ctx.fillStyle = '#c77dff';
+    ctx.fillText?.(isZh ? `裝備神兵：${weaponName}` : `EQUIPPED WEAPON: ${weaponName}`, rightX, rightY);
+    rightY += 30;
+
+    // 終局等級評定
+    let finalRank = 'A';
+    let finalRankText = isZh ? '自由特工' : 'FREE AGENT';
+    if (level >= 15 && readCount >= 3 && bossDefeated) {
+      finalRank = 'S+';
+      finalRankText = isZh ? '傳奇解放者' : 'LEGENDARY LIBERATOR';
+    } else if (level >= 10 && readCount >= 2) {
+      finalRank = 'S';
+      finalRankText = isZh ? '菁英幽影' : 'ELITE GHOST';
     }
 
+    ctx.fillStyle = accentColor;
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText?.(isZh ? `終局評級：RANK ${finalRank} - ${finalRankText}` : `FINAL RANK: ${finalRank} - ${finalRankText}`, rightX, rightY);
+
+    // 4. 底部提示
     const promptText = isZh ? '按 [ R ] 重新開始模擬  |  按 [ 9 ] 讀取快速存檔' : 'PRESS [ R ] TO RESTART  |  [ 9 ] QUICK LOAD';
     ctx.fillStyle = '#ffffff';
     ctx.shadowBlur = 0;
     ctx.font = '12px monospace';
-    ctx.fillText?.(promptText, width / 2, height / 2 + 70);
+    ctx.textAlign = 'center';
+    ctx.fillText?.(promptText, width / 2, height - 30);
 
     ctx.restore?.();
   }

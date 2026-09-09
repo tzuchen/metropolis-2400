@@ -978,6 +978,9 @@ export class GameEngine {
     (this.renderer as any).bigMapSelectedSector = this.bigMapSelectedSector;
     (this.renderer as any).storyArchiveSelectedIndex = this.storyArchiveSelectedIndex;
     (this.player as any).victory = this.victory;
+    (this.player as any).hasDefeatedBoss = this.robots.some((r) => !r.isAlive && isBossRobot(r));
+    (this.player as any).storyLogs = this.storyLogs;
+    (this.player as any).missionObjectives = this.missionObjectives;
     this.renderer.render(
       this.map,
       this.player,
@@ -2501,7 +2504,26 @@ export class GameEngine {
         return;
       }
 
-      const result: any = this.activeTerminal.executeCommand(cmd);
+      const inventory = (this.player as any).inventory;
+      const items: string[] = [];
+      if (Array.isArray(inventory)) {
+        for (const it of inventory) {
+          if (it?.id) items.push(it.id);
+          if (it?.name) items.push(it.name);
+        }
+      }
+      const consumables = this.player.consumables;
+      if (consumables?.batteries) items.push(`batteries:${consumables.batteries}`);
+      if (consumables?.empGrenades) items.push(`empGrenades:${consumables.empGrenades}`);
+      if (this.player.equippedWeapon?.name) items.push(`equippedWeapon:${this.player.equippedWeapon.name}`);
+
+      const context = {
+        hasDefeatedBoss: (this.player as any).hasDefeatedBoss === true,
+        items,
+        level: (this.player as any).level ?? 1,
+        decryptedSlates: this.storyLogs.filter((l) => l.read).map((l) => l.id),
+      };
+      const result: any = this.activeTerminal.executeCommand(cmd, context);
 
       if (result?.disabledForcefield) {
         const ffName = result.disabledForcefield || 'CORE_FF';
