@@ -2619,10 +2619,10 @@ export class GameRenderer {
     ctx.stroke?.();
 
     const augments = [
-      { key: '[1]', id: 'DERMAL_ARMOR', name: 'Dermal Armor Plating', effect: 'Passive +10 DEF. Subdermal kinetic mesh.', price: 200 },
-      { key: '[2]', id: 'OPTIC_HUD', name: 'Optic HUD Targeting', effect: 'Enemy HP overlays & threat tracking.', price: 250 },
-      { key: '[3]', id: 'REFLEX_BOOSTER', name: 'Reflex Booster', effect: '+15% dodge & +10% crit chance.', price: 300 },
-      { key: '[4]', id: 'POWER_CORE', name: 'Overclocked Power Core', effect: '+50 Max Energy capacity.', price: 350 },
+      { key: '[1]', id: 'DERMAL_ARMOR', name: 'Dermal Armor Plating', effect: 'Passive +10 DEF. Subdermal kinetic mesh.', price: 100 },
+      { key: '[2]', id: 'OPTIC_HUD', name: 'Optic HUD Targeting', effect: 'Enemy HP overlays & threat tracking.', price: 120 },
+      { key: '[3]', id: 'REFLEX_BOOSTER', name: 'Reflex Booster', effect: '+15% dodge & +10% crit chance.', price: 150 },
+      { key: '[4]', id: 'POWER_CORE', name: 'Overclocked Power Core', effect: '+50 Max Energy capacity.', price: 100 },
     ];
     const installed = p?.augments ?? {};
 
