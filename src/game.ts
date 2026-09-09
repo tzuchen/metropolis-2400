@@ -14,6 +14,7 @@ import { bgm } from './music';
 import { setupSubSectorZero, getNextSectorId } from './sewerMap';
 import { setupCitadel, buildCitadelMap } from './citadelMap';
 import { FXManager } from './fx';
+import { updateNPC } from './npcAI';
 
 export interface ResolutionPreset {
   width: number;
@@ -1446,6 +1447,13 @@ export class GameEngine {
         if (npc) {
           soundFX.terminal();
           this.updateNPCDialogues();
+          const dx = this.player.x - npc.x;
+          const dy = this.player.y - npc.y;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            npc.facing = dx > 0 ? 'right' : 'left';
+          } else {
+            npc.facing = dy > 0 ? 'down' : 'up';
+          }
           this.activeDialogue = { npc, textIndex: 0 };
           this.render();
           return;
@@ -1540,6 +1548,13 @@ export class GameEngine {
         if (!this.player.isWeaponDrawn) {
           soundFX.terminal();
           this.updateNPCDialogues();
+          const dx = this.player.x - targetNPC.x;
+          const dy = this.player.y - targetNPC.y;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            targetNPC.facing = dx > 0 ? 'right' : 'left';
+          } else {
+            targetNPC.facing = dy > 0 ? 'down' : 'up';
+          }
           this.activeDialogue = { npc: targetNPC, textIndex: 0 };
           this.render();
           return;
@@ -1647,6 +1662,9 @@ export class GameEngine {
 
     // Process conveyor belt transport
     this.processConveyors();
+
+    // Update NPC autonomous behavior
+    this.updateNPCs();
 
     // Check environmental observations (conveyor, plasma barrier, bionic canopy, landmarks)
     this.checkEnvironmentalObservations();
@@ -2824,6 +2842,16 @@ export class GameEngine {
 
     this.tick();
     return true;
+  }
+
+  private updateNPCs(): void {
+    for (const npc of this.npcs) {
+      if (!npc.isAlive) continue;
+      const res = updateNPC(npc, this.player, this.map, { npcs: this.npcs, robots: this.robots }, this.turnCounter);
+      if (res?.bark && Math.random() < 0.25) {
+        this.pushFloatingText(npc.x, npc.y, this.language === 'zh' ? res.bark.zh : res.bark.en, npc.avatarColor || '#00e5ff');
+      }
+    }
   }
 
   private findTerminalAt(x: number, y: number): any {

@@ -41,6 +41,14 @@ export interface SaveData {
     isAlive: boolean;
     currentDialogueIndex?: number;
     rewardClaimed?: boolean;
+    x?: number;
+    y?: number;
+    homeX?: number;
+    homeY?: number;
+    wanderRadius?: number;
+    facing?: string;
+    actionState?: string;
+    actionStateZh?: string;
   }>;
   storyLogs: Array<{ id: string; read: boolean }>;
   missionObjectives: Array<{ id: string; completed: boolean }>;
@@ -103,6 +111,14 @@ export function saveGameState(game: any): boolean {
         isAlive: n.isAlive,
         currentDialogueIndex: n.currentDialogueIndex,
         rewardClaimed: n.rewardClaimed,
+        x: n.x,
+        y: n.y,
+        homeX: n.homeX,
+        homeY: n.homeY,
+        wanderRadius: n.wanderRadius,
+        facing: n.facing,
+        actionState: n.actionState,
+        actionStateZh: n.actionStateZh,
       })),
       storyLogs: (game.storyLogs || []).map((l: StoryLog) => ({
         id: l.id,
@@ -183,6 +199,16 @@ export function loadGameState(game: any): boolean {
           npc.isAlive = sn.isAlive;
           npc.currentDialogueIndex = sn.currentDialogueIndex;
           npc.rewardClaimed = sn.rewardClaimed;
+          if (typeof sn.x === 'number' && typeof sn.y === 'number') {
+            npc.x = sn.x;
+            npc.y = sn.y;
+            npc.homeX = sn.homeX;
+            npc.homeY = sn.homeY;
+            npc.wanderRadius = sn.wanderRadius;
+            npc.facing = sn.facing;
+            npc.actionState = sn.actionState;
+            npc.actionStateZh = sn.actionStateZh;
+          }
         }
       });
     }

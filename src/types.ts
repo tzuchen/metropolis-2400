@@ -191,6 +191,16 @@ export interface NPC extends Entity {
   currentDialogueIndex?: number;
   questReward?: QuestReward;
   rewardClaimed?: boolean;
+  homeX?: number;
+  homeY?: number;
+  wanderRadius?: number;
+  facing?: 'up' | 'down' | 'left' | 'right';
+  actionState?: string;
+  actionStateZh?: string;
+  ambientBarks?: { en: string; zh: string }[];
+  currentBark?: { en: string; zh: string; expiresAt?: number };
+  barkTimer?: number;
+  lastMoveTurn?: number;
 }
 
 export interface DialogueSession {

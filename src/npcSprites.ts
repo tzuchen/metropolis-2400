@@ -36,60 +36,332 @@ export function drawCustomNPCSprite(
         : '#ffea00')
   );
 
+  // 1. 朝向與呼吸動態計算
+  const facing = String(npc?.facing || 'down').toLowerCase();
+  let headOffsetX = 0;
+  let headOffsetY = 0;
+  let bodyScaleY = 1;
+
+  // 呼吸起伏 (Breathing)
+  const breath = Math.sin(time * 0.003) * 0.02;
+  bodyScaleY = 1 + breath;
+
+  // 朝向偏移 (Facing)
+  if (facing === 'left') {
+    headOffsetX = -size * 0.03;
+    headOffsetY = size * 0.01;
+  } else if (facing === 'right') {
+    headOffsetX = size * 0.03;
+    headOffsetY = size * 0.01;
+  } else if (facing === 'up') {
+    headOffsetY = -size * 0.02;
+  } else {
+    // down
+    headOffsetY = size * 0.02;
+  }
+
   ctx.save();
   if (!visible) {
     ctx.globalAlpha = 0.4;
   }
 
-  // 1. 地面柔和接觸陰影
+  // 2. 地面柔和接觸陰影
   ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
   ctx.beginPath();
   ctx.arc(cx, cy + size * 0.35, size * 0.28, 0, Math.PI * 2);
   ctx.fill();
 
-  // 2. 角色各部位專屬分流繪製
+  // 3. 角色各部位專屬分流繪製 (傳入 headOffset 與 bodyScaleY)
   if (id.includes('kira') || role.includes('KIRA') || role.includes('LEADER')) {
-    drawKira(ctx, cx, cy, size, themeColor, time);
+    drawKira(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
   } else if (id.includes('vance') || role.includes('VANCE') || role.includes('MEDIC')) {
-    drawDocVance(ctx, cx, cy, size, themeColor, time);
+    drawDocVance(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
   } else if (id.includes('hiro') || role.includes('HIRO') || role.includes('RAMEN')) {
-    drawHiro(ctx, cx, cy, size, themeColor, time);
+    drawHiro(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
   } else if (id.includes('sylvia') || role.includes('SYLVIA') || role.includes('BOTANIST')) {
-    drawSylvia(ctx, cx, cy, size, themeColor, time);
+    drawSylvia(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
   } else if (id.includes('ghost') || role.includes('GHOST') || role.includes('INFILTRATOR')) {
-    drawGhost(ctx, cx, cy, size, themeColor, time);
+    drawGhost(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
   } else if (id.includes('jackal') || role.includes('JACKAL') || role.includes('BROKER')) {
-    drawJackal(ctx, cx, cy, size, themeColor, time);
+    drawJackal(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
   } else if (id.includes('zero') || role.includes('ZERO-ONE') || role.includes('CYBORG')) {
-    drawZeroOne(ctx, cx, cy, size, themeColor, time);
+    drawZeroOne(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
   } else if (id.includes('elena') || role.includes('ELENA') || role.includes('ARCHIVIST')) {
-    drawElena(ctx, cx, cy, size, themeColor, time);
+    drawElena(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
   } else {
     // 預設/Jax：暗巷情報商
-    drawJax(ctx, cx, cy, size, themeColor, time);
+    drawJax(ctx, cx, cy, size, themeColor, time, headOffsetX, headOffsetY, bodyScaleY);
   }
 
-  // 3. 頭頂浮動交談提示框 (TALK [T] Prompt)
+  // 4. 動態頭頂資訊框 (Action & Speech Bubble)
   const bob = Math.sin(time * 0.005) * 2;
   const tagY = cy - size * 0.46 + bob;
+  
+  // 決定顯示內容：優先顯示 currentBark，否則輪流顯示狀態與 TALK
+  let displayText = 'TALK [T]';
+  let isSpeech = false;
+  
+  if (npc?.currentBark) {
+    let barkText = '';
+    if (typeof npc.currentBark === 'object' && npc.currentBark !== null) {
+      barkText = npc.currentBark.zh || npc.currentBark.en || JSON.stringify(npc.currentBark);
+    } else {
+      barkText = String(npc.currentBark);
+    }
+    displayText = barkText.substring(0, 12) + (barkText.length > 12 ? '...' : '');
+    isSpeech = true;
+  } else {
+    // 輪流顯示狀態
+    const statusCycle = Math.floor(time / 2000) % 2;
+    if (statusCycle === 0) {
+       // 優先使用 npc.actionStateZh 或 npc.actionState
+       if (npc?.actionStateZh) {
+          displayText = String(npc.actionStateZh);
+       } else if (npc?.actionState) {
+          displayText = String(npc.actionState);
+       } else {
+          // 根據角色顯示專屬狀態
+          if (id.includes('hiro')) displayText = '[烹煮中]';
+          else if (id.includes('sylvia')) displayText = '[培育中]';
+          else if (id.includes('kira')) displayText = '[指揮中]';
+          else if (id.includes('ghost')) displayText = '[隱匿中]';
+          else if (id.includes('jackal')) displayText = '[交易前]';
+          else if (id.includes('zero')) displayText = '[同步中]';
+          else if (id.includes('elena')) displayText = '[播放中]';
+          else if (id.includes('vance')) displayText = '[待命]';
+          else displayText = '[閒置]';
+       }
+    } else {
+       displayText = 'TALK [T]';
+    }
+  }
 
-  ctx.fillStyle = 'rgba(5, 15, 22, 0.88)';
-  ctx.fillRect(cx - 24, tagY - 8, 48, 14);
+  // 繪製氣泡框
+  const bubbleWidth = isSpeech ? Math.max(60, displayText.length * 6 + 10) : 48;
+  const bubbleHeight = isSpeech ? 18 : 14;
+  const bubbleX = cx - bubbleWidth / 2;
+  const bubbleY = tagY - bubbleHeight / 2;
 
+  // 背景
+  ctx.fillStyle = isSpeech ? 'rgba(10, 20, 30, 0.95)' : 'rgba(5, 15, 22, 0.88)';
+  ctx.beginPath();
+  ctx.roundRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 4);
+  ctx.fill();
+
+  // 邊框
   ctx.strokeStyle = themeColor;
   ctx.shadowColor = themeColor;
-  ctx.shadowBlur = 4;
+  ctx.shadowBlur = isSpeech ? 6 : 4;
   ctx.lineWidth = 1;
-  ctx.strokeRect(cx - 24, tagY - 8, 48, 14);
+  ctx.stroke();
+  
+  // 箭頭 (指向角色)
+  ctx.beginPath();
+  ctx.moveTo(cx - 4, bubbleY + bubbleHeight);
+  ctx.lineTo(cx + 4, bubbleY + bubbleHeight);
+  ctx.lineTo(cx, bubbleY + bubbleHeight + 4);
+  ctx.closePath();
+  ctx.fillStyle = isSpeech ? 'rgba(10, 20, 30, 0.95)' : 'rgba(5, 15, 22, 0.88)';
+  ctx.fill();
+  ctx.stroke();
 
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 8px monospace';
+  // 文字
+  ctx.fillStyle = isSpeech ? '#ffffff' : '#ffffff';
+  ctx.font = isSpeech ? '9px monospace' : 'bold 8px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('TALK [T]', cx, tagY - 1);
+  ctx.fillText(displayText, cx, tagY);
   ctx.shadowBlur = 0;
 
   ctx.restore();
+}
+
+// 特效繪製函數
+function drawKiraEffects(ctx: any, cx: number, cy: number, size: number, time: number) {
+  // 橙色戰術全息雷達波紋向外擴散
+  const pulse = (time * 0.002) % 1;
+  const radius = size * 0.2 + pulse * size * 0.3;
+  const alpha = 1 - pulse;
+  ctx.strokeStyle = `rgba(255, 109, 0, ${alpha * 0.6})`;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy - size * 0.1, radius, 0, Math.PI * 2);
+  ctx.stroke();
+  
+  // 第二層波紋
+  const pulse2 = (time * 0.002 + 0.5) % 1;
+  const radius2 = size * 0.2 + pulse2 * size * 0.3;
+  const alpha2 = 1 - pulse2;
+  ctx.strokeStyle = `rgba(255, 109, 0, ${alpha2 * 0.4})`;
+  ctx.beginPath();
+  ctx.arc(cx, cy - size * 0.1, radius2, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawVanceEffects(ctx: any, cx: number, cy: number, size: number, time: number) {
+  // 青藍色醫用生命體徵脈衝波紋
+  const pulse = (time * 0.003) % 1;
+  const radius = size * 0.15 + pulse * size * 0.25;
+  const alpha = 1 - pulse;
+  ctx.strokeStyle = `rgba(0, 229, 255, ${alpha * 0.5})`;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.stroke();
+  
+  // 心電圖式脈衝
+  const ecgOffset = (time * 0.05) % 40;
+  ctx.strokeStyle = `rgba(0, 229, 255, ${0.3 + 0.2 * Math.sin(time * 0.01)})`;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx - 10, cy - size * 0.05);
+  ctx.lineTo(cx - 5, cy - size * 0.05);
+  ctx.lineTo(cx - 3, cy - size * 0.08);
+  ctx.lineTo(cx, cy - size * 0.02);
+  ctx.lineTo(cx + 3, cy - size * 0.08);
+  ctx.lineTo(cx + 5, cy - size * 0.05);
+  ctx.lineTo(cx + 10, cy - size * 0.05);
+  ctx.stroke();
+}
+
+function drawHiroEffects(ctx: any, cx: number, cy: number, size: number, time: number) {
+  // 碗口飄浮上升的蒸氣白煙 (3 條曲線動畫)
+  for (let i = 0; i < 3; i++) {
+    const offset = i * 0.33;
+    const steamY = ((time * 0.03 + offset * 20) % 20);
+    const alpha = Math.max(0, 1 - steamY / 20);
+    const x = cx - size * 0.1 + Math.sin(time * 0.005 + i) * 4;
+    const y = cy + size * 0.04 - steamY;
+    
+    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.4})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + 3, y - 5, x + Math.sin(time * 0.01 + i) * 2, y - 10);
+    ctx.stroke();
+  }
+}
+
+function drawSylviaEffects(ctx: any, cx: number, cy: number, size: number, time: number) {
+  // 圍繞身體旋轉漂浮的青綠色仿生植物發光孢子光點
+  for (let i = 0; i < 5; i++) {
+    const angle = (time * 0.002 + i * (Math.PI * 2 / 5));
+    const radius = size * 0.3 + Math.sin(time * 0.005 + i) * 5;
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy - size * 0.1 + Math.sin(angle) * radius * 0.6;
+    const pulse = 0.5 + 0.5 * Math.sin(time * 0.01 + i);
+    
+    ctx.fillStyle = `rgba(124, 255, 203, ${pulse * 0.8})`;
+    ctx.shadowColor = '#7cffcb';
+    ctx.shadowBlur = 4;
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+}
+
+function drawGhostEffects(ctx: any, cx: number, cy: number, size: number, time: number) {
+  // 紫色光學迷彩波紋
+  const waveOffset = time * 0.01;
+  ctx.strokeStyle = `rgba(157, 78, 221, ${0.2 + 0.1 * Math.sin(time * 0.005)})`;
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) {
+    const y = cy - size * 0.2 + i * 8 + Math.sin(waveOffset + i) * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.15, y);
+    ctx.quadraticCurveTo(cx, y + Math.sin(waveOffset + i * 2) * 3, cx + size * 0.15, y);
+    ctx.stroke();
+  }
+  
+  // 偶發性噪點干擾線
+  if (Math.sin(time * 0.02) > 0.7) {
+    ctx.strokeStyle = `rgba(255, 255, 255, 0.3)`;
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 3; i++) {
+      const y = cy - size * 0.3 + Math.random() * size * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - size * 0.2, y);
+      ctx.lineTo(cx + size * 0.2, y);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawJackalEffects(ctx: any, cx: number, cy: number, size: number, time: number) {
+  // 槍口/瞄具紅色雷射準心光點
+  const laserPulse = 0.5 + 0.5 * Math.sin(time * 0.015);
+  ctx.fillStyle = `rgba(255, 23, 68, ${laserPulse})`;
+  ctx.shadowColor = '#ff1744';
+  ctx.shadowBlur = 6;
+  ctx.beginPath();
+  ctx.arc(cx + size * 0.15, cy - size * 0.15, 2, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // 雷射線
+  ctx.strokeStyle = `rgba(255, 23, 68, ${laserPulse * 0.5})`;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx + size * 0.15, cy - size * 0.15);
+  ctx.lineTo(cx + size * 0.3, cy - size * 0.25);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function drawZeroOneEffects(ctx: any, cx: number, cy: number, size: number, time: number) {
+  // 賽博生化電路偶發性青色電弧跳動
+  if (Math.sin(time * 0.02) > 0.6) {
+    ctx.strokeStyle = `rgba(0, 255, 255, ${0.6 + 0.4 * Math.sin(time * 0.05)})`;
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 4;
+    
+    // 電弧從機械側跳動
+    const arcStartX = cx + size * 0.05;
+    const arcStartY = cy - size * 0.1;
+    const arcEndX = cx + size * 0.15 + Math.random() * 5;
+    const arcEndY = cy - size * 0.05 + Math.random() * 5;
+    
+    ctx.beginPath();
+    ctx.moveTo(arcStartX, arcStartY);
+    ctx.lineTo(arcStartX + 5, arcStartY + 3);
+    ctx.lineTo(arcEndX, arcEndY);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+}
+
+function drawElenaEffects(ctx: any, cx: number, cy: number, size: number, time: number) {
+  // 浮動微光粉紅音符 '♪' 與霓虹光暈
+  for (let i = 0; i < 3; i++) {
+    const noteY = cy - size * 0.3 - ((time * 0.02 + i * 10) % 30);
+    const alpha = Math.max(0, 1 - (cy - size * 0.3 - noteY) / 30);
+    const x = cx + size * 0.1 + Math.sin(time * 0.005 + i * 2) * 8;
+    
+    ctx.fillStyle = `rgba(255, 64, 129, ${alpha * 0.8})`;
+    ctx.shadowColor = '#ff4081';
+    ctx.shadowBlur = 4;
+    ctx.font = '10px monospace';
+    ctx.fillText('♪', x, noteY);
+  }
+  ctx.shadowBlur = 0;
+}
+
+function drawJaxEffects(ctx: any, cx: number, cy: number, size: number, time: number) {
+  // 身上偶爾閃爍的金色暗巷硬幣反光
+  if (Math.sin(time * 0.015) > 0.5) {
+    const sparkleX = cx + (Math.random() - 0.5) * size * 0.3;
+    const sparkleY = cy - size * 0.1 + (Math.random() - 0.5) * size * 0.2;
+    const sparkleSize = 2 + Math.random() * 2;
+    
+    ctx.fillStyle = `rgba(255, 234, 0, ${0.5 + 0.5 * Math.sin(time * 0.03)})`;
+    ctx.shadowColor = '#ffea00';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(sparkleX, sparkleY, sparkleSize, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
 }
 
 // 1. Kira (火花指揮官): 橙紅軍官高領外套、反抗軍單肩斜帶、紅色幹練短髮、戰術通訊耳麥
@@ -144,6 +416,9 @@ function drawKira(ctx: any, cx: number, cy: number, size: number, color: string,
   ctx.shadowBlur = 5;
   ctx.fillRect(cx - size * 0.08, cy - size * 0.23, size * 0.16, 3);
   ctx.shadowBlur = 0;
+  
+  // 特效
+  drawKiraEffects(ctx, cx, cy, size, time);
 }
 
 // 2. Doc Vance (生化醫官): 白青色醫官大褂、胸前十字發光醫護標記、灰白鬍茬、雙管光纖聽診器
@@ -196,6 +471,9 @@ function drawDocVance(ctx: any, cx: number, cy: number, size: number, color: str
   ctx.shadowBlur = 5;
   ctx.fillRect(cx + 1, cy - size * 0.23, 7, 3.5);
   ctx.shadowBlur = 0;
+  
+  // 特效
+  drawVanceEffects(ctx, cx, cy, size, time);
 }
 
 // 3. Hiro (商店街拉麵商): 廚師白頭巾(Hachimaki)、深藍圍裙(Maekake)、手持湯勺/麵碗與微弱熱氣
@@ -268,6 +546,9 @@ function drawHiro(ctx: any, cx: number, cy: number, size: number, color: string,
   ctx.arc(cx - 4, cy - size * 0.21, 2, Math.PI, 0);
   ctx.arc(cx + 4, cy - size * 0.21, 2, Math.PI, 0);
   ctx.stroke();
+  
+  // 特效
+  drawHiroEffects(ctx, cx, cy, size, time);
 }
 
 // 4. Sylvia (仿生公園學者): 薄荷綠生化背心、額頭護目鏡、腰帶發光試管、肩上發光孢子
@@ -327,6 +608,9 @@ function drawSylvia(ctx: any, cx: number, cy: number, size: number, color: strin
   ctx.fillStyle = '#00e676';
   ctx.fillRect(cx - 5, cy - size * 0.22, 3, 2.5);
   ctx.fillRect(cx + 2, cy - size * 0.22, 3, 2.5);
+  
+  // 特效
+  drawSylviaEffects(ctx, cx, cy, size, time);
 }
 
 // 5. Ghost (反抗軍滲透幽靈): 深紫色兜帽斗篷、面部全息流光面罩、腕部全息投影
@@ -377,6 +661,9 @@ function drawGhost(ctx: any, cx: number, cy: number, size: number, color: string
     ctx.fillRect(cx - size * 0.04, cy - size * 0.23, 3, 3.5);
   }
   ctx.shadowBlur = 0;
+  
+  // 特效
+  drawGhostEffects(ctx, cx, cy, size, time);
 }
 
 // 6. Jackal (黑市軍火掮客): 緋紅皮質背心、重型雙濾罐防毒面罩、彈藥斜挎帶、紅色機械義眼
@@ -425,6 +712,9 @@ function drawJackal(ctx: any, cx: number, cy: number, size: number, color: strin
   ctx.shadowBlur = 6;
   ctx.fillRect(cx + 2, cy - size * 0.24, 4, 4);
   ctx.shadowBlur = 0;
+  
+  // 特效
+  drawJackalEffects(ctx, cx, cy, size, time);
 }
 
 // 7. Zero-One (叛逃覺醒生化人): 震撼的半人半機械構造，紫色超導光纖、紫水晶機械眼、背後金屬散熱脊椎
@@ -480,6 +770,9 @@ function drawZeroOne(ctx: any, cx: number, cy: number, size: number, color: stri
   ctx.fillStyle = '#37474f';
   ctx.shadowBlur = 0;
   ctx.fillRect(cx - 6, cy - size * 0.23, 3, 2);
+  
+  // 特效
+  drawZeroOneEffects(ctx, cx, cy, size, time);
 }
 
 // 8. Elena (失落音軌保管人): 復古大風衣、粉紫耳罩式耳機、銀髮高盤髻、手持卡帶隨身聽
@@ -533,6 +826,9 @@ function drawElena(ctx: any, cx: number, cy: number, size: number, color: string
   ctx.arc(cx, cy - size * 0.15, size * 0.15, Math.PI * 0.1, Math.PI * 0.9);
   ctx.stroke();
   ctx.shadowBlur = 0;
+  
+  // 特效
+  drawElenaEffects(ctx, cx, cy, size, time);
 }
 
 // 9. Jax / 預設 (暗巷情報商): 暗巷帽T、亮黃護目鏡、斜挎信用點晶片包
@@ -577,4 +873,7 @@ function drawJax(ctx: any, cx: number, cy: number, size: number, color: string, 
   ctx.shadowBlur = 6;
   ctx.fillRect(cx - size * 0.08, cy - size * 0.23, size * 0.16, 3.5);
   ctx.shadowBlur = 0;
+  
+  // 特效
+  drawJaxEffects(ctx, cx, cy, size, time);
 }
