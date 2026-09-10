@@ -210,16 +210,18 @@ export function drawManualModal(
   const titleHeight = 24;
   const sectionGap = 8;
   const totalSectionGaps = sections.length * sectionGap;
-  const availableHeight = bottomLimit - (y + 48) - titleHeight - totalSectionGaps;
+  const availableHeight = bottomLimit - (y + 48);
+  const itemCount = sections.reduce((sum, sec) => sum + sec.items.length, 0);
   const lineCount = totalLines;
   const idealLineHeight = 16;
   const idealFontSize = 13;
+  ctx.font = `${idealFontSize}px ${font}`;
 
   let fontSize = idealFontSize;
   let lineHeight = idealLineHeight;
 
   if (lineCount > 0) {
-    const requiredHeight = lineCount * idealLineHeight;
+    const requiredHeight = sections.length * titleHeight + (lineCount - sections.length) * idealLineHeight + itemCount * 2 + totalSectionGaps;
     if (requiredHeight > availableHeight) {
       const scale = availableHeight / requiredHeight;
       fontSize = Math.max(10, Math.floor(idealFontSize * scale));

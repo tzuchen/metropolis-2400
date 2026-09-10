@@ -192,14 +192,16 @@ export function loadGameState(game: any): boolean {
     if (!data) data = memoryBackup;
     if (!data) return false;
 
-    // Restore sector
-    if (typeof data.sectorId === 'string' && data.sectorId.length > 0 && typeof game.switchSector === 'function') {
-      game.switchSector(data.sectorId);
-    }
+    // Restore only known maps; malformed legacy saves must not desynchronize map and player state.
+    const validSectorIds = new Set(['sector-1', 'sector-2', 'sub-sector-0', 'sector-citadel']);
+    const canRestoreSector = typeof data.sectorId === 'string'
+      && validSectorIds.has(data.sectorId)
+      && typeof game.switchSector === 'function';
+    if (canRestoreSector) game.switchSector(data.sectorId);
 
     // Restore player state
     Object.assign(game.player, data.player);
-    (game.player as any).currentSectorId = data.sectorId;
+    (game.player as any).currentSectorId = canRestoreSector ? data.sectorId : game.map?.id || 'sector-1';
     if (typeof data.player.isCollarDisarmed === 'boolean') {
       game.player.isCollarDisarmed = data.player.isCollarDisarmed;
       game.isCollarDisarmed = data.player.isCollarDisarmed;
