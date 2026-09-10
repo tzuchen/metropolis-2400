@@ -72,6 +72,16 @@ export function initGame(): GameEngineInstance {
   const bgm = resolveBGM() as { start?: () => void } | undefined;
   let audioUnlocked = false;
 
+  const unlockAudio = (): void => {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    unlockAudioContext(soundFX);
+
+    if (bgm && typeof bgm.start === 'function') {
+      bgm.start();
+    }
+  };
+
   window.addEventListener('keydown', (event: KeyboardEvent) => {
     const blockedKeys = [' ', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'];
 
@@ -79,17 +89,12 @@ export function initGame(): GameEngineInstance {
       event.preventDefault();
     }
 
-    if (!audioUnlocked) {
-      audioUnlocked = true;
-      unlockAudioContext(soundFX);
-
-      if (bgm && typeof bgm.start === 'function') {
-        bgm.start();
-      }
-    }
+    unlockAudio();
 
     engine.handleKeyDown(event.key);
   });
+
+  window.addEventListener('pointerdown', unlockAudio, { once: true, passive: true });
 
   const urlParams = new URLSearchParams(window.location.search);
   const startParam = urlParams.get('start');

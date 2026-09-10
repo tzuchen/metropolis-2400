@@ -959,19 +959,23 @@ export class GameEngine {
     this.renderer.fx = this.fx;
     this.renderer.defeatCutscene = this.defeatCutscene;
     this.renderer.activeWaypoint = this.activeWaypoint;
-    const bossNear = this.robots.some((r) => r.isAlive && r.robotType === 'EXTERMINATOR' && Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 9);
-    const hostileNearby = this.robots.some(
-      (r) =>
-        r.isAlive &&
-        (r.aiState === 'chase' || r.aiState === 'attack' || (r.pursuitTurns ?? 0) > 0) &&
-        Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 14
-    );
-    if (bossNear) {
-      bgm.setIntensity('boss');
-    } else if (hostileNearby) {
-      bgm.setIntensity('combat');
+    if (this.isTitleScreen) {
+      bgm.setIntensity('title');
     } else {
-      bgm.setIntensity('exploration');
+      const bossNear = this.robots.some((r) => r.isAlive && r.robotType === 'EXTERMINATOR' && Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 9);
+      const hostileNearby = this.robots.some(
+        (r) =>
+          r.isAlive &&
+          (r.aiState === 'chase' || r.aiState === 'attack' || (r.pursuitTurns ?? 0) > 0) &&
+          Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 14
+      );
+      if (bossNear) {
+        bgm.setIntensity('boss');
+      } else if (hostileNearby) {
+        bgm.setIntensity('combat');
+      } else {
+        bgm.setIntensity('exploration');
+      }
     }
     this.renderer.isTitleScreen = this.isTitleScreen;
     this.renderer.language = this.language;

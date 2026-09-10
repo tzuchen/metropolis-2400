@@ -3,7 +3,7 @@
  * Zero external audio files: 100% synthesized via Web Audio API.
  */
 
-export type MusicIntensity = 'exploration' | 'combat' | 'boss';
+export type MusicIntensity = 'title' | 'exploration' | 'combat' | 'boss';
 
 export class MusicSynthesizer {
   private ctx: AudioContext | null = null;
@@ -16,7 +16,7 @@ export class MusicSynthesizer {
   private padGain: GainNode | null = null;
   private isPlaying: boolean = false;
   private isMuted: boolean = false;
-  private intensity: MusicIntensity = 'exploration';
+  private intensity: MusicIntensity = 'title';
   private arpTimer: any = null;
   private arpStep: number = 0;
   private _isTapeActive: boolean = false;
@@ -29,6 +29,8 @@ export class MusicSynthesizer {
   private readonly synthwaveRoots = [73.42, 58.27, 87.31, 65.41];
   // 80s Synthwave arpeggio scale
   private readonly synthwaveArpScale = [146.83, 174.61, 196.0, 220.0, 261.63, 293.66, 349.23, 440.0];
+  private readonly titleRoots = [55.0, 43.65, 65.41, 49.0];
+  private readonly titleArpScale = [220.0, 261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 659.25];
   private chordIndex: number = 0;
 
   constructor() {
@@ -167,7 +169,11 @@ export class MusicSynthesizer {
     if (!this.ctx || !this.filterNode || !this.masterGain) return;
 
     const now = this.ctx.currentTime;
-    if (level === 'exploration') {
+    if (level === 'title') {
+      this.filterNode.frequency.setTargetAtTime(850, now, 0.3);
+      this.filterNode.Q.setTargetAtTime(3.2, now, 0.3);
+      this.masterGain.gain.setTargetAtTime(0.28, now, 0.3);
+    } else if (level === 'exploration') {
       this.filterNode.frequency.setTargetAtTime(550, now, 0.4);
       this.masterGain.gain.setTargetAtTime(0.22, now, 0.3);
     } else if (level === 'combat') {
@@ -213,7 +219,7 @@ export class MusicSynthesizer {
     }
 
     // 依據強度切換琶音節奏速度 (毫秒)
-    const intervalMs = this.intensity === 'boss' ? 120 : this.intensity === 'combat' ? 150 : 280;
+    const intervalMs = this.intensity === 'boss' ? 120 : this.intensity === 'combat' ? 150 : this.intensity === 'title' ? 220 : 280;
 
     this.arpTimer = setInterval(() => {
       this.tickArp();
@@ -274,6 +280,27 @@ export class MusicSynthesizer {
     }
   }
 
+  private playSubPulse(ctx: AudioContext, now: number): void {
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(40, now);
+      osc.frequency.exponentialRampToValueAtTime(25, now + 0.15);
+
+      gain.gain.setValueAtTime(0.5, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain!);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } catch (e) {
+      console.warn('SubPulse synthesis error', e);
+    }
+  }
+
   private playHiHat(ctx: AudioContext, now: number): void {
     try {
       const bufferSize = ctx.sampleRate * 0.05;
@@ -310,12 +337,19 @@ export class MusicSynthesizer {
     const isBoss = this.intensity === 'boss';
     const isCombat = this.intensity === 'combat';
     const isTape = this._isTapeActive;
+    const isTitle = this.intensity === 'title';
 
     // 換根音 (每 16 拍切換和弦)
     if (this.arpStep % 16 === 0) {
       if (isTape) {
         this.chordIndex = (this.chordIndex + 1) % this.synthwaveRoots.length;
         const root = this.synthwaveRoots[this.chordIndex];
+        this.droneOsc?.frequency.setTargetAtTime(root, now, 0.1);
+        this.padOsc1?.frequency.setTargetAtTime(root * 4, now, 0.2);
+        this.padOsc2?.frequency.setTargetAtTime(root * 4 + 2.5, now, 0.2);
+      } else if (isTitle) {
+        this.chordIndex = (this.chordIndex + 1) % this.titleRoots.length;
+        const root = this.titleRoots[this.chordIndex];
         this.droneOsc?.frequency.setTargetAtTime(root, now, 0.1);
         this.padOsc1?.frequency.setTargetAtTime(root * 4, now, 0.2);
         this.padOsc2?.frequency.setTargetAtTime(root * 4 + 2.5, now, 0.2);
@@ -329,7 +363,7 @@ export class MusicSynthesizer {
     }
 
     // 戰鬥打擊節奏網格 或 Synthwave 輕快鼓點
-    if (isCombat || isBoss || isTape) {
+    if (isCombat || isBoss || isTape || isTitle) {
       const step = this.arpStep % 16;
       
       // Kick: 4-on-the-floor (0, 4, 8, 12) for combat/boss, 0, 8 for tape
@@ -354,6 +388,16 @@ export class MusicSynthesizer {
         if (isBoss) {
           // Boss mode: Double hi-hat or extra intensity
           this.playHiHat(this.ctx, now + 0.05);
+        }
+      }
+
+      // Title mode: SubPulse heartbeat on step 0 & 2, gentle HiHat on step 8
+      if (isTitle) {
+        if (step === 0 || step === 2) {
+          this.playSubPulse(this.ctx, now);
+        }
+        if (step === 8) {
+          this.playHiHat(this.ctx, now);
         }
       }
 
@@ -394,6 +438,14 @@ export class MusicSynthesizer {
       oscType = 'sawtooth';
       peakGain = 0.08;
       decayTime = 0.14;
+    } else if (isTitle) {
+      // Title screen: 16-step classic cyberpunk theme pattern
+      const notePattern = [0, 2, 4, 7, 5, 4, 2, 3, 0, 4, 5, 7, 6, 5, 3, 2];
+      const scaleIdx = notePattern[this.arpStep % notePattern.length];
+      freq = this.titleArpScale[scaleIdx];
+      oscType = 'sawtooth';
+      peakGain = 0.07;
+      decayTime = 0.24;
     } else {
       const notePattern = [0, 2, 4, 3, 1, 5, 2, 4];
       const scaleIdx = notePattern[this.arpStep % notePattern.length];
