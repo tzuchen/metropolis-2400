@@ -29,8 +29,8 @@ export class MusicSynthesizer {
   private readonly synthwaveRoots = [73.42, 58.27, 87.31, 65.41];
   // 80s Synthwave arpeggio scale
   private readonly synthwaveArpScale = [146.83, 174.61, 196.0, 220.0, 261.63, 293.66, 349.23, 440.0];
-  private readonly titleRoots = [55.0, 43.65, 65.41, 49.0];
-  private readonly titleArpScale = [220.0, 261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 659.25];
+  private readonly titleRoots = [65.41, 77.78, 51.91, 58.27];
+  private readonly titleArpScale = [261.63, 311.13, 349.23, 392.00, 466.16, 523.25, 622.25, 698.46];
   private chordIndex: number = 0;
 
   constructor() {
@@ -95,9 +95,10 @@ export class MusicSynthesizer {
     const now = ctx.currentTime;
 
     // 1. 低音底噪無人機 (Sub-Bass Drone)
+    const initialRoot = this.intensity === 'title' ? this.titleRoots[0] : 55;
     this.droneOsc = ctx.createOscillator();
     this.droneOsc.type = 'sawtooth';
-    this.droneOsc.frequency.setValueAtTime(55, now);
+    this.droneOsc.frequency.setValueAtTime(initialRoot, now);
 
     this.droneGain = ctx.createGain();
     this.droneGain.gain.setValueAtTime(0.18, now);
@@ -109,11 +110,11 @@ export class MusicSynthesizer {
     // 2. 雙重失諧賽博氛圍襯底 (Detuned Cyber Pad)
     this.padOsc1 = ctx.createOscillator();
     this.padOsc1.type = 'sawtooth';
-    this.padOsc1.frequency.setValueAtTime(220, now); // A3
+    this.padOsc1.frequency.setValueAtTime(initialRoot * 4, now);
 
     this.padOsc2 = ctx.createOscillator();
     this.padOsc2.type = 'sawtooth';
-    this.padOsc2.frequency.setValueAtTime(222.5, now); // Detuned +2.5Hz for chorus shimmer
+    this.padOsc2.frequency.setValueAtTime(initialRoot * 4 + 2.5, now); // Detuned +2.5Hz for chorus shimmer
 
     this.padGain = ctx.createGain();
     this.padGain.gain.setValueAtTime(0.08, now);
@@ -170,9 +171,9 @@ export class MusicSynthesizer {
 
     const now = this.ctx.currentTime;
     if (level === 'title') {
-      this.filterNode.frequency.setTargetAtTime(850, now, 0.3);
-      this.filterNode.Q.setTargetAtTime(3.2, now, 0.3);
-      this.masterGain.gain.setTargetAtTime(0.28, now, 0.3);
+      this.filterNode.frequency.setTargetAtTime(1150, now, 0.3);
+      this.filterNode.Q.setTargetAtTime(3.5, now, 0.3);
+      this.masterGain.gain.setTargetAtTime(0.32, now, 0.3);
     } else if (level === 'exploration') {
       this.filterNode.frequency.setTargetAtTime(550, now, 0.4);
       this.masterGain.gain.setTargetAtTime(0.22, now, 0.3);
@@ -440,12 +441,12 @@ export class MusicSynthesizer {
       decayTime = 0.14;
     } else if (isTitle) {
       // Title screen: 16-step classic cyberpunk theme pattern
-      const notePattern = [0, 2, 4, 7, 5, 4, 2, 3, 0, 4, 5, 7, 6, 5, 3, 2];
+      const notePattern = [0, 3, 4, 5, 1, 3, 4, 6, 2, 5, 6, 5, 4, 3, 2, 1];
       const scaleIdx = notePattern[this.arpStep % notePattern.length];
       freq = this.titleArpScale[scaleIdx];
       oscType = 'sawtooth';
-      peakGain = 0.07;
-      decayTime = 0.24;
+      peakGain = 0.09;
+      decayTime = 0.28;
     } else {
       const notePattern = [0, 2, 4, 3, 1, 5, 2, 4];
       const scaleIdx = notePattern[this.arpStep % notePattern.length];
