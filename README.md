@@ -252,21 +252,30 @@ metropolis-2400/
 │   ├── citadelMap.ts     # Citadel map and endgame area
 │   ├── textWrap.ts       # Canvas text wrapping helpers
 │   ├── uiFont.ts         # UI font helpers
+│   ├── combat.ts         # Combat resolution and weapon effects
+│   ├── dialogues.ts      # Bilingual story/NPC dialogue data
+│   ├── globalAtlas.ts    # Cross-sector map/atlas coordination
+│   ├── npcDialogueManager.ts # NPC conversation progression
+│   ├── radar.ts          # Tactical radar/minimap helpers
+│   ├── worldBuilder.ts   # Sector entities, objectives and world initialization
 │   └── style.css         # Retro CRT scanline shaders & glowing cyber-interface styles
-├── scripts/              # Automated verification test suite
+├── scripts/              # Automated verification test suite (41 scripts)
 │   ├── verify-game.ts    # Engine loop & turn validation
 │   ├── verify-ai.ts      # Robot vision, alerts & pathfinding tests
-│   ├── verify-depth.ts   # Inventory, EMP shockwave & ambush crit tests
-│   ├── verify-augments.ts# Cyberware clinic & canister hazard tests
-│   ├── verify-weapons.ts # Multi-weapon cycling & suppressed acoustics tests
+│   ├── verify-augments.ts # Cyberware augmentation tests
 │   ├── verify-story.ts   # Data slate decryption & dynamic dialogue tests
-│   ├── verify-renderer.ts# Canvas drawing calls & UI verification
-│   ├── verify-sprites.ts # Sprite rendering integrity tests
-│   └── verify-npc-actions-and-movement.ts # NPC wandering, facing & VFX tests
+│   ├── verify-weapons.ts # Multi-weapon cycling & suppressed acoustics tests
+│   ├── verify-generic-sector-save-restore.ts # Save/Load restoration tests
+│   ├── verify-citadel-endgame-flow.ts # Citadel boss and ending flow
+│   ├── verify-title-save-translation.ts # Title UI, save/load, bilingual
+│   ├── verify-art-and-literature-quests.ts # Quest progression
+│   └── ...               # 32 additional verification scripts
 ├── live-gh-pages-preview.png # GitHub Pages live preview screenshot
 ├── npc-actions-preview.png   # NPC dynamic actions & VFX screenshot
 └── preview.png           # Live gameplay screenshot
 ```
+
+> `scripts` currently contains 41 verification scripts. `npm test` runs TypeScript typechecking plus 37 selected verification scripts covering engine turns, AI, story, augments, weapons, maps, saves, bosses/endgame, UI, and quests.
 
 ---
 
