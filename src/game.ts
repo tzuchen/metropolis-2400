@@ -1459,7 +1459,6 @@ export class GameEngine {
       this.cycleResolution();
       return;
     }
-    if (handleSpecialInput(this, key)) return;
     if (this.isTitleScreen) {
       if (key === 'ArrowUp' || key === 'w' || key === 'W') {
         this.titleMenuIndex = (this.titleMenuIndex - 1 + 6) % 6;
@@ -1508,6 +1507,7 @@ export class GameEngine {
       return;
     }
 
+    if (handleSpecialInput(this, key)) return;
     if (this.isBigMapOpen) {
       if (key === 'Escape' || key === 'Esc' || key === 'Tab' || key === 'tab' || key === ' ' || key === 'Space' || key === 'Enter' || key === 'k' || key === 'K') {
         this.isBigMapOpen = false;

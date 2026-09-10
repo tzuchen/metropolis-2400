@@ -72,6 +72,13 @@ assert(game.language === 'en', 'Pressing [Z] on Title Screen should toggle langu
 game.handleKeyDown('z');
 assert(game.language === 'zh', 'Pressing [Z] again should toggle language back to zh');
 
+// Arrow navigation selects title menu entries without moving the player
+game.titleMenuIndex = 0;
+game.handleKeyDown('ArrowDown');
+assert(game.titleMenuIndex === 1, 'ArrowDown should select the next title menu item');
+game.handleKeyDown('ArrowUp');
+assert(game.titleMenuIndex === 0, 'ArrowUp should select the previous title menu item');
+
 // Pressing move key while on title screen should NOT move player
 const startX = game.player.x;
 game.handleKeyDown('ArrowRight');

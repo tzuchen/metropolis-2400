@@ -229,6 +229,11 @@ export function drawManualModal(
     }
   }
 
+  ctx.save?.();
+  ctx.beginPath?.();
+  ctx.rect?.(x + 16, y + 44, boxW - 32, bottomLimit - (y + 44));
+  ctx.clip?.();
+
   let secY = y + 48;
   sections.forEach((sec) => {
     ctx.fillStyle = sec.color;
@@ -251,6 +256,8 @@ export function drawManualModal(
 
     secY += sectionGap;
   });
+
+  ctx.restore?.();
 
   // 底部關閉提示
   const pulse = 0.7 + 0.3 * Math.sin(now * 0.008);
