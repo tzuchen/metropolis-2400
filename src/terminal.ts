@@ -32,6 +32,12 @@ export class TerminalSession {
   history: string[] = [];
   input: string = '';
   isSiphoned: boolean = false;
+  get title(): string { return this.terminal?.name || ''; }
+  get name(): string { return this.terminal?.name || ''; }
+  get lines(): string[] { return this.history; }
+  get log(): string[] { return this.history; }
+  get buffer(): string { return this.input; }
+  get value(): string { return this.input; }
 
   constructor(terminal: TerminalData) {
     this.terminal = terminal;

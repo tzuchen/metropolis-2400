@@ -1,4 +1,4 @@
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard, Language, LaserBeam, PushableBlock } from './types';
+import type { SectorMap, Player, Item, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard, Language, LaserBeam, PushableBlock } from './types';
 import { buildSector1Map, buildSector2Map, calculateFOV, disableForcefield, getTile, isWalkable, toggleDoor } from './map';
 import { hasSavedGame, saveGameState, loadGameState } from './saveLoad';
 import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise, installAugment, cycleWeapon, createQuantumAnnihilator } from './entities';
@@ -17,6 +17,18 @@ import { FXManager } from './fx';
 import { updateNPC } from './npcAI';
 import { updateNPCDialogues as _updateNPCDialogues } from './npcDialogueManager';
 import { fireEquippedWeapon as _fireEquippedWeapon } from './combat';
+import {
+  createSectorRobots,
+  createSectorNPCs,
+  createSector2NPCs,
+  createSectorStoryLogs,
+  createSectorItems,
+  createSector2Items,
+  createSectorObjectives,
+  createSectorHazards,
+  createSectorPushableBlocks,
+} from './worldBuilder';
+
 
 export interface ResolutionPreset {
   width: number;
@@ -142,7 +154,7 @@ export class GameEngine {
     this.render();
     this.startAnimationLoop();
     this.setupPointerEvents();
-    (this.player as any).checkInTimer = 100;
+    this.player.checkInTimer = 100;
   }
 
   private setupPointerEvents(): void {
@@ -393,460 +405,39 @@ export class GameEngine {
   }
 
   private createSectorRobots(): Robot[] {
-    return [
-      createRobot('SCOUT_DRONE' as RobotType, { x: 12, y: 5 }, [{ x: 12, y: 5 }, { x: 12, y: 12 }]),
-      createRobot('SCOUT_DRONE' as RobotType, { x: 18, y: 8 }, [{ x: 18, y: 8 }, { x: 24, y: 8 }]),
-      createRobot('SHOCK_ENFORCER' as RobotType, { x: 24, y: 6 }, [{ x: 24, y: 5 }, { x: 24, y: 8 }]),
-      createRobot('HUNTER_KILLER' as RobotType, { x: 32, y: 18 }, [{ x: 32, y: 18 }, { x: 32, y: 24 }]),
-      createRobot('SERVICE_BOT' as RobotType, { x: 8, y: 10 }, [{ x: 8, y: 10 }, { x: 8, y: 14 }]),
-    ];
+    return createSectorRobots();
   }
 
   private createSectorNPCs(): NPC[] {
-    return getSector1NPCs();
+    return createSectorNPCs();
   }
 
   private createSector2NPCs(): NPC[] {
-    return getSector2NPCs();
+    return createSector2NPCs();
   }
 
   private createSectorStoryLogs(): StoryLog[] {
-    const baseLogs = getSectorStoryLogs();
-    const existingIds = new Set(baseLogs.map((l) => l.id));
-    const extraLogs: StoryLog[] = [];
-
-    if (!existingIds.has('slate-tzorg')) {
-      extraLogs.push({
-        id: 'slate-tzorg',
-        title: 'Tzorg Security Directive',
-        read: false,
-        content: 'CLASSIFIED: Subject Raven has breached perimeter. All units engage on sight. Deploy Hunter-Killers to Central Data Core. The Five Million must remain dormant. Failure to comply will result in neural termination.',
-      } as unknown as StoryLog);
-    }
-
-    if (!existingIds.has('slate-ghost')) {
-      extraLogs.push({
-        id: 'slate-ghost',
-        title: 'Awakening the Five Million',
-        read: false,
-        content: 'Intercepted quantum transmission: The neural collars can be reversed. If the Central Overmind core is breached, the signal can be broadcast to all five million subjects. Freedom is not a privilege. It is a right. — Ghost',
-      } as unknown as StoryLog);
-    }
-
-    return [...baseLogs, ...extraLogs];
+    return createSectorStoryLogs();
   }
 
   private createSectorItems(): GroundItem[] {
-    return [
-      {
-        id: 'item-med-1',
-        name: 'Nanite Medkit',
-        itemType: 'MEDKIT',
-        x: 8,
-        y: 7,
-        description: 'Military-grade nanite injector. Restores +40 HP.',
-        amount: 1,
-        iconColor: '#00ff88',
-      },
-      {
-        id: 'item-bat-1',
-        name: 'Plasma Battery',
-        itemType: 'BATTERY',
-        x: 19,
-        y: 3,
-        description: 'Super-capacitance plasma power cell. Restores +50 EN.',
-        amount: 1,
-        iconColor: '#00f0ff',
-      },
-      {
-        id: 'item-emp-1',
-        name: 'EMP Disruptor',
-        itemType: 'EMP_GRENADE',
-        x: 23,
-        y: 11,
-        description: 'Electro-magnetic disruptor grenade. Stuns all robots in radius 4 for 4 turns.',
-        amount: 1,
-        iconColor: '#c77dff',
-      },
-      {
-        id: 'item-med-2',
-        name: 'Nanite Medkit',
-        itemType: 'MEDKIT',
-        x: 28,
-        y: 4,
-        description: 'Emergency trauma pack left behind by Tzorg patrol.',
-        amount: 1,
-        iconColor: '#00ff88',
-      },
-      {
-        id: 'item-key-1',
-        name: 'Security Pass',
-        itemType: 'KEYCARD',
-        x: 15,
-        y: 11,
-        description: 'Decrypted security clearance token for Tzorg terminal override.',
-        amount: 1,
-        iconColor: '#ffea00',
-      },
-      {
-        id: 'slate-item-vance',
-        name: 'Data Slate 01',
-        itemType: 'DATA_SLATE',
-        x: 5,
-        y: 3,
-        description: 'Encrypted memory disc: Dr. Vance\'s remorse regarding the Neural Collar.',
-        iconColor: '#00e5ff',
-        storyLogId: 'slate-vance',
-      },
-      {
-        id: 'slate-item-kira',
-        name: 'Data Slate 02',
-        itemType: 'DATA_SLATE',
-        x: 4,
-        y: 7,
-        description: 'Resistance dispatch: The Fall of Sector 2 & Operation Prometheus.',
-        iconColor: '#ff7700',
-        storyLogId: 'slate-kira',
-      },
-      {
-        id: 'slate-item-tzorg',
-        name: 'Data Slate 03',
-        itemType: 'DATA_SLATE',
-        x: 21,
-        y: 8,
-        description: 'Tzorg Syndicate security directive concerning rogue Subject Raven.',
-        iconColor: '#ff2a4b',
-        storyLogId: 'slate-tzorg',
-      },
-      {
-        id: 'slate-item-ghost',
-        name: 'Data Slate 04',
-        itemType: 'DATA_SLATE',
-        x: 17,
-        y: 4,
-        description: 'Intercepted quantum transmission: Awakening the Five Million.',
-        iconColor: '#9d4edd',
-        storyLogId: 'slate-ghost',
-      },
-      {
-        id: 'item-omni-visor',
-        name: '全知超感光子透鏡',
-        itemType: 'KEYCARD',
-        x: 5,
-        y: 23,
-        description: '全知超感光子透鏡：啟動全視域掃描，偵測全地圖單位。',
-        amount: 1,
-        iconColor: '#00f0ff',
-      },
-      {
-        id: 'item-full-map-uplink',
-        name: '全域軌道測繪晶片',
-        itemType: 'KEYCARD',
-        x: 6,
-        y: 23,
-        description: '全域軌道測繪晶片：啟動全地圖探索視圖。',
-        amount: 1,
-        iconColor: '#ffea00',
-      },
-      {
-        id: 'item-blackmarket-tactical',
-        name: '黑市特工戰術寶箱',
-        itemType: 'CREDIT_CHIP',
-        x: 16,
-        y: 15,
-        description: '黑市特工戰術寶箱：+200 CR / 治療 40 HP',
-        amount: 200,
-        iconColor: '#ffea00',
-      },
-    ];
+    return createSectorItems();
   }
 
   private createSector2Items(): GroundItem[] {
-    return [
-      {
-        id: 'sec2-med-1',
-        name: 'Nanite Medkit',
-        itemType: 'MEDKIT',
-        x: 8,
-        y: 5,
-        description: 'Military-grade nanite injector. Restores +40 HP.',
-        amount: 1,
-        iconColor: '#00ff88',
-      },
-      {
-        id: 'sec2-bat-1',
-        name: 'Plasma Battery',
-        itemType: 'BATTERY',
-        x: 16,
-        y: 7,
-        description: 'Super-capacitance plasma power cell. Restores +50 EN.',
-        amount: 1,
-        iconColor: '#00f0ff',
-      },
-      {
-        id: 'sec2-emp-1',
-        name: 'EMP Disruptor',
-        itemType: 'EMP_GRENADE',
-        x: 25,
-        y: 20,
-        description: 'Electro-magnetic disruptor grenade. Stuns all robots in radius 4 for 4 turns.',
-        amount: 1,
-        iconColor: '#c77dff',
-      },
-      {
-        id: 'item-tzorg-plasma-capacitor',
-        name: '佐格原型等離子電容',
-        itemType: 'BATTERY',
-        x: 29,
-        y: 5,
-        description: '佐格原型等離子電容：+60 EN',
-        amount: 1,
-        iconColor: '#00f0ff',
-      },
-      {
-        id: 'item-chromatic-aerosol',
-        name: '超光譜量子色劑',
-        itemType: 'KEYCARD',
-        x: 23,
-        y: 5,
-        description: '超光譜量子色劑：Vesper 的塗鴉創作材料。',
-        amount: 1,
-        iconColor: '#ff00ff',
-      },
-    ];
+    return createSector2Items();
   }
 
   private createSectorObjectives(): MissionObjective[] {
-    return [
-      {
-        id: 'obj-safehouse',
-        title: 'Safehouse Recon & Gear',
-        description: 'Converse with Commander Kira and Doc Vance in Sector 1 Safehouse.',
-        completed: false,
-      },
-      {
-        id: 'obj-scavenge',
-        title: 'Tactical Stockpile',
-        description: 'Scavenge field supplies (Nanite Medkit, Battery, or EMP Grenade).',
-        completed: false,
-      },
-      {
-        id: 'obj-forcefield',
-        title: 'Deactivate Checkpoint 01',
-        description: 'Access terminal CHECKPOINT_FF to lower the high-energy plasma barrier.',
-        completed: false,
-      },
-      {
-        id: 'obj-vault',
-        title: 'Infiltrate Central Data Core',
-        description: 'Bypass Hunter-Killer defense grid and reach Sector 1 Extraction Nexus.',
-        completed: false,
-      },
-      {
-        id: 'obj-superweapon',
-        title: 'Project Singularity: Quantum Annihilator',
-        description: 'Collect Quantum Core from Sylvia and Matrix Chip from Sewers, then forge weapon with Zero-One in Sector 2.',
-        completed: false,
-      },
-    ];
+    return createSectorObjectives();
   }
 
   private createSectorHazards(): Hazard[] {
-    return [
-      { id: 'hazard-plasma-1', x: 19, y: 8, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
-      { id: 'hazard-plasma-2', x: 26, y: 7, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
-      { id: 'hazard-plasma-3', x: 33, y: 19, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
-      { id: 'hazard-plasma-4', x: 14, y: 13, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
-    ];
+    return createSectorHazards();
   }
 
   private createSectorPushableBlocks(sectorId?: string): PushableBlock[] {
-    const id = sectorId || this.map?.id || 'sector-1';
-    if (id === 'sector-1') {
-      return [
-        {
-          id: 'crate-detention-grate',
-          x: 36,
-          y: 4,
-          initialX: 36,
-          initialY: 4,
-          sectorId: 'sector-1',
-          name: 'Loose Ventilation Metal Grate',
-          nameZh: '鬆動的通風金屬柵板',
-          blockType: 'crate',
-          secretDoor: { x: 36, y: 3, revealedTile: 4 },
-          revealed: false,
-        },
-        {
-          id: 'crate-sec1-secret',
-          x: 16,
-          y: 18,
-          initialX: 16,
-          initialY: 18,
-          sectorId: 'sector-1',
-          name: 'Disguised Armor Wall Panel',
-          nameZh: '偽裝滑動裝甲牆',
-          blockType: 'disguised_wall',
-          secretDoor: { x: 16, y: 17, revealedTile: 4 },
-          revealed: false,
-        },
-        {
-          id: 'crate-sec1-alley',
-          x: 20,
-          y: 15,
-          initialX: 20,
-          initialY: 15,
-          sectorId: 'sector-1',
-          name: 'Reinforced Cargo Crate',
-          nameZh: '加固物流重裝箱',
-          blockType: 'crate',
-          revealed: false,
-          secretSurprise: {
-            type: 'credits',
-            amount: 150,
-            messageZh: '【發現隱密補給】移開重裝箱後，在箱底夾層發現了 150 信用點！',
-            messageEn: '[SUPPLY CACHE] Pushed cargo crate to uncover 150 Credits in a secret compartment!',
-          },
-        },
-        {
-          id: 'crate-sec1-rack',
-          x: 33,
-          y: 23,
-          initialX: 33,
-          initialY: 23,
-          sectorId: 'sector-1',
-          name: 'Data Relay Server Rack',
-          nameZh: '數據中繼伺服器機櫃',
-          blockType: 'server_rack',
-          revealed: false,
-          secretSurprise: {
-            type: 'energy',
-            amount: 60,
-            messageZh: '【發現後備電源】移開伺服器機櫃後，成功接入備用能源電池 (+60 EN)！',
-            messageEn: '[BACKUP POWER] Tapped into backup power cells behind the server rack (+60 EN)!',
-          },
-        },
-      ];
-    }
-    if (id === 'sector-2') {
-      return [
-        {
-          id: 'crate-sec2-secret',
-          x: 26,
-          y: 5,
-          initialX: 26,
-          initialY: 5,
-          sectorId: 'sector-2',
-          name: 'Movable Industrial Wall Section',
-          nameZh: '偽裝冷卻重裝牆',
-          blockType: 'disguised_wall',
-          secretDoor: { x: 27, y: 5, revealedTile: 4 },
-          revealed: false,
-        },
-        {
-          id: 'crate-sec2-rack',
-          x: 18,
-          y: 16,
-          initialX: 18,
-          initialY: 16,
-          sectorId: 'sector-2',
-          name: 'Overmind Sub-Core Server Rack',
-          nameZh: '主腦子核心伺服機櫃',
-          blockType: 'server_rack',
-          revealed: false,
-          secretSurprise: {
-            type: 'item',
-            item: {
-              id: 'item-emp-disruptor-cache',
-              name: 'EMP Disruptor',
-              itemType: 'EMP_GRENADE',
-              description: '高能量 EMP 干擾器',
-              iconColor: '#00f0ff',
-            } as unknown as GroundItem,
-          },
-        },
-        {
-          id: 'crate-sec2-crate',
-          x: 16,
-          y: 18,
-          initialX: 16,
-          initialY: 18,
-          sectorId: 'sector-2',
-          name: 'Heavy Fabrication Container',
-          nameZh: '重型機件製造貨櫃',
-          blockType: 'crate',
-          revealed: false,
-          secretSurprise: {
-            type: 'credits',
-            amount: 200,
-            messageZh: '【發現走私晶片】推開製造貨櫃後，搜刮出價值 200 信用點的黑市物資！',
-            messageEn: '[BLACK MARKET CACHE] Recovered 200 Credits worth of components!',
-          },
-        },
-      ];
-    }
-    if (id === 'sub-sector-0') {
-      return [
-        {
-          id: 'crate-sewer-secret',
-          x: 29,
-          y: 5,
-          initialX: 29,
-          initialY: 5,
-          sectorId: 'sub-sector-0',
-          name: 'Loose Drainage Brick Wall',
-          nameZh: '鬆動的下水道石砌牆',
-          blockType: 'disguised_wall',
-          secretDoor: { x: 30, y: 5, revealedTile: 4 },
-          revealed: false,
-        },
-        {
-          id: 'crate-sewer-crate',
-          x: 10,
-          y: 10,
-          initialX: 10,
-          initialY: 10,
-          sectorId: 'sub-sector-0',
-          name: 'Reinforced Drainage Cargo Crate',
-          nameZh: '加固下水道儲運箱',
-          blockType: 'crate',
-          revealed: false,
-          secretSurprise: {
-            type: 'item',
-            item: {
-              id: 'item-nanite-medkit-cache',
-              name: 'Nanite Medkit',
-              itemType: 'MEDKIT',
-              description: '軍用奈米急救包',
-              iconColor: '#00ff88',
-            } as unknown as GroundItem,
-          },
-        },
-      ];
-    }
-    if (id === 'sector-citadel') {
-      return [
-        {
-          id: 'crate-citadel-rack',
-          x: 12,
-          y: 15,
-          initialX: 12,
-          initialY: 15,
-          sectorId: 'sector-citadel',
-          name: 'Citadel Mainframe Buffer Unit',
-          nameZh: '堡壘主機緩衝機櫃',
-          blockType: 'server_rack',
-          revealed: false,
-          secretSurprise: {
-            type: 'energy',
-            amount: 80,
-            messageZh: '【戰術能量補給】抽取了 80 點高純度超導能量！',
-            messageEn: '[TACTICAL RECHARGE] Siphoned 80 energy units from the mainframe buffer!',
-          },
-        },
-      ];
-    }
-    return [];
+    return createSectorPushableBlocks(sectorId || this.map?.id);
   }
 
   switchSector(targetSectorId: string): void {
@@ -900,7 +491,7 @@ export class GameEngine {
         this.player.x = 3;
         this.player.y = 5;
       }
-      (this.player as any).currentSectorId = 'sector-2';
+      this.player.currentSectorId = 'sector-2';
       this.robots = [
         createRobot('SCOUT_DRONE' as RobotType, { x: 12, y: 5 }, [{ x: 12, y: 5 }, { x: 20, y: 5 }]),
         createRobot('SHOCK_ENFORCER' as RobotType, { x: 20, y: 15 }, [{ x: 20, y: 15 }, { x: 20, y: 22 }]),
@@ -930,7 +521,7 @@ export class GameEngine {
         this.player.x = 37;
         this.player.y = 25;
       }
-      (this.player as any).currentSectorId = 'sector-1';
+      this.player.currentSectorId = 'sector-1';
       this.robots = this.createSectorRobots();
       this.hazards = this.createSectorHazards();
       this.npcs = this.createSectorNPCs();
@@ -952,7 +543,7 @@ export class GameEngine {
         const tile = getTile(this.map, { x: block.secretDoor.x, y: block.secretDoor.y });
         if (tile !== undefined && tile !== block.secretDoor.revealedTile) {
           // Set the tile to revealedTile (4 = DOOR_OPEN)
-          const mapData = (this.map as any).tiles || (this.map as any).grid;
+          const mapData = this.map.tiles || this.map.grid;
           if (Array.isArray(mapData)) {
             const row = mapData[block.secretDoor.y];
             if (Array.isArray(row)) {
@@ -989,12 +580,12 @@ export class GameEngine {
   }
 
   hasOmniVision(): boolean {
-    const inventory = (this.player as any).inventory;
+    const inventory = this.player.inventory;
     return this.isOmniVisionActive || (Array.isArray(inventory) && inventory.some((it: any) => it?.id === 'item-omni-visor'));
   }
 
   hasFullMap(): boolean {
-    const inventory = (this.player as any).inventory;
+    const inventory = this.player.inventory;
     return this.isFullMapActive || (Array.isArray(inventory) && inventory.some((it: any) => it?.id === 'item-full-map-uplink'));
   }
 
@@ -1087,7 +678,7 @@ export class GameEngine {
   }
 
   gainExp(amount: number, reason?: string): void {
-    const p = this.player as any;
+    const p = this.player;
     if (typeof p.exp === 'undefined') p.exp = 0;
     if (typeof p.level === 'undefined') p.level = 1;
     if (typeof p.expToNext === 'undefined') p.expToNext = 100;
@@ -1130,7 +721,7 @@ export class GameEngine {
       this.pushMessage(this.language === 'zh' ? '能量不足，無法發動戰術滑鏟！' : 'Insufficient energy for tactical dash!', 'warning');
       return false;
     }
-    const facing = (this.player as any).facing || 'right';
+    const facing = this.player.facing || 'right';
     let dx = 0;
     let dy = 0;
     if (facing === 'right') dx = 1;
@@ -1154,7 +745,7 @@ export class GameEngine {
     }
 
     this.player.energy -= 10;
-    const tileSize = (this.renderer as any)?.tileSize || 48;
+    const tileSize = this.renderer.tileSize;
     this.fx.spawnDashTrail(this.player.x * tileSize + tileSize / 2, this.player.y * tileSize + tileSize / 2, facing);
     this.player.x = targetX;
     this.player.y = targetY;
@@ -1173,20 +764,20 @@ export class GameEngine {
   }
 
   performCheckIn(): void {
-    const hasMasterPass = Array.isArray((this.player as any).inventory) && (this.player as any).inventory.some((it: any) => it?.id === 'item-master-pass');
+    const hasMasterPass = Array.isArray(this.player.inventory) && this.player.inventory.some((it: any) => it?.id === 'item-master-pass');
     if (hasMasterPass && !this.isCollarDisarmed) {
       this.disarmCollar();
       return;
     }
-    const maxTimer = (this.player as any).checkInMaxTimer || 100;
-    (this.player as any).checkInTimer = maxTimer;
+    const maxTimer = this.player.checkInMaxTimer || 100;
+    this.player.checkInTimer = maxTimer;
     this.checkInAlertActive = false;
     this.securityLevel = 'CLEAR' as SecurityLevel;
     for (const r of this.robots) {
       if (!r.isAlive) continue;
       r.aiState = 'patrol';
       r.targetPos = null;
-      (r as any).pursuitTurns = 0;
+      r.pursuitTurns = 0;
     }
     this.pushMessage(
       this.language === 'zh'
@@ -1200,12 +791,12 @@ export class GameEngine {
   }
 
   handlePlayerStep(): void {
-    if (this.isCollarDisarmed || (this.player as any).isCollarDisarmed) return;
-    const timer = (this.player as any).checkInTimer;
+    if (this.isCollarDisarmed || this.player.isCollarDisarmed) return;
+    const timer = this.player.checkInTimer;
     if (typeof timer === 'undefined') return;
 
     if (timer <= 0 || this.checkInAlertActive) {
-      (this.player as any).checkInTimer = 0;
+      this.player.checkInTimer = 0;
       this.checkInAlertActive = true;
       this.securityLevel = 'ALERT' as SecurityLevel;
       for (const r of this.robots) {
@@ -1213,14 +804,14 @@ export class GameEngine {
         if (r.aiState !== 'chase') {
           r.aiState = 'chase';
           r.targetPos = { x: this.player.x, y: this.player.y };
-          (r as any).pursuitTurns = 8;
+          r.pursuitTurns = 8;
         }
       }
       return;
     }
 
     const newTimer = timer - 1;
-    (this.player as any).checkInTimer = newTimer;
+    this.player.checkInTimer = newTimer;
 
     if (newTimer === 20) {
       this.pushMessage(
@@ -1256,7 +847,7 @@ export class GameEngine {
         if (!r.isAlive) continue;
         r.aiState = 'chase';
         r.targetPos = { x: this.player.x, y: this.player.y };
-        (r as any).pursuitTurns = 10;
+        r.pursuitTurns = 10;
       }
     }
   }
@@ -1286,8 +877,8 @@ export class GameEngine {
   updateFOV(): void {
     if (this.hasOmniVision()) {
       this.visibleTiles = new Set<string>();
-      const width = Number((this.map as any).width) || 0;
-      const height = Number((this.map as any).height) || 0;
+      const width = Number(this.map.width) || 0;
+      const height = Number(this.map.height) || 0;
       for (let x = 0; x < width; x++) {
         for (let y = 0; y < height; y++) {
           this.visibleTiles.add(`${x},${y}`);
@@ -1302,8 +893,8 @@ export class GameEngine {
     });
 
     if (this.hasFullMap()) {
-      const width = Number((this.map as any).width) || 0;
-      const height = Number((this.map as any).height) || 0;
+      const width = Number(this.map.width) || 0;
+      const height = Number(this.map.height) || 0;
       for (let x = 0; x < width; x++) {
         for (let y = 0; y < height; y++) {
           this.exploredTiles.add(`${x},${y}`);
@@ -1365,14 +956,14 @@ export class GameEngine {
     try {
     this.fx.update(16);
     this.updateDefeatCutscene(Date.now());
-    (this.renderer as any).fx = this.fx;
-    (this.renderer as any).defeatCutscene = this.defeatCutscene;
-    (this.renderer as any).activeWaypoint = this.activeWaypoint;
+    this.renderer.fx = this.fx;
+    this.renderer.defeatCutscene = this.defeatCutscene;
+    this.renderer.activeWaypoint = this.activeWaypoint;
     const bossNear = this.robots.some((r) => r.isAlive && r.robotType === 'EXTERMINATOR' && Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 9);
     const hostileNearby = this.robots.some(
       (r) =>
         r.isAlive &&
-        ((r as any).aiState === 'chase' || (r as any).aiState === 'attack' || ((r as any).pursuitTurns ?? 0) > 0) &&
+        (r.aiState === 'chase' || r.aiState === 'attack' || (r.pursuitTurns ?? 0) > 0) &&
         Math.hypot(r.x - this.player.x, r.y - this.player.y) <= 14
     );
     if (bossNear) {
@@ -1391,14 +982,14 @@ export class GameEngine {
     this.renderer.isOmniVisionActive = this.hasOmniVision();
     this.renderer.isFullMapActive = this.hasFullMap();
     this.renderer.isBigMapOpen = this.isBigMapOpen;
-    (this.renderer as any).bigMapSelectedSector = this.bigMapSelectedSector;
-    (this.renderer as any).storyArchiveSelectedIndex = this.storyArchiveSelectedIndex;
-    (this.renderer as any).pushableBlocks = this.pushableBlocks;
-    (this.renderer as any).graffitiMuralComplete = this.graffitiMuralComplete;
-    (this.player as any).victory = this.victory;
-    (this.player as any).hasDefeatedBoss = this.robots.some((r) => !r.isAlive && isBossRobot(r));
-    (this.player as any).storyLogs = this.storyLogs;
-    (this.player as any).missionObjectives = this.missionObjectives;
+    this.renderer.bigMapSelectedSector = this.bigMapSelectedSector;
+    this.renderer.storyArchiveSelectedIndex = this.storyArchiveSelectedIndex;
+    this.renderer.pushableBlocks = this.pushableBlocks;
+    this.renderer.graffitiMuralComplete = this.graffitiMuralComplete;
+    this.player.victory = this.victory;
+    this.player.hasDefeatedBoss = this.robots.some((r) => !r.isAlive && isBossRobot(r));
+    this.player.storyLogs = this.storyLogs;
+    this.player.missionObjectives = this.missionObjectives;
     this.renderer.render(
       this.map,
       this.player,
@@ -1670,9 +1261,9 @@ export class GameEngine {
       if (key === 'q' || key === 'Q') {
         const weapon = cycleWeapon(this.player);
         soundFX.terminal();
-        const isSup = (weapon as any).isSuppressed;
+        const isSup = weapon.isSuppressed;
         const isZh = this.language === 'zh';
-        const wName = isZh ? ((weapon as any).nameZh || weapon.name) : weapon.name;
+        const wName = isZh ? (weapon.nameZh || weapon.name) : weapon.name;
         this.pushFloatingText(this.player.x, this.player.y, wName, isSup ? '#00ff88' : '#00f0ff');
         this.pushMessage(
           isZh
@@ -1718,7 +1309,7 @@ export class GameEngine {
       if (key === ' ' || key === 'Enter' || key === 'Space') {
         const npc = this.activeDialogue.npc;
         const isZh = this.language === 'zh';
-        const zhDialogue = (npc as any).dialogueZh;
+        const zhDialogue = npc.dialogueZh;
         const list = isZh && Array.isArray(zhDialogue) && zhDialogue.length > 0 ? zhDialogue : (npc.dialogue || []);
         const nextIndex = this.activeDialogue.textIndex + 1;
 
@@ -1736,10 +1327,10 @@ export class GameEngine {
             this.player.credits += r.amount;
             this.pushFloatingText(npc.x, npc.y, '+' + r.amount + ' CR', '#ffea00');
           } else if (r.type === 'ITEM') {
-            let inventory = (this.player as any).inventory;
+            let inventory = this.player.inventory;
             if (!Array.isArray(inventory)) {
               inventory = [];
-              (this.player as any).inventory = inventory;
+              this.player.inventory = inventory;
             }
             if (!inventory.some((it: any) => it?.id === r.item.id)) {
               inventory.push(r.item);
@@ -1757,7 +1348,7 @@ export class GameEngine {
         }
 
         if (npc.id === 'npc-hiro' && nextIndex >= list.length - 1) {
-          const inventory = (this.player as any).inventory;
+          const inventory = this.player.inventory;
           if (Array.isArray(inventory)) {
             const recipeIndex = inventory.findIndex((it: any) => it?.id === 'item-ramen-recipe');
             if (recipeIndex !== -1) {
@@ -1772,14 +1363,14 @@ export class GameEngine {
                   : 'Hiro: Thanks for recovering my ramen recipe! My max HP increased!',
                 'success'
               );
-              (this as any).ramenQuestComplete = true;
+              this.ramenQuestComplete = true;
               this.updateNPCDialogues();
             }
           }
         }
 
         if (npc.id === 'npc-elena' && nextIndex >= list.length - 1) {
-          const inventory = (this.player as any).inventory;
+          const inventory = this.player.inventory;
           if (Array.isArray(inventory)) {
             const tapeIndex = inventory.findIndex((it: any) => it?.id === 'item-synth-tape');
             if (tapeIndex !== -1) {
@@ -1795,29 +1386,29 @@ export class GameEngine {
                 'success'
               );
               bgm.setSynthwaveTapeMode(true);
-              (this as any).synthwaveTapeActive = true;
+              this.synthwaveTapeActive = true;
               this.updateNPCDialogues();
             }
           }
         }
 
         if (npc.id === 'npc-zero-one') {
-          const inventory = (this.player as any).inventory;
+          const inventory = this.player.inventory;
           if (Array.isArray(inventory)) {
             const hasCore = inventory.some((it: any) => it?.id === 'item-quantum-core');
             const hasChip = inventory.some((it: any) => it?.id === 'item-matrix-chip');
             const hasWeapon = inventory.some((it: any) => it?.id === 'quantum-annihilator');
             
             if (hasCore && hasChip && !hasWeapon) {
-              (this.player as any).inventory = inventory.filter((it: any) => it?.id !== 'item-quantum-core' && it?.id !== 'item-matrix-chip');
+              this.player.inventory = inventory.filter((it: any) => it?.id !== 'item-quantum-core' && it?.id !== 'item-matrix-chip');
 
               const superWeapon = createQuantumAnnihilator();
-              (this.player as any).inventory.push(superWeapon);
+              this.player.inventory.push(superWeapon);
               
-              let weapons = (this.player as any).weapons;
+              let weapons = this.player.weapons;
               if (!Array.isArray(weapons)) {
                 weapons = [];
-                (this.player as any).weapons = weapons;
+                this.player.weapons = weapons;
               }
               weapons.push(superWeapon);
               this.player.equippedWeapon = superWeapon;
@@ -1839,20 +1430,20 @@ export class GameEngine {
                   : 'Zero-One: Quantum Annihilator forged! This will change the game.',
                 'success'
               );
-              (this as any).zeroOneWeaponForged = true;
+              this.zeroOneWeaponForged = true;
               this.updateNPCDialogues();
             }
           }
         }
 
         if (npc.id === 'npc-vesper') {
-          const inventory = (this.player as any).inventory;
+          const inventory = this.player.inventory;
           if (Array.isArray(inventory)) {
             const aerosolIndex = inventory.findIndex((it: any) => it?.id === 'item-chromatic-aerosol');
             if (aerosolIndex !== -1 && !this.graffitiMuralComplete) {
               inventory.splice(aerosolIndex, 1);
               this.graffitiMuralComplete = true;
-              const p = this.player as any;
+              const p = this.player;
               if (!p.augments) p.augments = {};
               p.augments['GRAFFITI_POWER_BOOST'] = true;
               if (!p.graffitiBuffApplied) {
@@ -1876,13 +1467,13 @@ export class GameEngine {
         }
 
         if (npc.id === 'npc-archie') {
-          const inventory = (this.player as any).inventory;
+          const inventory = this.player.inventory;
           if (Array.isArray(inventory)) {
             const folioIndex = inventory.findIndex((it: any) => it?.id === 'item-unburnt-folio');
             if (folioIndex !== -1 && !this.poetryQuestComplete) {
               inventory.splice(folioIndex, 1);
               this.poetryQuestComplete = true;
-              const p = this.player as any;
+              const p = this.player;
               p.checkInMaxTimer = (p.checkInMaxTimer || 100) + 25;
               p.checkInTimer = p.checkInMaxTimer;
               soundFX.pickup();
@@ -1918,16 +1509,16 @@ export class GameEngine {
 
     if (key === 'ArrowUp' || key === 'w' || key === 'W') {
       dy = -1;
-      (this.player as any).facing = 'up';
+      this.player.facing = 'up';
     } else if (key === 'ArrowDown' || key === 's' || key === 'S') {
       dy = 1;
-      (this.player as any).facing = 'down';
+      this.player.facing = 'down';
     } else if (key === 'ArrowLeft' || key === 'a' || key === 'A') {
       dx = -1;
-      (this.player as any).facing = 'left';
+      this.player.facing = 'left';
     } else if (key === 'ArrowRight' || key === 'd' || key === 'D') {
       dx = 1;
-      (this.player as any).facing = 'right';
+      this.player.facing = 'right';
     } else if (key === 'f' || key === 'F') {
       const drawn = toggleWeaponDraw(this.player);
       soundFX.laser();
@@ -1949,9 +1540,9 @@ export class GameEngine {
     } else if (key === 'q' || key === 'Q') {
       const weapon = cycleWeapon(this.player);
       soundFX.terminal();
-      const isSup = (weapon as any).isSuppressed;
+      const isSup = weapon.isSuppressed;
       const isZh = this.language === 'zh';
-      const wName = isZh ? ((weapon as any).nameZh || weapon.name) : weapon.name;
+      const wName = isZh ? (weapon.nameZh || weapon.name) : weapon.name;
       this.pushFloatingText(this.player.x, this.player.y, wName, isSup ? '#00ff88' : '#00f0ff');
       this.pushMessage(
         isZh
@@ -1991,8 +1582,8 @@ export class GameEngine {
         for (const [mx, my] of moveDirs) {
           const nx = foundBlock.x + mx;
           const ny = foundBlock.y + my;
-          const mapWidth = Number((this.map as any).width) || 0;
-          const mapHeight = Number((this.map as any).height) || 0;
+          const mapWidth = Number(this.map.width) || 0;
+          const mapHeight = Number(this.map.height) || 0;
           if (nx < 0 || nx >= mapWidth || ny < 0 || ny >= mapHeight) continue;
           const targetTile = getTile(this.map, { x: nx, y: ny });
           if (targetTile === undefined || !isWalkable(targetTile)) continue;
@@ -2005,7 +1596,7 @@ export class GameEngine {
           foundBlock.revealed = true;
 
           if (foundBlock.secretDoor && foundBlock.secretDoor.revealedTile !== undefined) {
-            const mapData = (this.map as any).tiles || (this.map as any).grid;
+            const mapData = this.map.tiles || this.map.grid;
             if (Array.isArray(mapData)) {
               const row = mapData[foundBlock.secretDoor.y];
               if (Array.isArray(row)) {
@@ -2182,7 +1773,7 @@ export class GameEngine {
         let hitRobot: Robot | null = null;
         let hitCanister: Hazard | null = null;
         let hitBlock: PushableBlock | null = null;
-        const maxRange = (this.player.equippedWeapon as any)?.range ?? 5;
+        const maxRange = this.player.equippedWeapon?.range ?? 5;
         for (let range = 1; range <= maxRange; range++) {
           const tx = this.player.x + dx * range;
           const ty = this.player.y + dy * range;
@@ -2228,8 +1819,8 @@ export class GameEngine {
       if (pushableBlock) {
         const bx = nx + dx;
         const by = ny + dy;
-        const mapWidth = Number((this.map as any).width) || 0;
-        const mapHeight = Number((this.map as any).height) || 0;
+        const mapWidth = Number(this.map.width) || 0;
+        const mapHeight = Number(this.map.height) || 0;
         const inBounds = bx >= 0 && bx < mapWidth && by >= 0 && by < mapHeight;
         const targetTile = inBounds ? getTile(this.map, { x: bx, y: by }) : undefined;
         const targetWalkable = targetTile !== undefined && isWalkable(targetTile);
@@ -2283,7 +1874,7 @@ export class GameEngine {
           if (pushableBlock.secretDoor && !pushableBlock.revealed && (pushableBlock.x !== oldX || pushableBlock.y !== oldY)) {
             pushableBlock.revealed = true;
             const sd = pushableBlock.secretDoor;
-            const mapData = (this.map as any).tiles || (this.map as any).grid;
+            const mapData = this.map.tiles || this.map.grid;
             if (Array.isArray(mapData)) {
               const row = mapData[sd.y];
               if (Array.isArray(row)) {
@@ -2291,9 +1882,9 @@ export class GameEngine {
               }
             }
             soundFX.victory();
-            const tileSize = (this.renderer as any)?.tileSize || 48;
-            (this.fx as any).spawnSparks(sd.x * tileSize + tileSize / 2, sd.y * tileSize + tileSize / 2, '#00ff88', 20);
-            (this.fx as any).triggerShake(6);
+            const tileSize = this.renderer.tileSize;
+            this.fx.spawnSparks(sd.x * tileSize + tileSize / 2, sd.y * tileSize + tileSize / 2, '#00ff88', 20);
+            this.fx.triggerShake(6);
             this.pushFloatingText(sd.x, sd.y, 'SECRET REVEALED!', '#00ff88');
             this.pushMessage(
               isZh
@@ -2460,7 +2051,7 @@ export class GameEngine {
       this.lastBroadcastTurn = this.turnCounter;
     }
 
-    (this.map as any).pushableBlocks = this.pushableBlocks;
+    this.map.pushableBlocks = this.pushableBlocks;
 
     for (const robot of this.robots) {
       if (!robot.isAlive) {
@@ -2482,14 +2073,14 @@ export class GameEngine {
         
         const coverBlock = this.findPushableBlockOnLine({ x: robot.x, y: robot.y }, { x: this.player.x, y: this.player.y });
         if (coverBlock) {
-          const coverTileSize = (this.renderer as any)?.tileSize || 48;
-          (this.fx as any).spawnSparks(
+          const coverTileSize = this.renderer.tileSize;
+          this.fx.spawnSparks(
             coverBlock.x * coverTileSize + coverTileSize / 2,
             coverBlock.y * coverTileSize + coverTileSize / 2,
             '#ffea00',
             10
           );
-          (this.fx as any).triggerShake(3);
+          this.fx.triggerShake(3);
           soundFX.hit();
           this.pushFloatingText(coverBlock.x, coverBlock.y, 'COVER BLOCKED!', '#ffea00');
           this.pushMessage(
@@ -2511,7 +2102,7 @@ export class GameEngine {
         }
 
         this.player.hp = Math.max(0, this.player.hp - damage);
-        const hitPlayerTileSize = (this.renderer as any)?.tileSize || 48;
+        const hitPlayerTileSize = this.renderer.tileSize;
         const hitPlayerX = this.player.x * hitPlayerTileSize + hitPlayerTileSize / 2;
         const hitPlayerY = this.player.y * hitPlayerTileSize + hitPlayerTileSize / 2;
         let enemyBeamType: 'LASER' | 'ELEC' | 'PLASMA' | 'NEEDLE' = 'NEEDLE';
@@ -2523,26 +2114,26 @@ export class GameEngine {
           enemyBeamColor = '#ff1744';
           enemyBeamWidth = 3.5;
           soundFX.laser();
-          (this.fx as any).spawnSparks(hitPlayerX, hitPlayerY, '#ff1744', 10);
-          (this.fx as any).triggerShake(5);
+          this.fx.spawnSparks(hitPlayerX, hitPlayerY, '#ff1744', 10);
+          this.fx.triggerShake(5);
         } else if (robot.robotType === 'SHOCK_ENFORCER') {
           enemyBeamType = 'ELEC';
           enemyBeamColor = '#00e5ff';
           enemyBeamWidth = 3.5;
           soundFX.hit();
-          (this.fx as any).spawnSparks(hitPlayerX, hitPlayerY, '#00e5ff', 10);
-          (this.fx as any).triggerShake(4);
+          this.fx.spawnSparks(hitPlayerX, hitPlayerY, '#00e5ff', 10);
+          this.fx.triggerShake(4);
         } else if (robot.robotType === 'EXTERMINATOR' || isBossRobot(robot)) {
           enemyBeamType = 'PLASMA';
           enemyBeamColor = '#ff0055';
           enemyBeamWidth = 6;
           soundFX.explosion();
-          (this.fx as any).spawnExplosion(hitPlayerX, hitPlayerY, 18);
-          (this.fx as any).triggerShake(9);
+          this.fx.spawnExplosion(hitPlayerX, hitPlayerY, 18);
+          this.fx.triggerShake(9);
         } else {
           soundFX.hit();
-          (this.fx as any).spawnSparks(hitPlayerX, hitPlayerY, '#ffea00', 10);
-          (this.fx as any).triggerShake(3);
+          this.fx.spawnSparks(hitPlayerX, hitPlayerY, '#ffea00', 10);
+          this.fx.triggerShake(3);
         }
 
         this.laserBeams.push({
@@ -2571,7 +2162,7 @@ export class GameEngine {
       const anyChasing = this.robots.some(
         (r) =>
           r.isAlive &&
-          ((r as any).aiState === 'chase' || (r as any).aiState === 'attack' || ((r as any).pursuitTurns ?? 0) > 0)
+          (r.aiState === 'chase' || r.aiState === 'attack' || (r.pursuitTurns ?? 0) > 0)
       );
       if (!anyChasing) {
         this.securityLevel = 'CLEAR' as SecurityLevel;
@@ -2596,8 +2187,8 @@ export class GameEngine {
       soundFX.pickup();
       this.pushFloatingText(this.player.x, this.player.y, '+40 HP', '#00ff88');
       this.pushMessage('Injected Nanite Stimpack (+40 HP). Vital signs stabilized.', 'success');
-      const medTileSize = (this.renderer as any)?.tileSize || 48;
-      (this.fx as any).spawnSparks(
+      const medTileSize = this.renderer.tileSize;
+      this.fx.spawnSparks(
         this.player.x * medTileSize + medTileSize / 2,
         this.player.y * medTileSize + medTileSize / 2,
         '#00ff88',
@@ -2622,8 +2213,8 @@ export class GameEngine {
       soundFX.pickup();
       this.pushFloatingText(this.player.x, this.player.y, '+50 EN', '#00f0ff');
       this.pushMessage('Connected Plasma Battery (+50 EN). Cyberware powered.', 'success');
-      const batteryTileSize = (this.renderer as any)?.tileSize || 48;
-      (this.fx as any).spawnSparks(
+      const batteryTileSize = this.renderer.tileSize;
+      this.fx.spawnSparks(
         this.player.x * batteryTileSize + batteryTileSize / 2,
         this.player.y * batteryTileSize + batteryTileSize / 2,
         '#00f0ff',
@@ -2641,15 +2232,15 @@ export class GameEngine {
       this.player.consumables!.empGrenades -= 1;
       soundFX.emp();
       soundFX.explosion();
-      const empTileSize = (this.renderer as any)?.tileSize || 48;
+      const empTileSize = this.renderer.tileSize;
       const blastRadius = 4;
       const ringRadius = blastRadius * empTileSize + 25;
-      (this.fx as any).spawnEmpRing(
+      this.fx.spawnEmpRing(
         this.player.x * empTileSize + empTileSize / 2,
         this.player.y * empTileSize + empTileSize / 2,
         ringRadius
       );
-      (this.fx as any).triggerShake(6);
+      this.fx.triggerShake(6);
       let stunnedCount = 0;
 
       for (const r of this.robots) {
@@ -2659,7 +2250,7 @@ export class GameEngine {
           r.stunnedTurns = 4;
           r.aiState = 'idle';
           this.pushFloatingText(r.x, r.y, '⚡STUNNED (4T)⚡', '#00f0ff');
-          (this.fx as any).spawnSparks(
+          this.fx.spawnSparks(
             r.x * empTileSize + empTileSize / 2,
             r.y * empTileSize + empTileSize / 2,
             '#00f0ff',
@@ -2750,7 +2341,7 @@ export class GameEngine {
 
     this.player.credits -= cost;
     this.player.equippedWeapon.power = (this.player.equippedWeapon.power ?? 20) + 5;
-    (this.player.equippedWeapon as any).overclockLevel = ((this.player.equippedWeapon as any).overclockLevel || 0) + 1;
+    if (this.player.equippedWeapon) { this.player.equippedWeapon.overclockLevel = (this.player.equippedWeapon.overclockLevel || 0) + 1; }
     soundFX.upgrade();
     this.pushFloatingText(this.player.x, this.player.y, '+5 WEAPON DMG!', '#ffea00');
     this.pushMessage('Weapon Overclocked! [' + this.player.equippedWeapon.name + '] Power increased to ' + this.player.equippedWeapon.power + '.', 'success');
@@ -2769,12 +2360,12 @@ export class GameEngine {
     this.player.credits -= cost;
     this.securityLevel = 'CLEAR' as SecurityLevel;
     this.checkInAlertActive = false;
-    (this.player as any).checkInTimer = 100;
+    this.player.checkInTimer = 100;
     
     for (const r of this.robots) {
       if (r.isAlive && r.aiState === 'chase') {
         r.aiState = 'patrol';
-        (r as any).pursuitTurns = 0;
+        r.pursuitTurns = 0;
       }
     }
 
@@ -2791,12 +2382,12 @@ export class GameEngine {
     soundFX.explosion();
     soundFX.emp();
     this.pushFloatingText(canister.x, canister.y, 'PLASMA DETONATION!', '#ff6d00');
-    const canisterTileSize = (this.renderer as any)?.tileSize || 48;
+    const canisterTileSize = this.renderer.tileSize;
     const centerX = canister.x * canisterTileSize + canisterTileSize / 2;
     const centerY = canister.y * canisterTileSize + canisterTileSize / 2;
     const blastRadius = canisterTileSize * 2 + 9;
-    (this.fx as any).spawnPlasmaCanisterExplosion(centerX, centerY, blastRadius);
-    (this.fx as any).triggerShake(10);
+    this.fx.spawnPlasmaCanisterExplosion(centerX, centerY, blastRadius);
+    this.fx.triggerShake(10);
 
     for (const r of this.robots) {
       if (!r.isAlive) continue;
@@ -2833,7 +2424,7 @@ export class GameEngine {
 
   private executeDetentionRelocation(showMessages: boolean = true): void {
     // Confiscate gear
-    const p = this.player as any;
+    const p = this.player;
     this.confiscatedGear = {
       weapons: Array.isArray(p.weapons) ? [...p.weapons] : [],
       equippedWeapon: p.equippedWeapon ? { ...p.equippedWeapon } : null,
@@ -2863,7 +2454,7 @@ export class GameEngine {
       if (!r.isAlive) continue;
       r.aiState = 'patrol';
       r.targetPos = null;
-      (r as any).pursuitTurns = 0;
+      r.pursuitTurns = 0;
     }
 
     // Switch to sector-1 detention cell
@@ -2921,7 +2512,7 @@ export class GameEngine {
 
   private startDefeatCutscene(): void {
     this.player.isAlive = false;
-    (this.player as any).isWeaponDrawn = false;
+    this.player.isWeaponDrawn = false;
     this.laserBeams = [];
     soundFX.powerDown();
 
@@ -3030,7 +2621,7 @@ export class GameEngine {
 
   recoverConfiscatedGear(): void {
     if (!this.isGearConfiscated || !this.confiscatedGear) return;
-    const p = this.player as any;
+    const p = this.player;
     const gear = this.confiscatedGear;
 
     // Restore weapons
@@ -3095,7 +2686,7 @@ export class GameEngine {
       block.y = 4;
       // Restore the secret door tile back to wall
       if (block.secretDoor) {
-        const mapData = (this.map as any).tiles || (this.map as any).grid;
+        const mapData = this.map.tiles || this.map.grid;
         if (Array.isArray(mapData)) {
           const row = mapData[block.secretDoor.y];
           if (Array.isArray(row)) {
@@ -3134,13 +2725,13 @@ export class GameEngine {
         this.pushFloatingText(this.player.x, this.player.y, `+${cr} CR`, '#ffea00');
         this.pushMessage(`Retrieved encrypted credit chip (+${cr} CR).`, 'success');
       } else if (item.itemType === 'KEYCARD') {
-        let inventory = (this.player as any).inventory;
+        let inventory = this.player.inventory;
         if (!Array.isArray(inventory)) {
           inventory = [];
-          (this.player as any).inventory = inventory;
+          this.player.inventory = inventory;
         }
         if (!inventory.some((it: any) => it?.id === item.id)) {
-          inventory.push(item);
+          inventory.push(item as unknown as Item);
         }
 
         if (item.id === 'item-omni-visor') {
@@ -3274,15 +2865,15 @@ export class GameEngine {
 
   disarmCollar(): void {
     this.isCollarDisarmed = true;
-    (this.player as any).isCollarDisarmed = true;
+    this.player.isCollarDisarmed = true;
     this.checkInAlertActive = false;
-    (this.player as any).checkInTimer = 100;
+    this.player.checkInTimer = 100;
     this.securityLevel = 'CLEAR' as SecurityLevel;
     for (const r of this.robots) {
       if (!r.isAlive) continue;
       r.aiState = 'patrol';
       r.targetPos = null;
-      (r as any).pursuitTurns = 0;
+      r.pursuitTurns = 0;
     }
     soundFX.victory();
     this.pushFloatingText(this.player.x, this.player.y, 'COLLAR DISARMED!', '#00ff88');
@@ -3338,19 +2929,19 @@ export class GameEngine {
 
     if (key === 'Backspace') {
       this.terminalInputBuffer = this.terminalInputBuffer.slice(0, -1);
-      (this.activeTerminal as any).input = this.terminalInputBuffer;
+      if (this.activeTerminal) this.activeTerminal.input = this.terminalInputBuffer;
       this.render();
       return;
     }
 
     if (key === 'Enter') {
-      const cmd = this.terminalInputBuffer || (this.activeTerminal as any)?.input || '';
+      const cmd = this.terminalInputBuffer || this.activeTerminal?.input || '';
       this.terminalInputBuffer = '';
-      (this.activeTerminal as any).input = '';
+      if (this.activeTerminal) this.activeTerminal.input = '';
 
       const upperCmd = cmd.toUpperCase();
       if (upperCmd === 'BREACH' || upperCmd === 'HACK') {
-        this.activeBreachSession = createBreachSession((this.activeTerminal as any)?.terminal?.id || 'CORE');
+        this.activeBreachSession = createBreachSession(this.activeTerminal?.terminal?.id || 'CORE');
         this.render();
         return;
       }
@@ -3361,7 +2952,7 @@ export class GameEngine {
         return;
       }
 
-      const inventory = (this.player as any).inventory;
+      const inventory = this.player.inventory;
       const items: string[] = [];
       if (Array.isArray(inventory)) {
         for (const it of inventory) {
@@ -3375,9 +2966,9 @@ export class GameEngine {
       if (this.player.equippedWeapon?.name) items.push(`equippedWeapon:${this.player.equippedWeapon.name}`);
 
       const context = {
-        hasDefeatedBoss: (this.player as any).hasDefeatedBoss === true,
+        hasDefeatedBoss: this.player.hasDefeatedBoss === true,
         items,
-        level: (this.player as any).level ?? 1,
+        level: this.player.level ?? 1,
         decryptedSlates: this.storyLogs.filter((l) => l.read).map((l) => l.id),
       };
       const result: any = this.activeTerminal.executeCommand(cmd, context);
@@ -3405,7 +2996,7 @@ export class GameEngine {
         this.pushMessage(`${ffName}: Plasma barrier capacitors short-circuited. Barrier offline.`, 'success');
         soundFX.victory();
         this.gainExp(60, 'HACK_SUCCESS');
-        (this as any).forcefieldDisabled = true;
+        this.forcefieldDisabled = true;
         this.updateNPCDialogues();
       }
 
@@ -3415,7 +3006,7 @@ export class GameEngine {
 
       if (result?.endgameChoice) {
         this.endgameChoice = result.endgameChoice;
-        (this.player as any).endgameChoice = result.endgameChoice;
+        this.player.endgameChoice = result.endgameChoice;
         this.victory = true;
         this.isCitadelHordeActive = false;
         for (const r of this.robots) {
@@ -3461,7 +3052,7 @@ export class GameEngine {
 
     if (key.length === 1 && key >= ' ' && key <= '~') {
       this.terminalInputBuffer += key;
-      (this.activeTerminal as any).input = this.terminalInputBuffer;
+      if (this.activeTerminal) this.activeTerminal.input = this.terminalInputBuffer;
       this.render();
     }
   }
@@ -3502,10 +3093,10 @@ export class GameEngine {
         this.player.y = targetY;
 
         // Update facing
-        if (dx === 1) (this.player as any).facing = 'right';
-        else if (dx === -1) (this.player as any).facing = 'left';
-        else if (dy === 1) (this.player as any).facing = 'down';
-        else if (dy === -1) (this.player as any).facing = 'up';
+        if (dx === 1) this.player.facing = 'right';
+        else if (dx === -1) this.player.facing = 'left';
+        else if (dy === 1) this.player.facing = 'down';
+        else if (dy === -1) this.player.facing = 'up';
 
         // Trigger item pickup
         this.checkItemPickup();
@@ -3559,7 +3150,7 @@ export class GameEngine {
   }
 
   private findTerminalAt(x: number, y: number): any {
-    const rawTerminals = (this.map as any).terminals;
+    const rawTerminals = this.map.terminals;
 
     if (Array.isArray(rawTerminals)) {
       for (const terminal of rawTerminals) {
@@ -3573,7 +3164,7 @@ export class GameEngine {
 
     if (rawTerminals && typeof rawTerminals === 'object') {
       for (const terminal of Object.values(rawTerminals)) {
-        const pos = (terminal as any)?.position;
+        const pos = terminal?.position;
         if (pos && pos.x === x && pos.y === y) {
           return terminal;
         }
@@ -3603,7 +3194,7 @@ export class GameEngine {
       const robot = createRobot(type, pos, [pos]);
       robot.aiState = 'chase';
       robot.targetPos = { x: this.player.x, y: this.player.y };
-      (robot as any).alertCooldown = 999;
+      robot.alertCooldown = 999;
       this.robots.push(robot);
     }
     this.pushMessage('CITADEL HORDE: Reinforcements swarming the arena!', 'danger');
@@ -3639,7 +3230,7 @@ export class GameEngine {
       const robot = createRobot(type, pos, [pos]);
       robot.aiState = 'chase';
       robot.targetPos = { x: this.player.x, y: this.player.y };
-      (robot as any).alertCooldown = 999;
+      robot.alertCooldown = 999;
       this.robots.push(robot);
     }
   }

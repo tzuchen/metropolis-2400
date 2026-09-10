@@ -111,6 +111,8 @@ export interface Item {
   isSuppressed?: boolean;
   range?: number;
   iconColor?: string;
+  overclockLevel?: number;
+  damage?: number;
 }
 
 export interface Player extends Entity {
@@ -135,9 +137,20 @@ export interface Player extends Entity {
   level?: number;
   exp?: number;
   expToNext?: number;
+  xp?: number;
+  xpToNext?: number;
   skillPoints?: number;
   checkInTimer?: number;
   isCollarDisarmed?: boolean;
+  facing?: 'up' | 'down' | 'left' | 'right';
+  checkInMaxTimer?: number;
+  endgameChoice?: string;
+  hasDefeatedBoss?: boolean;
+  victory?: boolean;
+  missionObjectives?: MissionObjective[];
+  storyLogs?: StoryLog[];
+  critChance?: number;
+  graffitiBuffApplied?: boolean;
 }
 
 export type RobotAIState = 'idle' | 'patrol' | 'investigate' | 'chase' | 'attack';
@@ -153,6 +166,7 @@ export interface Robot extends Entity {
   scanRange: number;
   attackRange?: number;
   stunnedTurns?: number;
+  pursuitTurns?: number;
 }
 
 export interface TerminalData {
@@ -172,6 +186,7 @@ export type GameMessageType = 'info' | 'warning' | 'danger' | 'success';
 
 export interface GameMessage {
   text: string;
+  message?: string;
   type: GameMessageType;
 }
 
@@ -180,11 +195,13 @@ export interface SectorMap {
   height: number;
   name: string;
   tiles: number[][];
+  grid?: number[][];
   terminals: Record<string, TerminalData>;
   playerStart: Position;
   id?: string;
   elevatorPos?: Position;
   targetSectorId?: string;
+  pushableBlocks?: PushableBlock[];
 }
 
 export type QuestReward = { type: 'HEAL' | 'ENERGY' | 'CREDITS'; amount: number; message: string; item?: any; } | { type: 'ITEM'; amount?: number; message: string; item: any; };
@@ -258,6 +275,7 @@ export interface CyberwareAugment {
 export interface FloatingText {
   id: string;
   text: string;
+  message?: string;
   x: number;
   y: number;
   color: string;

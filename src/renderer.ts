@@ -1,4 +1,4 @@
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, TerminalData, DialogueSession, NPC, GroundItem, MissionObjective, StoryLog, Hazard, LaserBeam } from './types';
+import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, TerminalData, DialogueSession, NPC, GroundItem, MissionObjective, StoryLog, Hazard, LaserBeam, PushableBlock } from './types';
 import type { TerminalSession } from './terminal';
 import * as MapModule from './map';
 import { drawTileSprite, drawPlayerSprite, drawRobotSprite, drawNPCSprite, drawItemSprite, drawHazardSprite } from './sprites';
@@ -9,6 +9,7 @@ import { drawBreachModal, type BreachSession } from './breachProtocol';
 import { drawMiniRadar } from './radar';
 import { drawBigMapModal } from './bigMapModal';
 import { getFont, getTitleFont, CJK_FONT_STACK } from './uiFont';
+import type { FXManager } from './fx';
 
 export type Position = { x: number; y: number };
 export type Language = 'zh' | 'en';
@@ -62,6 +63,10 @@ export class GameRenderer {
   graffitiMuralComplete: boolean = false;
   defeatCutscene: DefeatCutscene | null = null;
   titleMenuIndex: number = 0;
+  fx: FXManager | null = null;
+  activeWaypoint: { x: number; y: number; name: string } | null = null;
+  storyArchiveSelectedIndex: number = 0;
+  pushableBlocks: PushableBlock[] = [];
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -77,7 +82,7 @@ export class GameRenderer {
     securityLevel: SecurityLevel,
     messages: GameMessage[],
     activeTerminal: TerminalSession | null,
-    laserBeams?: Array<LaserBeam | { from: Position; to: Position; color: string }>,
+    laserBeams?: LaserBeam[],
     floatingTexts?: Array<{ x: number; y: number; text: string; color: string; createdAt?: number }>,
     npcs?: NPC[],
     activeDialogue?: DialogueSession | null,
@@ -93,7 +98,7 @@ export class GameRenderer {
   ): void {
     const width = Number(this.canvas.width) || 800;
     const height = Number(this.canvas.height) || 600;
-    const ctx = this.ctx as any;
+    const ctx = this.ctx;
 
     ctx.save?.();
     const now = Date.now();
@@ -113,21 +118,21 @@ export class GameRenderer {
     const py = Number(player?.y) || 0;
 
     // 更新玩家面向 (朝向邏輯)
-    if (!(player as any).facing) {
+    if (!player.facing) {
       const dx = px - this.lastPlayerPos.x;
       const dy = py - this.lastPlayerPos.y;
-      if (dx > 0) (player as any).facing = 'right';
-      else if (dx < 0) (player as any).facing = 'left';
-      else if (dy > 0) (player as any).facing = 'down';
-      else if (dy < 0) (player as any).facing = 'up';
-      else (player as any).facing = 'right';
+      if (dx > 0) player.facing = 'right';
+      else if (dx < 0) player.facing = 'left';
+      else if (dy > 0) player.facing = 'down';
+      else if (dy < 0) player.facing = 'up';
+      else player.facing = 'right';
     }
     this.lastPlayerPos = { x: px, y: py };
 
     const camX = px * this.tileSize - width / 2;
     const camY = py * this.tileSize - height / 2;
 
-    if ((this as any).fx?.applyScreenShake) (this as any).fx.applyScreenShake(ctx);
+    if (this.fx?.applyScreenShake) this.fx.applyScreenShake(ctx);
 
     const visible = visibleTiles ?? new Set<string>();
     const explored = exploredTiles ?? new Set<string>();
@@ -210,7 +215,7 @@ export class GameRenderer {
     }
 
     // 4.7 繪製可推動物體 (Pushable Blocks)
-    const pushableBlocks = (this as any).pushableBlocks;
+    const pushableBlocks = this.pushableBlocks;
     if (Array.isArray(pushableBlocks)) {
       pushableBlocks.forEach((block: any) => {
         if (!block) return;
@@ -246,11 +251,11 @@ export class GameRenderer {
         const key = this.key(rx, ry);
         if (!visible.has(key)) return;
         this.drawRobot(robot, rx, ry, camX, camY, ctx, now);
-        if ((player as any).augments?.OPTIC_HUD) {
+        if (player.augments?.OPTIC_HUD) {
           const bx = rx * this.tileSize - camX + 4;
           const by = ry * this.tileSize - camY - 6;
           const barW = this.tileSize - 8;
-          const hpRatio = Math.max(0, Math.min(1, (robot as any).hp / ((robot as any).maxHp || 50)));
+          const hpRatio = Math.max(0, Math.min(1, robot.hp / (robot.maxHp || 50)));
           ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
           ctx.fillRect?.(bx, by, barW, 4);
           ctx.fillStyle = hpRatio > 0.5 ? '#00ff88' : hpRatio > 0.25 ? '#ffaa00' : '#ff3344';
@@ -266,7 +271,7 @@ export class GameRenderer {
     this.drawPlayer(player, camX, camY, ctx, now);
 
     // 7.5 繪製戰術瞄準雷射與鎖定框 (Laser Sight & Lock-on Reticle)
-    if ((player as any).isWeaponDrawn) {
+    if (player.isWeaponDrawn) {
       this.drawLaserSightAndLockOn(player, robots, camX, camY, ctx, now);
     }
 
@@ -274,7 +279,7 @@ export class GameRenderer {
     if (Array.isArray(laserBeams)) {
       laserBeams.forEach((beam) => {
         if (!beam || !beam.from || !beam.to) return;
-        const b = beam as any;
+        const b = beam;
         const duration = typeof b.duration === 'number' ? b.duration : 200;
         let alpha = 1;
         let progress = 1;
@@ -341,8 +346,8 @@ export class GameRenderer {
       });
     }
 
-    if ((this as any).activeWaypoint) {
-      const wp = (this as any).activeWaypoint as { x: number; y: number; color?: string };
+    if (this.activeWaypoint) {
+      const wp = this.activeWaypoint as { x: number; y: number; color?: string };
       const wx = wp.x * this.tileSize + this.tileSize / 2 - camX;
       const wy = wp.y * this.tileSize + this.tileSize / 2 - camY;
       const pulse = 0.6 + 0.4 * Math.sin(now * 0.008);
@@ -354,7 +359,7 @@ export class GameRenderer {
       ctx.stroke?.();
       ctx.restore?.();
     }
-    if ((this as any).fx?.render) (this as any).fx.render(ctx, camX, camY);
+    if (this.fx?.render) this.fx.render(ctx, camX, camY);
 
     // 10. 畫面周圍氛圍暗角 (Vignette & Scanline Overlay)
     this.drawScreenAtmosphere(width, height, ctx);
@@ -440,7 +445,7 @@ export class GameRenderer {
       } else if (!player.isAlive) {
         this.drawGameOverOverlay(width, height, ctx, now);
       }
-    } else if ((player as any).victory) {
+    } else if (player.victory) {
       this.drawVictoryOverlay(player, width, height, ctx, now);
     }
 
@@ -448,7 +453,7 @@ export class GameRenderer {
   }
 
   key(x: number, y: number): string {
-    const keyFn = (MapModule as any).key;
+    const keyFn = MapModule.key;
     if (typeof keyFn === 'function') {
       try {
         const result = keyFn.call(MapModule, x, y);
@@ -461,7 +466,7 @@ export class GameRenderer {
   }
 
   parseKey(key: string): Position | null {
-    const parseFn = (MapModule as any).parseKey;
+    const parseFn = MapModule.parseKey;
     if (typeof parseFn === 'function') {
       try {
         const result = parseFn.call(MapModule, key);
@@ -497,7 +502,7 @@ export class GameRenderer {
     ctx: any,
     now: number = 0
   ): void {
-    const m = map as any;
+    const m = map;
     const sx = x * this.tileSize - camX;
     const sy = y * this.tileSize - camY;
     const canvasWidth = Number(this.canvas.width) || 800;
@@ -746,7 +751,7 @@ export class GameRenderer {
   }
 
   drawPlayer(player: Player, camX: number, camY: number, ctx: any, now: number = 0): void {
-    const p = player as any;
+    const p = player;
     const px = Number(p?.x) || 0;
     const py = Number(p?.y) || 0;
     drawPlayerSprite(
@@ -1621,7 +1626,7 @@ export class GameRenderer {
   }
 
   drawLaserSightAndLockOn(player: Player, robots: Robot[], camX: number, camY: number, ctx: any, now: number): void {
-    const p = player as any;
+    const p = player;
     const px = Number(p?.x) || 0;
     const py = Number(p?.y) || 0;
     const facing = p?.facing || 'right';
@@ -1786,12 +1791,12 @@ export class GameRenderer {
     ctx.font = 'bold 12px monospace';
     ctx.textBaseline = 'middle';
 
-    const p = player as any;
+    const p = player;
     const px = Number(p?.x) || 0;
     const py = Number(p?.y) || 0;
     const sec = String(securityLevel ?? 'CLEAR').toUpperCase();
 
-    const curSec = (player as any)?.currentSectorId;
+    const curSec = player.currentSectorId;
     let sectorLabel = 'SECTOR 01';
     if (curSec === 'sector-2') sectorLabel = 'SECTOR 02';
     else if (curSec === 'sub-sector-0') sectorLabel = 'SECTOR 00';
@@ -1883,8 +1888,8 @@ export class GameRenderer {
     ctx.fillText?.(weaponStatusText, weaponX, 18);
 
     let hudCursorX = 850;
-    if ((this as any).activeWaypoint) {
-      const wp = (this as any).activeWaypoint as { x: number; y: number; name?: string };
+    if (this.activeWaypoint) {
+      const wp = this.activeWaypoint as { x: number; y: number; name?: string };
       const wpx = Number(wp?.x) || 0;
       const wpy = Number(wp?.y) || 0;
       const dx = wpx - px;
@@ -1921,7 +1926,7 @@ export class GameRenderer {
       ctx.textAlign = 'right';
 
       recent.forEach((message, index) => {
-        const m = message as any;
+        const m = message;
         const text = String(m?.text ?? m?.message ?? m ?? '');
         const msgType = String(m?.type ?? 'info');
 
@@ -1994,7 +1999,7 @@ export class GameRenderer {
     ctx: any,
     now: number = 0
   ): void {
-    const t = terminal as any;
+    const t = terminal;
     ctx.save?.();
 
     const boxW = Math.min(width - 40, 680);
@@ -2203,7 +2208,7 @@ export class GameRenderer {
     ctx.fillText?.('// RESISTANCE TACTICAL INVENTORY & CYBERDECK //', x + 20, y + 16);
 
     // 特工軍階稱號、等級、經驗進度與技能點數 (Agent Rank, Level, XP & Skill Points)
-    const pInv = player as any;
+    const pInv = player;
     const invLevel = Number(pInv?.level ?? 1) || 1;
     const invXp = Number(pInv?.exp ?? pInv?.xp ?? 0) || 0;
     const invXpToNext = Number(pInv?.expToNext ?? pInv?.xpToNext ?? 100) || 100;
@@ -2273,7 +2278,7 @@ export class GameRenderer {
     ctx.font = getTitleFont(13, this.language === 'zh');
     ctx.fillText?.('► EQUIPPED CYBERWARE & WEAPONS', x + 20, y + 68);
 
-    const p = player as any;
+    const p = player;
     const equippedWeapon = p?.equippedWeapon;
     const isZh = this.language === 'zh';
 
@@ -2636,7 +2641,7 @@ export class GameRenderer {
     ctx.lineTo?.(x + boxW - 20, y + 54);
     ctx.stroke?.();
 
-    const selectedIndex = (this as any).storyArchiveSelectedIndex ?? 0;
+    const selectedIndex = this.storyArchiveSelectedIndex ?? 0;
 
     logs.forEach((log, i) => {
       const ly = y + 66 + i * 80;
@@ -2703,7 +2708,7 @@ export class GameRenderer {
     ctx.fillStyle = 'rgba(0, 20, 15, 0.95)';
     ctx.fillRect?.(0, 0, width, height);
 
-    const p = player as any;
+    const p = player;
     const endgameChoice = String(p?.endgameChoice ?? '').toUpperCase();
     const isZh = this.language === 'zh';
 
@@ -2857,7 +2862,7 @@ export class GameRenderer {
     rightY += 20;
 
     // 情報晶片解密度
-    const storyLogs = (p as any)?.storyLogs ?? [];
+    const storyLogs = player.storyLogs ?? [];
     const readCount = Array.isArray(storyLogs) ? storyLogs.filter((l: any) => l.read).length : 0;
     const totalLogs = Array.isArray(storyLogs) ? storyLogs.length : 4;
     ctx.fillStyle = '#00e5ff';
@@ -2865,7 +2870,7 @@ export class GameRenderer {
     rightY += 20;
 
     // 首領討伐狀態
-    const bossDefeated = (p as any)?.hasDefeatedBoss || (p as any)?.bossDefeated || false;
+    const bossDefeated = player.hasDefeatedBoss || false;
     ctx.fillStyle = bossDefeated ? '#00ff88' : '#ff3855';
     ctx.fillText?.(isZh ? `首領討伐狀態：${bossDefeated ? '已討伐' : '未討伐'}` : `BOSS STATUS: ${bossDefeated ? 'DEFEATED' : 'NOT DEFEATED'}`, rightX, rightY);
     rightY += 20;
@@ -2931,7 +2936,7 @@ export class GameRenderer {
     ctx.textAlign = 'left';
     ctx.fillText?.('// JAX\'S BLACK MARKET CYBER-CLINIC & TACTICAL ARMORY //', x + 20, y + 16);
 
-    const p = player as any;
+    const p = player;
     const credits = p?.credits ?? 0;
     ctx.fillStyle = '#ffea00';
     ctx.font = 'bold 12px monospace';
