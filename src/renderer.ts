@@ -1,5 +1,3 @@
-// @ts-nocheck
-// eslint-disable
 import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, TerminalData, DialogueSession, NPC, GroundItem, MissionObjective, StoryLog, Hazard, LaserBeam } from './types';
 import type { TerminalSession } from './terminal';
 import * as MapModule from './map';
@@ -14,6 +12,13 @@ import { getFont, getTitleFont, CJK_FONT_STACK } from './uiFont';
 
 export type Position = { x: number; y: number };
 export type Language = 'zh' | 'en';
+
+interface DefeatCutscene {
+  stage: string;
+  stageStartTime: number;
+  duration: number;
+  playerDownPos?: { x: number; y: number };
+}
 
 // 街景霓虹看板標識定義 (基於地圖 Tile 座標)
 interface StreetSign {
@@ -55,7 +60,7 @@ export class GameRenderer {
   isBigMapOpen: boolean = false;
   bigMapSelectedSector: string = 'current';
   graffitiMuralComplete: boolean = false;
-  defeatCutscene: any = null;
+  defeatCutscene: DefeatCutscene | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -72,7 +77,7 @@ export class GameRenderer {
     messages: GameMessage[],
     activeTerminal: TerminalSession | null,
     laserBeams?: Array<LaserBeam | { from: Position; to: Position; color: string }>,
-    floatingTexts?: Array<{ x: number; y: number; text: string; color: string }>,
+    floatingTexts?: Array<{ x: number; y: number; text: string; color: string; createdAt?: number }>,
     npcs?: NPC[],
     activeDialogue?: DialogueSession | null,
     groundItems?: GroundItem[],
@@ -336,7 +341,7 @@ export class GameRenderer {
     }
 
     if ((this as any).activeWaypoint) {
-      const wp = (this as any).activeWaypoint;
+      const wp = (this as any).activeWaypoint as { x: number; y: number; color?: string };
       const wx = wp.x * this.tileSize + this.tileSize / 2 - camX;
       const wy = wp.y * this.tileSize + this.tileSize / 2 - camY;
       const pulse = 0.6 + 0.4 * Math.sin(now * 0.008);
@@ -1675,8 +1680,9 @@ export class GameRenderer {
     let dotX: number;
     let dotY: number;
     if (lockedRobot) {
-      dotX = Number(lockedRobot.x);
-      dotY = Number(lockedRobot.y);
+      const lr = lockedRobot as Robot;
+      dotX = Number(lr.x);
+      dotY = Number(lr.y);
     } else {
       dotX = endX;
       dotY = endY;
@@ -1707,8 +1713,9 @@ export class GameRenderer {
 
     // Draw lock-on reticle if robot found
     if (lockedRobot) {
-      const rx = Number(lockedRobot.x);
-      const ry = Number(lockedRobot.y);
+      const lr = lockedRobot as Robot;
+      const rx = Number(lr.x);
+      const ry = Number(lr.y);
       const boxX = rx * this.tileSize - camX;
       const boxY = ry * this.tileSize - camY;
 
@@ -1877,7 +1884,7 @@ export class GameRenderer {
 
     let hudCursorX = 850;
     if ((this as any).activeWaypoint) {
-      const wp = (this as any).activeWaypoint;
+      const wp = (this as any).activeWaypoint as { x: number; y: number; name?: string };
       const wpx = Number(wp?.x) || 0;
       const wpy = Number(wp?.y) || 0;
       const dx = wpx - px;
