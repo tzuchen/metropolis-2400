@@ -559,7 +559,7 @@ export function drawTitleScreen(
       ctx.fillStyle = `rgba(0, 255, 170, ${cursorBlink})`;
       ctx.font = 'bold 14px monospace';
       ctx.textAlign = 'left';
-      ctx.fillText?.('▶ SELECTED', mx + 18, iy);
+      ctx.fillText?.('▶', mx + 18, iy);
     }
 
     // 左側按鍵標籤
