@@ -224,8 +224,8 @@ export function drawManualModal(
     const requiredHeight = sections.length * titleHeight + (lineCount - sections.length) * idealLineHeight + itemCount * 2 + totalSectionGaps;
     if (requiredHeight > availableHeight) {
       const scale = availableHeight / requiredHeight;
-      fontSize = Math.max(10, Math.floor(idealFontSize * scale));
-      lineHeight = Math.max(12, Math.floor(idealLineHeight * scale));
+      fontSize = Math.max(7, Math.floor(idealFontSize * scale));
+      lineHeight = Math.max(9, Math.floor(idealLineHeight * scale));
     }
   }
 

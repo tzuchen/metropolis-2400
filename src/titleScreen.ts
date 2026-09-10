@@ -550,7 +550,7 @@ export function drawTitleScreen(
 
     // 高亮戰術光帶襯底 (僅第一項)
     if (item.highlight) {
-      const bandPulse = 0.15 + 0.1 * Math.sin(now * 0.006);
+      const bandPulse = 0.45 + 0.2 * Math.sin(now * 0.006);
       ctx.fillStyle = `rgba(0, 255, 170, ${bandPulse})`;
       ctx.fillRect?.(mx + 10, iy - 14, menuW - 20, 30);
 
@@ -559,7 +559,7 @@ export function drawTitleScreen(
       ctx.fillStyle = `rgba(0, 255, 170, ${cursorBlink})`;
       ctx.font = 'bold 14px monospace';
       ctx.textAlign = 'left';
-      ctx.fillText?.('▶', mx + 18, iy);
+      ctx.fillText?.('▶ SELECTED', mx + 18, iy);
     }
 
     // 左側按鍵標籤

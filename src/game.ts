@@ -1462,14 +1462,14 @@ export class GameEngine {
     if (this.isTitleScreen) {
       if (key === 'ArrowUp' || key === 'w' || key === 'W') {
         this.titleMenuIndex = (this.titleMenuIndex - 1 + 6) % 6;
-        soundFX.terminal();
         this.render();
+        soundFX.terminal();
         return;
       }
       if (key === 'ArrowDown' || key === 's' || key === 'S') {
         this.titleMenuIndex = (this.titleMenuIndex + 1) % 6;
-        soundFX.terminal();
         this.render();
+        soundFX.terminal();
         return;
       }
       if (key === 'Enter' || key === ' ' || key === 'Space') {
