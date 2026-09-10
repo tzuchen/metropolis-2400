@@ -78,16 +78,19 @@ function lowSecurity(): SecurityLevel {
 export function createPlayer(startPos: Position): Player {
   const laserPistol = createItem(
     LASER_PISTOL_ID,
-    'Laser Pistol',
+    'Laser Blaster Mk-II',
     WEAPON_TYPE,
     {
-      power: 20,
+      power: 35,
       energyCost: 5,
       equipped: true,
-      description: 'A futuristic pistol that fires concentrated laser beams.',
+      description: 'Standard-issue coherent pulse blaster. Reliable mid-range laser fire.',
     }
   );
-  (laserPistol as any).nameZh = '高能雷射手槍';
+  (laserPistol as any).weaponId = "LASER_PISTOL";
+  (laserPistol as any).range = 6;
+  (laserPistol as any).isSuppressed = false;
+  (laserPistol as any).nameZh = "雷射爆能槍 Mk-II";
 
   const personalShield = createItem(
     PERSONAL_SHIELD_ID,

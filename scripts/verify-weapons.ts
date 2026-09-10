@@ -36,6 +36,11 @@ if (!initialWpn || !initialWpn.name.includes('Laser')) {
   throw new Error(`Expected initial weapon to be Laser Blaster, got: ${initialWpn?.name}`);
 }
 
+// Direct spec assertions prevent documented weapon statistics from drifting.
+if (initialWpn.name !== "Laser Blaster Mk-II" || initialWpn.power !== 35 || initialWpn.energyCost !== 5 || (initialWpn as any).range !== 6 || (initialWpn as any).isSuppressed !== false) {
+  throw new Error("Laser Blaster Mk-II spec must be 35 DMG, 5 EN, range 6, unsuppressed");
+}
+
 console.log('Testing Weapon Cycling [Q]...');
 // Cycle 1: should switch to Dart Gun
 game.handleKeyDown('q');
@@ -47,6 +52,10 @@ if (!(wpn1 as any).isSuppressed) {
   throw new Error('Dart Gun should be flagged as isSuppressed');
 }
 
+if (wpn1.power !== 25 || wpn1.energyCost !== 3 || (wpn1 as any).range !== 5 || !(wpn1 as any).isSuppressed) {
+  throw new Error("Silenced Dart Gun spec must be 25 DMG, 3 EN, range 5, suppressed");
+}
+
 // Cycle 2: should switch to Scatter Plasma Shotgun
 game.handleKeyDown('q');
 const wpn2 = game.player.equippedWeapon;
@@ -55,6 +64,10 @@ if (!wpn2 || !wpn2.name.includes('Shotgun')) {
 }
 if (wpn2.power !== 65) {
   throw new Error(`Scatter Shotgun should have power 65, got: ${wpn2.power}`);
+}
+
+if (wpn2.power !== 65 || wpn2.energyCost !== 9 || (wpn2 as any).range !== 3 || (wpn2 as any).isSuppressed !== false) {
+  throw new Error("Scatter Plasma Shotgun spec must be 65 DMG, 9 EN, range 3, unsuppressed");
 }
 
 // Cycle 3: should switch back to Laser Blaster

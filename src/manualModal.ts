@@ -107,7 +107,7 @@ export function drawManualModal(
           color: '#ff9e00',
           items: [
             '[ F ] Draw/Holster Weapon: Holstered melee triggers [Ambush Crit] (200% DMG).',
-            '[ Q ] Cycle Armament: Laser Pistol, Plasma Rifle, or Dart Gun (Suppressed firing).',
+            '[ Q ] Cycle Armament: Laser Blaster Mk-II, Scatter Plasma Shotgun, or Silenced Dart Gun (Suppressed firing).',
             '[ C ] Holo-Disguise: Drain energy to slip past drone detection cones unseen.',
           ],
         },
