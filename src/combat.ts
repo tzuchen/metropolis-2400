@@ -100,6 +100,15 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
   let sparkCount = 10;
   let shakeIntensity = 0;
 
+  if (weaponId === "SCATTER_SHOTGUN") {
+    beamType = "PLASMA";
+    beamColor = "#ff9e00";
+    beamWidth = 7;
+    sparkColor = "#ff6d00";
+    sparkCount = 22;
+    shakeIntensity = 5;
+  }
+
   if (isQuantum) {
     beamType = 'QUANTUM';
     beamColor = '#b388ff';
@@ -120,6 +129,23 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
     targetRobot: hitRobot || undefined,
   };
   game.laserBeams.push(playerBeam);
+
+  if (weaponId === "SCATTER_SHOTGUN") {
+    const perpendicularX = -dy;
+    const perpendicularY = dx;
+    const spreadDistance = Math.min(2, maxRange);
+    for (const offset of [-1, 1]) {
+      game.laserBeams.push({
+        from: { x: game.player.x, y: game.player.y },
+        to: { x: game.player.x + dx * spreadDistance + perpendicularX * offset, y: game.player.y + dy * spreadDistance + perpendicularY * offset },
+        color: beamColor,
+        createdAt: Date.now(),
+        duration: 150,
+        beamType: "PLASMA",
+        width: 4,
+      });
+    }
+  }
 
   const hitTileSize = (game.renderer as any)?.tileSize || 48;
   (game.fx as any).spawnSparks(
