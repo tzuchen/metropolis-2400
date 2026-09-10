@@ -624,7 +624,7 @@ export function drawTitleScreen(
 
   ctx.font = isZh ? `12px ${fontStack}` : '12px monospace';
   const textWidth = ctx.measureText?.(tickerText)?.width || 800;
-  const scrollSpeed = 0.12;
+  const scrollSpeed = 0.02;
   const scrollOffset = (now * scrollSpeed) % (textWidth + width);
 
   ctx.save?.();
