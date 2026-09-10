@@ -68,7 +68,8 @@ export function drawTitleScreen(
   ctx: any,
   now: number,
   hasSaveData: boolean,
-  language: Language
+  language: Language,
+  selectedMenuIndex: number
 ): void {
   ctx.save?.();
   const isZh = language === 'zh';
@@ -505,7 +506,7 @@ export function drawTitleScreen(
       key: '[ N / SPACE / ENTER ]',
       label: isZh ? '開始新任務 (NEW MISSION)' : 'START NEW MISSION',
       color: `rgba(0, 255, 170, ${pulse})`,
-      highlight: true,
+      highlight: selectedMenuIndex === 0,
     },
     {
       key: '[ L ]',
@@ -513,31 +514,31 @@ export function drawTitleScreen(
         ? (hasSaveData ? '讀取存檔進度 (LOAD GAME)' : '讀取存檔 (未發現存檔資料)')
         : (hasSaveData ? 'CONTINUE / LOAD GAME' : 'LOAD GAME (NO SAVE FOUND)'),
       color: hasSaveData ? '#00f0ff' : '#4a5b6c',
-      highlight: false,
+      highlight: selectedMenuIndex === 1,
     },
     {
       key: '[ Z ]',
       label: isZh ? '切換語言 : [ 繁體中文 ] (TOGGLE LANGUAGE)' : 'TOGGLE LANGUAGE : [ ENGLISH ]',
       color: '#ffea00',
-      highlight: false,
+      highlight: selectedMenuIndex === 2,
     },
     {
       key: '[ H ]',
       label: isZh ? '特工行動手冊 (AGENT FIELD MANUAL)' : 'TACTICAL MANUAL & CONTROLS',
       color: '#00f0ff',
-      highlight: false,
+      highlight: selectedMenuIndex === 3,
     },
     {
       key: '[ 8 / 9 ]',
       label: isZh ? '戰術快速存讀 : [8] 存檔 / [9] 讀檔' : 'TACTICAL SAVE [8] / LOAD [9]',
       color: '#b388ff',
-      highlight: false,
+      highlight: selectedMenuIndex === 4,
     },
     {
       key: '[ 0 / F10 ]',
       label: isZh ? '切換畫面解析度 (CYCLE RESOLUTION)' : 'CYCLE RESOLUTION (960x600/1200x750/800x500)',
       color: '#00f0ff',
-      highlight: false,
+      highlight: selectedMenuIndex === 5,
     },
   ];
 

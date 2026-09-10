@@ -57,6 +57,7 @@ export class GameEngine {
   terminalInputBuffer: string = '';
   victory: boolean = false;
   isTitleScreen: boolean = false;
+  titleMenuIndex: number = 0;
   language: Language = 'zh';
   isManualOpen: boolean = false;
   activeBreachSession: BreachSession | null = null;
@@ -171,6 +172,43 @@ export class GameEngine {
         }
       }
     });
+  }
+
+  private executeTitleMenuItem(index: number): void {
+    switch (index) {
+      case 0:
+        this.isTitleScreen = false;
+        soundFX.pickup();
+        const msg = this.language === 'zh' ? '任務啟動！' : 'MISSION START!';
+        this.pushFloatingText(this.player.x, this.player.y, msg, '#00ffcc');
+        this.render();
+        break;
+      case 1:
+        if (this.hasSaveGame()) {
+          if (this.loadGame()) {
+            this.isTitleScreen = false;
+          }
+        } else {
+          soundFX.hit();
+          this.pushMessage(this.language === 'zh' ? '未發現存檔！' : 'NO SAVE FOUND!', 'warning');
+          this.render();
+        }
+        break;
+      case 2:
+        this.toggleLanguage();
+        break;
+      case 3:
+        this.isManualOpen = !this.isManualOpen;
+        soundFX.terminal();
+        this.render();
+        break;
+      case 4:
+        // Quick save/load not actionable from title
+        break;
+      case 5:
+        this.cycleResolution();
+        break;
+    }
   }
 
   private getBroadcastMessages(): string[] {
@@ -1347,6 +1385,7 @@ export class GameEngine {
     this.renderer.isTitleScreen = this.isTitleScreen;
     this.renderer.language = this.language;
     this.renderer.hasSaveData = this.hasSaveGame();
+    this.renderer.titleMenuIndex = this.titleMenuIndex;
     this.renderer.isManualOpen = this.isManualOpen;
     this.renderer.activeBreachSession = this.activeBreachSession;
     this.renderer.isOmniVisionActive = this.hasOmniVision();
@@ -1422,7 +1461,23 @@ export class GameEngine {
     }
     if (handleSpecialInput(this, key)) return;
     if (this.isTitleScreen) {
-      if (key === 'n' || key === 'N' || key === 'Enter' || key === ' ' || key === 'Space') {
+      if (key === 'ArrowUp' || key === 'w' || key === 'W') {
+        this.titleMenuIndex = (this.titleMenuIndex - 1 + 6) % 6;
+        soundFX.terminal();
+        this.render();
+        return;
+      }
+      if (key === 'ArrowDown' || key === 's' || key === 'S') {
+        this.titleMenuIndex = (this.titleMenuIndex + 1) % 6;
+        soundFX.terminal();
+        this.render();
+        return;
+      }
+      if (key === 'Enter' || key === ' ' || key === 'Space') {
+        this.executeTitleMenuItem(this.titleMenuIndex);
+        return;
+      }
+      if (key === 'n' || key === 'N') {
         this.isTitleScreen = false;
         soundFX.pickup();
         const msg = this.language === 'zh' ? '任務啟動！' : 'MISSION START!';
@@ -1438,6 +1493,16 @@ export class GameEngine {
       }
       if (key === 'z' || key === 'Z') {
         this.toggleLanguage();
+        return;
+      }
+      if (key === 'h' || key === 'H') {
+        this.isManualOpen = !this.isManualOpen;
+        soundFX.terminal();
+        this.render();
+        return;
+      }
+      if (key === '0' || key === 'F10') {
+        this.cycleResolution();
         return;
       }
       return;

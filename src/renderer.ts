@@ -61,6 +61,7 @@ export class GameRenderer {
   bigMapSelectedSector: string = 'current';
   graffitiMuralComplete: boolean = false;
   defeatCutscene: DefeatCutscene | null = null;
+  titleMenuIndex: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -97,7 +98,7 @@ export class GameRenderer {
     ctx.save?.();
     const now = Date.now();
     if (this.isTitleScreen) {
-      this.drawTitleScreen(width, height, ctx, now, this.hasSaveData, this.language);
+      this.drawTitleScreen(width, height, ctx, now, this.hasSaveData, this.language, this.titleMenuIndex);
       if (this.isManualOpen) {
         this.drawManualModal(width, height, ctx, now, this.language);
       }
@@ -482,8 +483,8 @@ export class GameRenderer {
     return { x, y };
   }
 
-  drawTitleScreen(width: number, height: number, ctx: any, now: number, hasSaveData: boolean, language: Language): void {
-    drawTitleScreen(width, height, ctx, now, hasSaveData, language);
+  drawTitleScreen(width: number, height: number, ctx: any, now: number, hasSaveData: boolean, language: Language, titleMenuIndex: number = 0): void {
+    drawTitleScreen(width, height, ctx, now, hasSaveData, language, titleMenuIndex);
   }
 
   drawTile(
@@ -740,8 +741,7 @@ export class GameRenderer {
       rx * this.tileSize - camX,
       ry * this.tileSize - camY,
       this.tileSize,
-      true,
-      now
+      true
     );
   }
 
