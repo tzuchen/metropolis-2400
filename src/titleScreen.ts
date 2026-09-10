@@ -589,7 +589,87 @@ export function drawTitleScreen(
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  //  4. 底部情報跑馬燈 (Resistance Telemetry Ticker)
+  //  4. 首次玩家任務簡報面板 (First-Time Mission Briefing)
+  //     置於選單控制台與底部跑馬燈之間的留白，避免與徽章/標題/選單/頁尾重疊。
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const briefW = Math.min(width - 40, 620);
+  const briefH = 62;
+  const briefX = (width - briefW) / 2;
+  const briefY = my + menuH + 14;
+
+  // 4a. 半透明深黑玻璃底板
+  ctx.fillStyle = 'rgba(3, 8, 16, 0.90)';
+  ctx.fillRect?.(briefX, briefY, briefW, briefH);
+
+  // 玻璃微光漸層
+  const briefGrad = ctx.createLinearGradient?.(briefX, briefY, briefX, briefY + briefH);
+  if (briefGrad) {
+    briefGrad.addColorStop?.(0, 'rgba(0, 240, 255, 0.04)');
+    briefGrad.addColorStop?.(1, 'rgba(0, 240, 255, 0.01)');
+  }
+  ctx.fillStyle = briefGrad || 'rgba(0,0,0,0)';
+  ctx.fillRect?.(briefX, briefY, briefW, briefH);
+
+  // 4b. 細緻青藍發光框線
+  ctx.strokeStyle = 'rgba(0, 240, 255, 0.7)';
+  ctx.lineWidth = 1;
+  ctx.shadowColor = '#00f0ff';
+  ctx.shadowBlur = 8;
+  ctx.strokeRect?.(briefX, briefY, briefW, briefH);
+  ctx.shadowBlur = 0;
+
+  // 4c. 左側戰術標籤
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.font = isZh ? `bold 11px ${fontStack}` : 'bold 11px monospace';
+  ctx.fillStyle = '#00f0ff';
+  ctx.fillText?.(isZh ? '▣ 任務簡報' : '▣ MISSION BRIEF', briefX + 12, briefY + 14);
+
+  // 4d. 角色與目標 (雙行)
+  const briefRole = isZh
+    ? '你是「火花反抗軍」特工'
+    : 'You are a SPARK RESISTANCE operative';
+  const briefGoal = isZh
+    ? '目標：抵達終端機並打卡，避開巡邏隊'
+    : 'Goal: reach the terminal & check in, avoid patrols';
+
+  ctx.font = isZh ? `12px ${fontStack}` : '12px monospace';
+  ctx.fillStyle = '#e0ffff';
+  ctx.fillText?.(briefRole, briefX + 12, briefY + 30);
+  ctx.fillStyle = 'rgba(0, 255, 170, 0.9)';
+  ctx.fillText?.(briefGoal, briefX + 12, briefY + 46);
+
+  // 4e. 三項核心起始操作 (右側)
+  const ctrlX = briefX + briefW - 12;
+  const ctrlFont = isZh ? `11px ${fontStack}` : '11px monospace';
+  const ctrlLines = isZh
+    ? [
+        { k: '移動', v: 'WASD / 方向鍵' },
+        { k: '互動', v: 'T' },
+        { k: '武器/隱密', v: 'F / C' },
+      ]
+    : [
+        { k: 'MOVE', v: 'WASD / ARROWS' },
+        { k: 'INTERACT', v: 'T' },
+        { k: 'WEAPON/STEALTH', v: 'F / C' },
+      ];
+
+  ctx.font = ctrlFont;
+  ctrlLines.forEach((line, i) => {
+    const ly = briefY + 14 + i * 15;
+    // 操作名稱 (右對齊)
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffea00';
+    ctx.fillText?.(line.k, ctrlX - 8, ly);
+    // 按鍵 (左對齊於名稱之前)
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.85)';
+    ctx.fillText?.(line.v, ctrlX - 8 - ctx.measureText?.(line.k)?.width - 10, ly);
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  5. 底部情報跑馬燈 (Resistance Telemetry Ticker)
   // ═══════════════════════════════════════════════════════════════════════════
 
   const tickerY = height - 28;

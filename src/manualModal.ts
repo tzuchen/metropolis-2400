@@ -132,22 +132,122 @@ export function drawManualModal(
         },
       ];
 
+  const contentLeft = x + 32;
+  const contentRight = x + boxW - 20;
+  const contentWidth = contentRight - contentLeft;
+  const bottomLimit = y + boxH - 28;
+
+  const wrapText = (text: string, maxWidth: number): string[] => {
+    const lines: string[] = [];
+    let currentLine = '';
+
+    const isCJK = (ch: string) => {
+      const code = ch.charCodeAt(0);
+      return (
+        (code >= 0x4e00 && code <= 0x9fff) ||
+        (code >= 0x3400 && code <= 0x4dbf) ||
+        (code >= 0x3000 && code <= 0x303f) ||
+        (code >= 0xff00 && code <= 0xffef)
+      );
+    };
+
+    const words = text.split(/(\s+)/);
+    for (const word of words) {
+      if (word === '') continue;
+      if (word.trim() === '') {
+        currentLine += word;
+        continue;
+      }
+
+      const testLine = currentLine + word;
+      if ((ctx.measureText?.(testLine)?.width ?? 0) <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine.trim() !== '') {
+          lines.push(currentLine.trimEnd());
+        }
+        if (word.length > 1 && !isCJK(word[0])) {
+          let subLine = '';
+          for (let i = 0; i < word.length; i++) {
+            const ch = word[i];
+            const testSub = subLine + ch;
+            if ((ctx.measureText?.(testSub)?.width ?? 0) <= maxWidth) {
+              subLine = testSub;
+            } else {
+              if (subLine.trim() !== '') lines.push(subLine.trimEnd());
+              subLine = ch;
+            }
+          }
+          currentLine = subLine;
+        } else {
+          let subLine = '';
+          for (let i = 0; i < word.length; i++) {
+            const ch = word[i];
+            const testSub = subLine + ch;
+            if ((ctx.measureText?.(testSub)?.width ?? 0) <= maxWidth) {
+              subLine = testSub;
+            } else {
+              if (subLine.trim() !== '') lines.push(subLine.trimEnd());
+              subLine = ch;
+            }
+          }
+          currentLine = subLine;
+        }
+      }
+    }
+    if (currentLine.trim() !== '') {
+      lines.push(currentLine.trimEnd());
+    }
+    return lines;
+  };
+
+  const totalLines = sections.reduce((sum, sec) => {
+    return sum + 1 + sec.items.reduce((itemSum, item) => {
+      return itemSum + wrapText('• ' + item, contentWidth).length;
+    }, 0);
+  }, 0);
+
+  const titleHeight = 24;
+  const sectionGap = 8;
+  const totalSectionGaps = sections.length * sectionGap;
+  const availableHeight = bottomLimit - (y + 48) - titleHeight - totalSectionGaps;
+  const lineCount = totalLines;
+  const idealLineHeight = 16;
+  const idealFontSize = 13;
+
+  let fontSize = idealFontSize;
+  let lineHeight = idealLineHeight;
+
+  if (lineCount > 0) {
+    const requiredHeight = lineCount * idealLineHeight;
+    if (requiredHeight > availableHeight) {
+      const scale = availableHeight / requiredHeight;
+      fontSize = Math.max(10, Math.floor(idealFontSize * scale));
+      lineHeight = Math.max(12, Math.floor(idealLineHeight * scale));
+    }
+  }
+
   let secY = y + 48;
   sections.forEach((sec) => {
     ctx.fillStyle = sec.color;
-    ctx.font = `bold 14px ${font}`;
+    ctx.font = `bold ${fontSize + 1}px ${font}`;
     ctx.shadowColor = sec.color;
     ctx.shadowBlur = 4;
     ctx.fillText?.(sec.title, x + 24, secY);
     ctx.shadowBlur = 0;
+    secY += titleHeight;
 
     ctx.fillStyle = '#d0e4f2';
-    ctx.font = `13px ${font}`;
-    sec.items.forEach((item, idx) => {
-      ctx.fillText?.('• ' + item, x + 32, secY + 18 + idx * 16);
+    ctx.font = `${fontSize}px ${font}`;
+    sec.items.forEach((item) => {
+      const wrappedLines = wrapText('• ' + item, contentWidth);
+      wrappedLines.forEach((line, idx) => {
+        ctx.fillText?.(line, contentLeft, secY + idx * lineHeight);
+      });
+      secY += wrappedLines.length * lineHeight + 2;
     });
 
-    secY += 24 + sec.items.length * 16 + 8;
+    secY += sectionGap;
   });
 
   // 底部關閉提示

@@ -4,6 +4,10 @@ import * as musicModule from './music';
 
 type GameEngineInstance = {
   handleKeyDown(key: string): void;
+  switchSector: (sector: string) => void;
+  isBigMapOpen?: boolean;
+  bigMapSelectedSector?: string;
+  render: () => void;
 };
 
 type GameEngineConstructor = new (canvas: HTMLCanvasElement) => GameEngineInstance;
@@ -63,7 +67,7 @@ export function initGame(): GameEngineInstance {
 
   const GameEngineCtor = resolveGameEngine();
   const engine = new GameEngineCtor(canvas);
-  (window as any).game = engine;
+  (window as { game?: GameEngineInstance }).game = engine;
   const soundFX = resolveSoundFX();
   const bgm = resolveBGM() as { start?: () => void } | undefined;
   let audioUnlocked = false;
@@ -97,10 +101,7 @@ export function initGame(): GameEngineInstance {
 
   if (sectorParam) {
     engine.handleKeyDown('Enter');
-    const switchSector = (engine as unknown as { switchSector?: (sector: string) => void }).switchSector;
-    if (typeof switchSector === 'function') {
-      switchSector.call(engine, sectorParam);
-    }
+    engine.switchSector(sectorParam);
   }
 
   const omniParam = urlParams.get('omni');
@@ -110,11 +111,11 @@ export function initGame(): GameEngineInstance {
 
   const bigMapParam = urlParams.get('bigmap');
   if (bigMapParam) {
-    (engine as any).isBigMapOpen = true;
+    engine.isBigMapOpen = true;
     if (bigMapParam !== '1' && bigMapParam !== 'true') {
-      (engine as any).bigMapSelectedSector = bigMapParam;
+      engine.bigMapSelectedSector = bigMapParam;
     }
-    (engine as any).render();
+    engine.render();
   }
 
   return engine;

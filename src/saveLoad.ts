@@ -193,10 +193,8 @@ export function loadGameState(game: any): boolean {
     if (!data) return false;
 
     // Restore sector
-    if (data.sectorId === 'sector-2' && typeof game.switchSector === 'function') {
-      game.switchSector('sector-2');
-    } else if (data.sectorId === 'sector-1' && typeof game.switchSector === 'function') {
-      game.switchSector('sector-1');
+    if (typeof data.sectorId === 'string' && data.sectorId.length > 0 && typeof game.switchSector === 'function') {
+      game.switchSector(data.sectorId);
     }
 
     // Restore player state
