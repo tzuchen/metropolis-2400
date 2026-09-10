@@ -5,8 +5,8 @@
 | 環境 | 網址 | 說明 |
 | :--- | :--- | :--- |
 | **GitHub Pages** | [https://tzuchen.github.io/metropolis-2400/](https://tzuchen.github.io/metropolis-2400/) | 公開版，隨時可玩 |
-| **Tailscale 內網** | [http://100.88.14.123:2400/](http://100.88.14.123:2400/) | 專屬內網 (由 `metropolis-2400.service` 常駐運行) |
-| **區域網路 (LAN)** | [http://192.168.31.128:2400/](http://192.168.31.128:2400/) | 本地網路直連 |
+| **Tailscale 內網** | [http://100.88.14.123:2400/](http://100.88.14.123:2400/) | 開發機目前啟動中的即時版本 |
+| **區域網路 (LAN)** | [http://192.168.31.128:2400/](http://192.168.31.128:2400/) | 開發機目前啟動中的即時版本 |
 
 ![Live GitHub Pages Preview](live-gh-pages-preview.png)
 
@@ -16,7 +16,6 @@
 [![Vite](https://img.shields.io/badge/Vite-6.0+-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![HTML5 Canvas](https://img.shields.io/badge/Graphics-Canvas_2D-E34F26?logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
 [![Web Audio API](https://img.shields.io/badge/Audio-Procedural_Synth-orange)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 > A modern, zero-dependency, tactical turn-based cyberpunk RPG built in pure TypeScript and HTML5 Canvas.
 > Inspired by Ralph Bosson's 1987 Origin Systems classic *"2400 A.D."*.
@@ -103,11 +102,14 @@ Your objective:
   - `HELP` — Displays available terminal subroutines.
   - `STATUS` — Inspects terminal security parameters and firewall health.
   - `LOGS` — Reads classified corporate memos and intercepted security traffic.
-  - `OVERRIDE` / `UNLOCK_DOORS` — Remotely cycles district blast doors.
-  - `DISABLE_FORCEFIELDS` — Deactivates security barriers.
+  - `OVERRIDE` / `HACK` / `BYPASS` — Deactivates a forcefield linked to the terminal.
+  - `CHECKIN` — Resets the neural-collar surveillance timer.
+  - `DISARM` — Permanently disables the collar when the Tzorg Master Keycard is held.
   - `CLEAR_ALARM` — Purges active security alerts back to `CLEAR`.
   - `SIPHON` — Drains terminal capacitors for player energy.
   - `SCAN` — Pings connected nodes on the local sub-grid.
+  - `BREACH` — Starts the core-terminal breach protocol.
+  - `OVERLOAD` / `SUBVERSION` / `EVACUATION` / `AWAKEN` — Available at the core terminal after the required boss progression.
 
 ### 8. 🎨 Cyberpunk Aesthetics & Procedural Audio
 - High-contrast retro CRT aesthetics with pixelated neon signboards, wall panels, and dynamic ambient lighting.
@@ -197,6 +199,22 @@ Your objective:
 | **`ESC`** | **Close Window** | Exit terminals, dialogue boxes, inventory, or story modals |
 | **`R`** | **Reboot Protocol** | Restart simulation upon mission failure or sector victory |
 
+### Title Screen and Additional Controls
+
+| Key | Action | Description |
+| :--- | :--- | :--- |
+| **`↑` `↓`** / **`W` `S`** | **Select Menu Item** | Move through the title-screen menu |
+| **`ENTER`** / **`SPACE`** | **Execute Selection** | Activate the highlighted title-screen option |
+| **`H`** | **Field Manual** | Open or close the tactical manual |
+| **`B`** | **Toggle Music** | Enable or mute the procedural synth soundtrack |
+| **`J`** | **Tactical Dash** | Dash in the current facing direction at an energy cost |
+| **`TAB`** / **`K`** | **Big Map** | Open or close the sector overview map |
+| **`V`** / **`X`** | **Vision Modes** | Toggle omni-vision or full-map exploration |
+| **`Z`** | **Language** | Switch between Traditional Chinese and English |
+| **`8`** / **`F5`** | **Quick Save** | Save the current game state |
+| **`9`** / **`F9`** | **Quick Load** | Restore the saved game state |
+| **`0`** / **`F10`** | **Resolution** | Cycle through the supported canvas resolutions |
+
 ---
 
 ## 🏗️ Technical Architecture (專案結構)
@@ -220,7 +238,20 @@ metropolis-2400/
 │   ├── terminal.ts       # Security terminal shell, parser, and subroutines
 │   ├── audio.ts          # Procedural Web Audio API sound synthesizer
 │   ├── game.ts           # Game loop dispatcher, input handler, acoustics & mission logic
+│   ├── inputHandler.ts   # Modal, title-screen, map and utility key handling
+│   ├── titleScreen.ts    # Title screen, menu and telemetry ticker renderer
+│   ├── manualModal.ts    # Tactical manual renderer
+│   ├── bigMapModal.ts    # Sector overview map renderer
+│   ├── saveLoad.ts       # Local save-state persistence
 │   ├── main.ts           # Canvas bootstrap & keyboard listener bindings
+│   ├── music.ts          # Procedural background music
+│   ├── fx.ts             # Combat and interface particle effects
+│   ├── boss.ts           # Boss encounter and endgame state
+│   ├── breachProtocol.ts # Core-terminal breach mini-game
+│   ├── sewerMap.ts       # Sub-Sector Zero map
+│   ├── citadelMap.ts     # Citadel map and endgame area
+│   ├── textWrap.ts       # Canvas text wrapping helpers
+│   ├── uiFont.ts         # UI font helpers
 │   └── style.css         # Retro CRT scanline shaders & glowing cyber-interface styles
 ├── scripts/              # Automated verification test suite
 │   ├── verify-game.ts    # Engine loop & turn validation
@@ -257,8 +288,8 @@ npm install
 
 ### Development Server
 ```bash
-npm run dev
-# Open http://localhost:2400 in your browser
+npm run dev -- --host 0.0.0.0
+# Open http://localhost:2400 in your browser. LAN/Tailscale access requires the host flag
 ```
 
 ### Build & Production Preview
