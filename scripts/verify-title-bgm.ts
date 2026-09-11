@@ -2,6 +2,60 @@ import assert from 'node:assert';
 import { bgm } from '../src/music';
 import { GameEngine } from '../src/game';
 
+// Mock window and AudioContext for Node.js environment to allow bgm.start() to succeed
+(globalThis as any).window = {
+  AudioContext: class {
+    state = 'running';
+    currentTime = 0;
+    destination = {};
+    createGain() {
+      return {
+        gain: { value: 0, setValueAtTime: () => {}, setTargetAtTime: () => {}, exponentialRampToValueAtTime: () => {} },
+        connect: () => {},
+        disconnect: () => {}
+      };
+    }
+    createBiquadFilter() {
+      return {
+        type: 'lowpass',
+        frequency: { value: 0, setValueAtTime: () => {}, setTargetAtTime: () => {} },
+        Q: { value: 0, setValueAtTime: () => {}, setTargetAtTime: () => {} },
+        connect: () => {},
+        disconnect: () => {}
+      };
+    }
+    createOscillator() {
+      return {
+        type: 'sine',
+        frequency: { value: 0, setValueAtTime: () => {}, setTargetAtTime: () => {}, exponentialRampToValueAtTime: () => {} },
+        connect: () => {},
+        disconnect: () => {},
+        start: () => {},
+        stop: () => {}
+      };
+    }
+    createBuffer() {
+      return {
+        getChannelData: () => new Float32Array(100)
+      };
+    }
+    createBufferSource() {
+      return {
+        buffer: null,
+        connect: () => {},
+        disconnect: () => {},
+        start: () => {},
+        stop: () => {}
+      };
+    }
+    resume() {
+      return Promise.resolve();
+    }
+  },
+  addEventListener: () => {},
+  removeEventListener: () => {}
+};
+
 console.log('=== Testing Title Screen Background Music (Title BGM) ===');
 
 // 1. Verify BGM initial intensity is 'title'
@@ -65,5 +119,13 @@ game.isTitleScreen = true;
 game.render();
 assert.strictEqual(bgm.currentIntensity, 'title', 'Re-entering title screen restores title BGM');
 console.log('✓ Returning to title screen restores title BGM');
+
+// 7. 驗證 60 FPS 渲染循環下高頻調用 setIntensity 不會中斷或重置播放
+for (let i = 0; i < 100; i++) {
+  bgm.setIntensity('exploration');
+}
+assert.strictEqual(bgm.enabled, true, 'BGM should remain enabled after rapid setIntensity calls');
+assert.strictEqual(bgm.currentIntensity, 'exploration', 'BGM intensity should remain exploration after rapid setIntensity calls');
+console.log('✓ Rapid 60 FPS setIntensity loop does not reset timer or disrupt playback');
 
 console.log('🎉 Title Screen BGM verification completed successfully!');

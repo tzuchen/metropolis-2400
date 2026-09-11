@@ -165,6 +165,7 @@ export class MusicSynthesizer {
   }
 
   setIntensity(level: MusicIntensity): void {
+    const wasSameIntensity = this.intensity === level;
     this.intensity = level;
 
     // 若未靜音且尚未播放，自動恢復播放
@@ -175,6 +176,11 @@ export class MusicSynthesizer {
     // 若 ctx 處於 suspended 狀態則調用 resume
     if (this.ctx && this.ctx.state === 'suspended') {
       void this.ctx.resume();
+    }
+
+    // 關鍵防禦：若強度未改變且已在播放，立即 return，避免每幀重設 scheduleArp()
+    if (wasSameIntensity && this.isPlaying) {
+      return;
     }
 
     if (!this.ctx || !this.filterNode || !this.masterGain) return;
