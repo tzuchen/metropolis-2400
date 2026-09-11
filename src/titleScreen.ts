@@ -156,12 +156,16 @@ export function drawTitleScreen(
   // 1d. 動態飄落的細微賽博雨絲/光點
   const rainCount = 80;
   for (let i = 0; i < rainCount; i++) {
-    const seedR = hash1(i * 31 + 7);
-    const speed = 0.15 + seedR * 0.25;
-    const rx = ((seedR * width * 3 + now * speed * 0.3) % (width + 40)) - 20;
-    const ry = ((seedR * height * 5 + now * speed) % (height + 60)) - 30;
-    const len = 6 + seedR * 10;
-    const alpha = 0.08 + seedR * 0.12;
+    const seedX = hash1(i * 31 + 7);
+    const seedY = hash1(i * 53 + 13);
+    const seedSpeed = hash1(i * 71 + 29);
+    const seedLen = hash1(i * 97 + 41);
+    const seedAlpha = hash1(i * 113 + 53);
+    const speed = 0.15 + seedSpeed * 0.25;
+    const rx = ((seedX * width * 3 + now * speed * 0.3) % (width + 40)) - 20;
+    const ry = ((seedY * height * 5 + now * speed) % (height + 60)) - 30;
+    const len = 6 + seedLen * 10;
+    const alpha = 0.08 + seedAlpha * 0.12;
     ctx.strokeStyle = `rgba(0, 240, 255, ${alpha})`;
     ctx.lineWidth = 1;
     ctx.beginPath?.();

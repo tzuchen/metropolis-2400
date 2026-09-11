@@ -1244,17 +1244,32 @@ export class GameRenderer {
     // 酸雨絲 (Acid Rain Streaks)
     const rainCount = 40;
     for (let i = 0; i < rainCount; i++) {
-      const baseX = (i * (width / rainCount) * 1.618) % width;
-      const x = baseX + Math.sin(now * 0.0006 + i) * 4;
-      const y = ((now * 0.22 + i * 35) % (height + 60)) - 30;
-      const len = 15 + Math.sin(i * 0.3) * 10;
-      const alpha = 0.15 + 0.1 * Math.sin(i * 0.5);
+      // Deterministic pseudo-random values derived from index
+      const seed = i * 2654435761;
+      const hash1 = ((seed ^ (seed >>> 13)) * 2246822519) >>> 0;
+      const hash2 = ((hash1 ^ (hash1 >>> 16)) * 3266489917) >>> 0;
+      const hash3 = ((hash2 ^ (hash2 >>> 13)) * 668265263) >>> 0;
+      const hash4 = ((hash3 ^ (hash3 >>> 16)) * 1274126177) >>> 0;
+
+      // Stable distinct position, speed, length, slant, opacity
+      const baseX = (hash1 / 4294967295) * width;
+      const fallSpeed = 0.15 + (hash2 / 4294967295) * 0.25;
+      const len = 12 + (hash3 / 4294967295) * 16;
+      const slant = -1 - (hash4 / 4294967295) * 3;
+      const baseAlpha = 0.12 + (hash1 / 4294967295) * 0.12;
+
+      // Subtle time variation for drift and opacity
+      const drift = Math.sin(now * 0.0006 + i * 0.7) * 3;
+      const alpha = baseAlpha + 0.04 * Math.sin(now * 0.001 + i * 1.3);
+
+      const x = baseX + drift;
+      const y = ((now * fallSpeed + (hash2 / 4294967295) * (height + 60)) % (height + 60)) - 30;
 
       ctx.strokeStyle = `rgba(100, 255, 150, ${alpha})`;
       ctx.lineWidth = 1;
       ctx.beginPath?.();
       ctx.moveTo?.(x, y);
-      ctx.lineTo?.(x - 2, y + len);
+      ctx.lineTo?.(x + slant, y + len);
       ctx.stroke?.();
     }
 
