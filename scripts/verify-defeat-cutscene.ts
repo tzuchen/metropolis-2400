@@ -145,4 +145,53 @@ game.updateDefeatCutscene(game.defeatCutscene!.stageStartTime + game.defeatCutsc
 game.render(); // wake_up
 console.log('✅ 各階段過場畫面 Renderer 繪製正常，無拋出異常！');
 
+// 9. 測試重複調用 handlePlayerDefeat(false) 不會重置或覆蓋現有過場動畫 (Regression)
+console.log('\n9. 測試重複調用 handlePlayerDefeat(false) 的冪等性與狀態保持...');
+const freshGame = new GameEngine(createMockCanvas(960, 600) as any);
+freshGame.player.hp = 0;
+freshGame.handlePlayerDefeat(false);
+
+if (!freshGame.defeatCutscene) {
+  throw new Error('❌ 首次調用 handlePlayerDefeat(false) 後應初始化 defeatCutscene');
+}
+
+const retainedCutscene = freshGame.defeatCutscene;
+const retainedStageStartTime = retainedCutscene.stageStartTime;
+
+// 再次調用，不應重置或覆蓋
+freshGame.handlePlayerDefeat(false);
+
+if (freshGame.defeatCutscene !== retainedCutscene) {
+  throw new Error('❌ 重複調用 handlePlayerDefeat(false) 不應重新建立 defeatCutscene 物件');
+}
+if (freshGame.defeatCutscene.stageStartTime !== retainedStageStartTime) {
+  throw new Error(`❌ 重複調用不應改變 stageStartTime，實際為 ${freshGame.defeatCutscene.stageStartTime}，預期為 ${retainedStageStartTime}`);
+}
+console.log('✅ 重複調用 handlePlayerDefeat(false) 未重置過場狀態，物件引用與 stageStartTime 保持不變！');
+
+// 驅動過場動畫至 wake_up 階段
+const swarmEnd = retainedCutscene.stageStartTime + retainedCutscene.duration + 100;
+freshGame.updateDefeatCutscene(swarmEnd);
+
+if (freshGame.defeatCutscene?.stage !== 'blur_out') {
+  throw new Error(`❌ 推進 swarm 後應進入 blur_out，實際為 ${freshGame.defeatCutscene?.stage}`);
+}
+
+const blurEnd = freshGame.defeatCutscene.stageStartTime + freshGame.defeatCutscene.duration + 100;
+freshGame.updateDefeatCutscene(blurEnd);
+
+if (freshGame.defeatCutscene?.stage !== 'wake_up') {
+  throw new Error(`❌ 推進 blur_out 後應進入 wake_up，實際為 ${freshGame.defeatCutscene?.stage}`);
+}
+if (freshGame.player.x !== 35 || freshGame.player.y !== 5) {
+  throw new Error(`❌ wake_up 時特工應在禁閉室 (35, 5)，實際為 (${freshGame.player.x}, ${freshGame.player.y})`);
+}
+if (!freshGame.isGearConfiscated) {
+  throw new Error('❌ 進入 wake_up 時裝備應已被扣押');
+}
+if (!freshGame.player.isAlive) {
+  throw new Error('❌ wake_up 時特工應已甦醒 (isAlive 應為 true)');
+}
+console.log('✅ 重複調用後過場動畫正確推進至 wake_up，特工在禁閉室甦醒且裝備已扣押！');
+
 console.log('\n🎉 所有玩家戰敗圍捕、模糊轉場與禁閉室甦醒測試全數通過！');

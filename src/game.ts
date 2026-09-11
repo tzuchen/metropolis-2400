@@ -2423,6 +2423,9 @@ export class GameEngine {
       this.executeDetentionRelocation(true);
       return;
     }
+    if (this.defeatCutscene) {
+      return;
+    }
     this.startDefeatCutscene();
   }
 
