@@ -174,8 +174,8 @@ if (freshGame.defeatCutscene.stageStartTime !== retainedStageStartTime) {
 console.log('✅ 重複調用 handlePlayerDefeat(false) 未重置過場狀態，物件引用與 stageStartTime 保持不變！');
 
 // 驅動過場動畫至 wake_up 階段
-const swarmEnd = retainedCutscene.stageStartTime + retainedCutscene.duration + 100;
-freshGame.updateDefeatCutscene(swarmEnd);
+const freshSwarmEnd = retainedCutscene.stageStartTime + retainedCutscene.duration + 100;
+freshGame.updateDefeatCutscene(freshSwarmEnd);
 
 if (freshGame.defeatCutscene?.stage !== 'blur_out') {
   throw new Error(`❌ 推進 swarm 後應進入 blur_out，實際為 ${freshGame.defeatCutscene?.stage}`);
@@ -286,5 +286,66 @@ if (!sector2InstantGame.isGearConfiscated) {
   throw new Error('❌ Instant 模式下裝備應已被扣押');
 }
 console.log('✅ 從 Sector-2 戰敗後 Instant 模式直接傳送至 Sector-1 禁閉室 (35, 5)，特工甦醒且裝備已扣押！');
+
+// 12. 測試 blur_out 邊界條件：確定性回歸測試
+console.log('\n12. 測試 blur_out 邊界條件 (確定性回歸測試)...');
+const boundaryGame = new GameEngine(createMockCanvas(960, 600) as any);
+boundaryGame.player.hp = 0;
+boundaryGame.startDefeatCutscene();
+
+if (!boundaryGame.defeatCutscene || boundaryGame.defeatCutscene.stage !== 'swarm') {
+  throw new Error('❌ 初始階段應為 swarm');
+}
+
+// 推進至 blur_out
+const swarmEnd = boundaryGame.defeatCutscene.stageStartTime + boundaryGame.defeatCutscene.duration + 100;
+boundaryGame.updateDefeatCutscene(swarmEnd);
+
+if (!boundaryGame.defeatCutscene || boundaryGame.defeatCutscene.stage !== 'blur_out') {
+  throw new Error(`❌ 推進 swarm 後應進入 blur_out，實際為 ${boundaryGame.defeatCutscene?.stage}`);
+}
+
+const blurOutStartTime = boundaryGame.defeatCutscene.stageStartTime;
+const blurOutDuration = boundaryGame.defeatCutscene.duration;
+
+// 在 blur_out 期間調用 updateDefeatCutscene，時間戳超過階段期限
+const blurOutEnd = blurOutStartTime + blurOutDuration + 50;
+boundaryGame.updateDefeatCutscene(blurOutEnd);
+
+if (!boundaryGame.defeatCutscene || boundaryGame.defeatCutscene.stage !== 'wake_up') {
+  throw new Error(`❌ 推進 blur_out 後應進入 wake_up，實際為 ${boundaryGame.defeatCutscene?.stage}`);
+}
+
+// 驗證玩家位置
+if (boundaryGame.player.x !== 35 || boundaryGame.player.y !== 5) {
+  throw new Error(`❌ wake_up 時特工應在禁閉室 (35, 5)，實際為 (${boundaryGame.player.x}, ${boundaryGame.player.y})`);
+}
+
+// 驗證 BGM 強度
+if (bgm.currentIntensity !== 'exploration') {
+  throw new Error(`❌ wake_up 時 bgm.currentIntensity 應為 'exploration'，實際為 ${bgm.currentIntensity}`);
+}
+
+// 驗證玩家存活
+if (!boundaryGame.player.isAlive) {
+  throw new Error('❌ wake_up 時特工應已甦醒 (isAlive 應為 true)');
+}
+
+// 驗證裝備扣押
+if (!boundaryGame.isGearConfiscated) {
+  throw new Error('❌ wake_up 時裝備應已被扣押');
+}
+
+// 再次調用 updateDefeatCutscene 確保不會重複觸發或卡住
+const wakeUpStartTime = boundaryGame.defeatCutscene.stageStartTime;
+const wakeUpDuration = boundaryGame.defeatCutscene.duration;
+const wakeUpEnd = wakeUpStartTime + wakeUpDuration + 100;
+boundaryGame.updateDefeatCutscene(wakeUpEnd);
+
+if (boundaryGame.defeatCutscene !== null) {
+  throw new Error('❌ wake_up 完成後 defeatCutscene 應為 null');
+}
+
+console.log('✅ blur_out 邊界條件測試通過：確定性推進至 wake_up，玩家位置正確，BGM 恢復，過場正常結束！');
 
 console.log('\n🎉 所有玩家戰敗圍捕、模糊轉場與禁閉室甦醒測試全數通過！');

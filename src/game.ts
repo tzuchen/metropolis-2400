@@ -2627,10 +2627,10 @@ export class GameEngine {
       }
     } else if (cs.stage === 'blur_out') {
       if (elapsed >= cs.duration) {
-        this.executeDetentionRelocation(false);
         cs.stage = 'wake_up';
         cs.stageStartTime = now;
         cs.duration = 1400;
+        this.executeDetentionRelocation(false);
       }
     } else if (cs.stage === 'wake_up') {
       if (elapsed >= cs.duration) {
