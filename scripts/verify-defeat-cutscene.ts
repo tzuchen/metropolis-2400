@@ -1,4 +1,5 @@
 import { GameEngine } from '../src/game';
+import { bgm } from '../src/music';
 
 function createMockCanvas(w = 960, h = 600): any {
   const drawnRects: Array<{ x: number; y: number; w: number; h: number; fill?: any }> = [];
@@ -108,6 +109,9 @@ if (game.player.x !== 35 || game.player.y !== 5) {
 }
 if (!game.isGearConfiscated) {
   throw new Error('❌ 進入禁閉室時裝備應已扣押至證物箱');
+}
+if (bgm.currentIntensity !== 'exploration') {
+  throw new Error(`❌ wake_up 時 bgm.currentIntensity 應為 'exploration'，實際為 ${bgm.currentIntensity}`);
 }
 console.log('✅ 特工已在禁閉室醒來 (35, 5)，畫面進入 Stage 3 [wake_up] 逐漸由模糊變清晰！');
 
@@ -245,6 +249,9 @@ if (!sector2Game.player.isAlive) {
 }
 if (!sector2Game.isGearConfiscated) {
   throw new Error('❌ wake_up 時裝備應已被扣押');
+}
+if (bgm.currentIntensity !== 'exploration') {
+  throw new Error(`❌ Sector-2 wake_up 時 bgm.currentIntensity 應為 'exploration'，實際為 ${bgm.currentIntensity}`);
 }
 console.log('✅ 從 Sector-2 戰敗後過場動畫正確傳送至 Sector-1 禁閉室 (35, 5)，特工甦醒且裝備已扣押！');
 

@@ -2476,6 +2476,12 @@ export class GameEngine {
     this.player.y = 5;
     this.updateFOV();
 
+    // Ensure BGM continues seamlessly
+    bgm.setIntensity('exploration');
+    if (!bgm.enabled) {
+      bgm.start();
+    }
+
     // Spawn confiscated locker in guard room
     const lockerIndex = this.groundItems.findIndex((it) => it.id === 'item-confiscated-locker');
     const lockerItem: GroundItem = {
@@ -2619,6 +2625,7 @@ export class GameEngine {
     } else if (cs.stage === 'wake_up') {
       if (elapsed >= cs.duration) {
         this.defeatCutscene = null;
+        bgm.setIntensity('exploration');
         this.pushMessage(
           this.language === 'zh'
             ? '【脫逃提示】右上角 (36, 4) 為【鬆動的通風金屬柵板】！可按 [E] 拆開或推動它以顯現通風暗門！'

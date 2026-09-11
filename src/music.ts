@@ -165,8 +165,18 @@ export class MusicSynthesizer {
   }
 
   setIntensity(level: MusicIntensity): void {
-    if (this.intensity === level) return;
     this.intensity = level;
+
+    // 若未靜音且尚未播放，自動恢復播放
+    if (!this.isMuted && !this.isPlaying) {
+      this.start();
+    }
+
+    // 若 ctx 處於 suspended 狀態則調用 resume
+    if (this.ctx && this.ctx.state === 'suspended') {
+      void this.ctx.resume();
+    }
+
     if (!this.ctx || !this.filterNode || !this.masterGain) return;
 
     const now = this.ctx.currentTime;
@@ -175,8 +185,8 @@ export class MusicSynthesizer {
       this.filterNode.Q.setTargetAtTime(3.5, now, 0.3);
       this.masterGain.gain.setTargetAtTime(0.32, now, 0.3);
     } else if (level === 'exploration') {
-      this.filterNode.frequency.setTargetAtTime(550, now, 0.4);
-      this.masterGain.gain.setTargetAtTime(0.22, now, 0.3);
+      this.filterNode.frequency.setTargetAtTime(750, now, 0.4);
+      this.masterGain.gain.setTargetAtTime(0.28, now, 0.3);
     } else if (level === 'combat') {
       this.filterNode.frequency.setTargetAtTime(1500, now, 0.2);
       this.masterGain.gain.setTargetAtTime(0.35, now, 0.2);
@@ -225,6 +235,10 @@ export class MusicSynthesizer {
     this.arpTimer = setInterval(() => {
       this.tickArp();
     }, intervalMs);
+
+    if (typeof (this.arpTimer as any)?.unref === 'function') {
+      (this.arpTimer as any).unref();
+    }
   }
 
   private playKick(ctx: AudioContext, now: number, isBoss: boolean): void {
@@ -454,7 +468,7 @@ export class MusicSynthesizer {
       // Combat/Boss use sawtooth, Exploration uses triangle
       oscType = (isCombat || isBoss) ? 'sawtooth' : 'triangle';
       // Boss has higher volume
-      peakGain = isBoss ? 0.12 : isCombat ? 0.08 : 0.04;
+      peakGain = isBoss ? 0.12 : isCombat ? 0.08 : 0.06;
       decayTime = isBoss ? 0.1 : isCombat ? 0.14 : 0.22;
     }
 
