@@ -112,3 +112,115 @@ if (!recordedTexts.includes('SECTOR 1 INFILTRATION PROTOCOL // STATUS: ACTIVE //
 }
 
 console.log('Mission Log Modal test passed!');
+
+// Compact HUD Regression Test
+let hudRecordedTexts: Array<{ text: string; x: number; y: number; width: number }> = [];
+const MONO_CHAR_WIDTH = 7.2;
+const hudRecordingCtx = {
+  save: () => {},
+  restore: () => {},
+  fillRect: () => {},
+  strokeRect: () => {},
+  fillText: (text: string, x: number, y: number) => {
+    const width = String(text).length * MONO_CHAR_WIDTH;
+    hudRecordedTexts.push({ text: String(text), x, y, width });
+  },
+  beginPath: () => {},
+  closePath: () => {},
+  moveTo: () => {},
+  lineTo: () => {},
+  arc: () => {},
+  fill: () => {},
+  stroke: () => {},
+  setLineDash: () => {},
+  measureText: (text: string) => ({ width: String(text).length * MONO_CHAR_WIDTH }),
+};
+const hudRecordingCanvas = {
+  width: 800,
+  height: 600,
+  getContext: () => hudRecordingCtx
+} as unknown as HTMLCanvasElement;
+
+const hudRenderer = new GameRenderer(hudRecordingCanvas);
+hudRenderer.language = 'en';
+hudRenderer.activeWaypoint = { x: 10, y: 10, name: 'REBEL_BASE' };
+
+const hudPlayer = {
+  x: 5,
+  y: 5,
+  hp: 80,
+  maxHp: 100,
+  energy: 60,
+  maxEnergy: 100,
+  credits: 250,
+  level: 7,
+  exp: 45,
+  expToNext: 100,
+  checkInTimer: 42,
+  isCollarDisarmed: false,
+  isDisguised: true,
+  currentSectorId: 'sector-1',
+  equippedWeapon: {
+    id: 'quantum-annihilator',
+    name: 'Quantum Annihilator Mark VII Heavy Antimatter Cannon',
+    power: 99,
+    range: 8,
+    energyCost: 20,
+  },
+  weapons: [
+    { id: 'quantum-annihilator', name: 'Quantum Annihilator Mark VII Heavy Antimatter Cannon', power: 99, range: 8, energyCost: 20 },
+    { id: 'laser-pistol', name: 'Laser Blaster Mk-II', power: 35, range: 6, energyCost: 5 },
+  ],
+  isWeaponDrawn: true,
+  augments: {},
+  consumables: { medkits: 2, batteries: 1, empGrenades: 0 },
+};
+
+hudRecordedTexts = [];
+hudRenderer.drawHud(800, 600, hudPlayer as any, SecurityLevel.CLEAR, [], hudRecordingCtx);
+
+// Assert expected prefixes are present
+const expectedPrefixes = ['SECTOR', 'SEC:', 'CHK:', 'LV.', 'HP', 'EN', 'CR:', 'WEAPON:', '[ GPS:', '[DISGUISED]'];
+for (const prefix of expectedPrefixes) {
+  const found = hudRecordedTexts.some((entry) => entry.text.startsWith(prefix));
+  if (!found) {
+    throw new Error(`Compact HUD regression: expected prefix "${prefix}" not found in recorded texts`);
+  }
+}
+
+// Every recorded status label must begin inside the 800px right inset and end no later than it
+const rightInset = 800 - 12; // hudRightMargin = 12
+for (const entry of hudRecordedTexts) {
+  if (entry.x < 0) {
+    throw new Error(`Compact HUD regression: label "${entry.text}" starts at x=${entry.x} which is outside the canvas`);
+  }
+  if (entry.x + entry.width > rightInset + 1) {
+    throw new Error(`Compact HUD regression: label "${entry.text}" ends at x=${(entry.x + entry.width).toFixed(1)} which exceeds right inset ${rightInset}`);
+  }
+}
+
+// Labels sharing the same y coordinate must have non-overlapping horizontal intervals
+const yGroups = new Map<number, Array<{ x: number; width: number; text: string }>>();
+for (const entry of hudRecordedTexts) {
+  const yKey = Math.round(entry.y * 100) / 100;
+  if (!yGroups.has(yKey)) yGroups.set(yKey, []);
+  yGroups.get(yKey)!.push({ x: entry.x, width: entry.width, text: entry.text });
+}
+for (const [yKey, labels] of yGroups) {
+  labels.sort((a, b) => a.x - b.x);
+  for (let i = 0; i < labels.length - 1; i++) {
+    const aEnd = labels[i].x + labels[i].width;
+    const bStart = labels[i + 1].x;
+    if (aEnd > bStart) {
+      throw new Error(`Compact HUD regression: labels at y=${yKey} overlap: "${labels[i].text}" ends at ${aEnd.toFixed(1)}, "${labels[i + 1].text}" starts at ${bStart.toFixed(1)}`);
+    }
+  }
+}
+
+// At least two y rows are used for this crowded state
+const uniqueYRows = new Set(hudRecordedTexts.map((entry) => Math.round(entry.y * 100) / 100));
+if (uniqueYRows.size < 2) {
+  throw new Error(`Compact HUD regression: expected at least 2 y rows, got ${uniqueYRows.size}`);
+}
+
+console.log('Compact HUD regression test passed! Rows:', uniqueYRows.size, 'Labels:', hudRecordedTexts.length);

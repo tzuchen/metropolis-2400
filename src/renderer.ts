@@ -1439,7 +1439,7 @@ export class GameRenderer {
         const by = sy + 4 + i * bladeH;
         ctx.fillStyle = '#161b22';
         ctx.fillRect?.(sx + 3, by + 1, tileSize - 6, bladeH - 2);
-        
+
         // Cooling ventilation slits
         ctx.fillStyle = '#010409';
         for (let s = 0; s < 3; s++) {
@@ -1451,7 +1451,7 @@ export class GameRenderer {
         let ledColor = '#00ff88'; // green
         if (ledPhase > 0.5) ledColor = '#00e5ff'; // cyan
         else if (ledPhase < -0.5) ledColor = '#ffea00'; // amber
-        
+
         ctx.fillStyle = ledColor;
         ctx.shadowColor = ledColor;
         ctx.shadowBlur = 4;
@@ -1796,16 +1796,6 @@ export class GameRenderer {
   ): void {
     ctx.save?.();
 
-    ctx.fillStyle = 'rgba(7, 13, 20, 0.88)';
-    ctx.fillRect?.(0, 0, width, 36);
-
-    ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect?.(0, 35.5, width, 1);
-
-    ctx.font = 'bold 12px monospace';
-    ctx.textBaseline = 'middle';
-
     const p = player;
     const px = Number(p?.x) || 0;
     const py = Number(p?.y) || 0;
@@ -1817,69 +1807,34 @@ export class GameRenderer {
     else if (curSec === 'sub-sector-0') sectorLabel = 'SECTOR 00';
     else if (curSec === 'sector-citadel') sectorLabel = 'CITADEL APEX';
 
-    ctx.fillStyle = '#00e5ff';
-    ctx.fillText?.(sectorLabel + ' [POS ' + px + ',' + py + ']', 12, 18);
-
     let secColor = '#00ff66';
     if (sec === 'SUSPICIOUS') secColor = '#ffea00';
     if (sec === 'ALERT') secColor = '#ff7700';
     if (sec === 'LOCKDOWN') secColor = '#ff1744';
 
-    ctx.fillStyle = secColor;
-    ctx.fillText?.('SEC: ' + sec, 175, 18);
-
-    // 神經項圈簽到倒數 (Neural Collar Check-in Timer)
+    let chkText: string;
+    let chkColor: string;
     if (p?.isCollarDisarmed) {
-      ctx.fillStyle = '#00ff88';
-      ctx.fillText?.('CHK: UNLOCKED [∞]', 255, 18);
+      chkText = 'CHK: UNLOCKED [∞]';
+      chkColor = '#00ff88';
     } else {
       const chkTimer = typeof p?.checkInTimer === 'number' ? p.checkInTimer : 100;
-      let chkColor = '#00ffcc';
+      chkText = 'CHK: ' + chkTimer + '/100';
+      chkColor = '#00ffcc';
       if (chkTimer <= 10) chkColor = '#ff2a4b';
       else if (chkTimer <= 30) chkColor = '#ffea00';
-      ctx.fillStyle = chkColor;
-      ctx.fillText?.('CHK: ' + chkTimer + '/100', 255, 18);
     }
 
-    // 玩家等級與經驗值迷你進度條 (LV.X & XP Bar)
     const level = Number(p?.level ?? 1) || 1;
     const xp = Number(p?.exp ?? p?.xp ?? 0) || 0;
     const xpToNext = Number(p?.expToNext ?? p?.xpToNext ?? 100) || 100;
     const xpRatio = Math.max(0, Math.min(1, xp / xpToNext));
 
-    ctx.fillStyle = '#ffea00';
-    ctx.fillText?.('LV.' + level, 345, 18);
-
-    // XP 進度條 (寬度 45px)
-    const xpBarX = 385;
-    const xpBarY = 14;
-    const xpBarW = 45;
-    const xpBarH = 8;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.fillRect?.(xpBarX, xpBarY, xpBarW, xpBarH);
-    ctx.fillStyle = '#00e5ff';
-    ctx.fillRect?.(xpBarX, xpBarY, xpBarW * xpRatio, xpBarH);
-    ctx.strokeStyle = 'rgba(0, 229, 255, 0.5)';
-    ctx.lineWidth = 0.8;
-    ctx.strokeRect?.(xpBarX, xpBarY, xpBarW, xpBarH);
-    ctx.fillStyle = '#8899a6';
-    ctx.font = '9px monospace';
-    ctx.fillText?.(xp + '/' + xpToNext, xpBarX + xpBarW + 4, 18);
-    ctx.font = 'bold 12px monospace';
-
     const hp = Math.max(0, p?.hp ?? 100);
     const maxHp = p?.maxHp ?? 100;
-    ctx.fillStyle = '#ff2a4b';
-    ctx.fillText?.('HP ' + hp + '/' + maxHp, 475, 18);
-
     const energy = Math.max(0, p?.energy ?? 100);
     const maxEnergy = p?.maxEnergy ?? 100;
-    ctx.fillStyle = '#00f0ff';
-    ctx.fillText?.('EN ' + energy + '/' + maxEnergy, 560, 18);
-
     const credits = p?.credits ?? 0;
-    ctx.fillStyle = '#ffb700';
-    ctx.fillText?.('CR: ' + credits, 645, 18);
 
     const isZh = this.language === 'zh';
     const weapons = Array.isArray(p?.weapons) ? p.weapons : [];
@@ -1890,19 +1845,9 @@ export class GameRenderer {
     const weaponDmg = Number(p?.equippedWeapon?.power ?? p?.equippedWeapon?.damage ?? 0) || 0;
     const isQuantum = String(curWName).toUpperCase().includes('QUANTUM');
     const isArmed = !!p?.isWeaponDrawn;
-    let weaponStatusText: string;
-    if (isZh) {
-      weaponStatusText = '武器: ' + (isArmed ? '[已拔槍]' : '[已收槍]') + ' ' + curWName + ' (' + weaponDmg + ' DMG) ' + (nextWName ? '[Q換: ' + nextWName + ']' : '[Q換槍]');
-    } else {
-      weaponStatusText = 'WEAPON: ' + (isArmed ? '[ARMED]' : '[HOLSTERED]') + ' ' + curWName + ' (' + weaponDmg + ' DMG) ' + (nextWName ? '[Q: ' + nextWName + ']' : '[Q:SWAP]');
-    }
     const weaponColor = isArmed ? (isQuantum ? '#b388ff' : '#ff3855') : '#8899a6';
-    const weaponTextWidth = ctx.measureText?.(weaponStatusText)?.width || weaponStatusText.length * 7;
-    const weaponX = Math.max(650, width - weaponTextWidth - 10);
-    ctx.fillStyle = weaponColor;
-    ctx.fillText?.(weaponStatusText, weaponX, 18);
 
-    let hudCursorX = 850;
+    let gpsText: string | null = null;
     if (this.activeWaypoint) {
       const wp = this.activeWaypoint as { x: number; y: number; name?: string };
       const wpx = Number(wp?.x) || 0;
@@ -1925,15 +1870,240 @@ export class GameRenderer {
         else if (deg < 292.5) arrow = '↑';
         else arrow = '↗';
       }
-      const gpsText = `[ GPS: ${String(wp?.name ?? 'WAYPOINT')} ${dist}格 ${arrow} ]`;
-      ctx.fillStyle = '#ffea00';
-      ctx.fillText?.(gpsText, hudCursorX, 18);
-      hudCursorX += (ctx.measureText ? ctx.measureText(gpsText).width : gpsText.length * 6) + 14;
+      gpsText = `[ GPS: ${String(wp?.name ?? 'WAYPOINT')} ${dist}格 ${arrow} ]`;
     }
 
-    if (p?.isDisguised) {
-      ctx.fillStyle = '#b432ff';
-      ctx.fillText?.('[DISGUISED]', hudCursorX, 18);
+    const disguiseText = p?.isDisguised ? '[DISGUISED]' : null;
+
+    // Layout configuration
+    const hudLeftMargin = 12;
+    const hudRightMargin = 12;
+    const hudItemGap = 14;
+    const hudRowHeight = 24;
+    const hudTopPadding = 6;
+    const hudBottomPadding = 6;
+    const hudMaxContentWidth = width - hudLeftMargin - hudRightMargin;
+
+    // Helper to measure text width
+    const measureW = (text: string, font?: string): number => {
+      const prevFont = ctx.font;
+      if (font) ctx.font = font;
+      const w = ctx.measureText?.(text)?.width || text.length * 7;
+      if (font) ctx.font = prevFont;
+      return w;
+    };
+
+    // Helper to truncate text with ellipsis
+    const truncateText = (text: string, maxWidth: number, font: string): string => {
+      if (measureW(text, font) <= maxWidth) return text;
+      let truncated = text;
+      while (truncated.length > 1 && measureW(truncated + '…', font) > maxWidth) {
+        truncated = truncated.slice(0, -1);
+      }
+      return truncated + '…';
+    };
+
+    // Build items list
+    type HudItem = {
+      text: string;
+      color: string;
+      font: string;
+      special?: 'xp_bar';
+      xpRatio?: number;
+      xpBarW?: number;
+      xpBarH?: number;
+      xpValueText?: string;
+      xpValueColor?: string;
+      xpValueFont?: string;
+    };
+
+    const hudItems: HudItem[] = [];
+
+    // 1. Sector/Position
+    hudItems.push({
+      text: sectorLabel + ' [POS ' + px + ',' + py + ']',
+      color: '#00e5ff',
+      font: 'bold 12px monospace'
+    });
+
+    // 2. Security
+    hudItems.push({
+      text: 'SEC: ' + sec,
+      color: secColor,
+      font: 'bold 12px monospace'
+    });
+
+    // 3. Check-in
+    hudItems.push({
+      text: chkText,
+      color: chkColor,
+      font: 'bold 12px monospace'
+    });
+
+    // 4. Level
+    hudItems.push({
+      text: 'LV.' + level,
+      color: '#ffea00',
+      font: 'bold 12px monospace'
+    });
+
+    // 5. XP Bar
+    const xpBarW = 45;
+    const xpBarH = 8;
+    const xpValueText = xp + '/' + xpToNext;
+    hudItems.push({
+      text: '', // Placeholder, width calculated specially
+      color: '#00e5ff',
+      font: 'bold 12px monospace',
+      special: 'xp_bar',
+      xpRatio: xpRatio,
+      xpBarW: xpBarW,
+      xpBarH: xpBarH,
+      xpValueText: xpValueText,
+      xpValueColor: '#8899a6',
+      xpValueFont: '9px monospace'
+    });
+
+    // 6. HP
+    hudItems.push({
+      text: 'HP ' + hp + '/' + maxHp,
+      color: '#ff2a4b',
+      font: 'bold 12px monospace'
+    });
+
+    // 7. Energy
+    hudItems.push({
+      text: 'EN ' + energy + '/' + maxEnergy,
+      color: '#00f0ff',
+      font: 'bold 12px monospace'
+    });
+
+    // 8. Credits
+    hudItems.push({
+      text: 'CR: ' + credits,
+      color: '#ffb700',
+      font: 'bold 12px monospace'
+    });
+
+    // 9. Weapon Status
+    // We need to construct the weapon text carefully to allow truncation of the name if needed
+    // Structure: [Label] [State] [Name] ([Dmg] DMG) [Controls]
+    const weaponLabel = isZh ? '武器: ' : 'WEAPON: ';
+    const weaponState = isArmed ? (isZh ? '[已拔槍] ' : '[ARMED] ') : (isZh ? '[已收槍] ' : '[HOLSTERED] ');
+    const weaponDmgPart = ' (' + weaponDmg + ' DMG) ';
+    const weaponControls = nextWName ? (isZh ? '[Q換: ' + nextWName + ']' : '[Q: ' + nextWName + ']') : (isZh ? '[Q換槍]' : '[Q:SWAP]');
+
+    // Estimate max width for weapon name to ensure it fits in a row if it's the only thing or part of a row
+    // We'll just add it as a standard item, but if it's too long, we might need to truncate.
+    // For now, add full text. The layout engine will handle wrapping.
+    // However, the requirement says "truncate only the name portion... to fit within an available row".
+    // This implies if the weapon item itself is too wide for a row, we truncate the name.
+    // Let's calculate the width of the non-name parts.
+    const weaponFixedWidth = measureW(weaponLabel + weaponState + weaponDmgPart + weaponControls, 'bold 12px monospace');
+    const availableForName = hudMaxContentWidth - weaponFixedWidth;
+    const truncatedWeaponName = truncateText(curWName, availableForName, 'bold 12px monospace');
+
+    const weaponStatusText = weaponLabel + weaponState + truncatedWeaponName + weaponDmgPart + weaponControls;
+    hudItems.push({
+      text: weaponStatusText,
+      color: weaponColor,
+      font: 'bold 12px monospace'
+    });
+
+    // 10. GPS
+    if (gpsText) {
+      hudItems.push({
+        text: gpsText,
+        color: '#ffea00',
+        font: 'bold 12px monospace'
+      });
+    }
+
+    // 11. Disguise
+    if (disguiseText) {
+      hudItems.push({
+        text: disguiseText,
+        color: '#b432ff',
+        font: 'bold 12px monospace'
+      });
+    }
+
+    // Calculate layout
+    let currentX = hudLeftMargin;
+    let currentY = hudTopPadding;
+    let maxRows = 1;
+    let maxRowBottom = hudTopPadding + hudRowHeight;
+
+    const drawHudItem = (item: HudItem, x: number, y: number) => {
+      ctx.font = item.font;
+      ctx.textBaseline = 'middle';
+
+      if (item.special === 'xp_bar') {
+        // Draw XP Bar
+        const barX = x;
+        const barY = y + hudRowHeight / 2 - (item.xpBarH || 8) / 2;
+        const barW = item.xpBarW || 45;
+        const barH = item.xpBarH || 8;
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect?.(barX, barY, barW, barH);
+        ctx.fillStyle = '#00e5ff';
+        ctx.fillRect?.(barX, barY, barW * (item.xpRatio || 0), barH);
+        ctx.strokeStyle = 'rgba(0, 229, 255, 0.5)';
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect?.(barX, barY, barW, barH);
+
+        // Draw XP Value Text
+        if (item.xpValueText) {
+          ctx.fillStyle = item.xpValueColor || '#8899a6';
+          ctx.font = item.xpValueFont || '9px monospace';
+          ctx.fillText?.(item.xpValueText, barX + barW + 4, y + hudRowHeight / 2);
+        }
+      } else {
+        ctx.fillStyle = item.color;
+        ctx.fillText?.(item.text, x, y + hudRowHeight / 2);
+      }
+    };
+
+    const positionedHudItems: Array<{ item: HudItem; x: number; y: number }> = [];
+    for (const item of hudItems) {
+      let itemWidth: number;
+      if (item.special === 'xp_bar') {
+        // Width is bar + gap + text
+        const barW = item.xpBarW || 45;
+        const textW = item.xpValueText ? measureW(item.xpValueText, item.xpValueFont) : 0;
+        itemWidth = barW + 4 + textW;
+      } else {
+        itemWidth = measureW(item.text, item.font);
+      }
+
+      // Check if it fits in the current row
+      if (currentX + itemWidth > width - hudRightMargin) {
+        // Wrap to next row
+        currentX = hudLeftMargin;
+        currentY += hudRowHeight;
+        maxRows++;
+      }
+
+      positionedHudItems.push({ item, x: currentX, y: currentY });
+      currentX += itemWidth + hudItemGap;
+
+      if (currentY + hudRowHeight > maxRowBottom) {
+        maxRowBottom = currentY + hudRowHeight;
+      }
+    }
+
+    // Draw HUD Background
+    const hudHeight = maxRowBottom + hudBottomPadding;
+    ctx.fillStyle = 'rgba(7, 13, 20, 0.88)';
+    ctx.fillRect?.(0, 0, width, hudHeight);
+
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect?.(0, hudHeight - 0.5, width, 1);
+
+    for (const positionedItem of positionedHudItems) {
+      drawHudItem(positionedItem.item, positionedItem.x, positionedItem.y);
     }
 
     if (Array.isArray(messages)) {
@@ -1972,7 +2142,7 @@ export class GameRenderer {
 
     ctx.font = 'bold 11px monospace';
     ctx.textBaseline = 'middle';
-    const hudItems = [
+    const consumableItems = [
       { key: '[1]', label: `MED: ${medCount}`, color: '#00ff88' },
       { key: '[2]', label: `BAT: ${batCount}`, color: '#00e5ff' },
       { key: '[3]', label: `EMP: ${empCount}`, color: '#c77dff' },
@@ -1993,15 +2163,15 @@ export class GameRenderer {
     ];
 
     let curX = 10;
-    const gap = 12;
-    hudItems.forEach((item) => {
+    const consumableGap = 12;
+    consumableItems.forEach((item) => {
       const text = `${item.key} ${item.label}`;
       const measuredWidth = ctx.measureText?.(text)?.width;
       const textWidth = (measuredWidth && measuredWidth > 0) ? measuredWidth : text.length * 7;
       if (curX + textWidth > width - 10) return;
       ctx.fillStyle = item.color;
       ctx.fillText?.(text, curX, height - 13);
-      curX += textWidth + gap;
+      curX += textWidth + consumableGap;
     });
 
     ctx.restore?.();
@@ -3182,11 +3352,11 @@ export class GameRenderer {
       // 使用 progress 控制眼皮開啟程度，並加入輕微的抖動模擬剛醒來的狀態
       const blinkProgress = progress;
       const eyelidH = (1 - blinkProgress) * height * 0.35;
-      
+
       // 上眼皮
       ctx.fillStyle = 'rgba(10, 5, 5, 1)';
       ctx.fillRect?.(0, 0, width, eyelidH);
-      
+
       // 下眼皮
       ctx.fillRect?.(0, height - eyelidH, width, eyelidH);
 
