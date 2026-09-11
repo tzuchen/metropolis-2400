@@ -1095,6 +1095,16 @@ export class GameEngine {
         this.render();
         return;
       }
+      if (key === 'b' || key === 'B') {
+        const on = bgm.toggle();
+        const msg = on
+          ? (this.language === 'zh' ? '合成器音樂：已開啟' : 'SYNTH BGM: ONLINE')
+          : (this.language === 'zh' ? '合成器音樂：已靜音' : 'SYNTH BGM: MUTED');
+        this.pushFloatingText(this.player.x, this.player.y, msg, on ? '#00ffaa' : '#888888');
+        this.pushMessage(msg, 'info');
+        this.render();
+        return;
+      }
       if (key === '0' || key === 'F10') {
         this.cycleResolution();
         return;

@@ -128,4 +128,21 @@ assert.strictEqual(bgm.enabled, true, 'BGM should remain enabled after rapid set
 assert.strictEqual(bgm.currentIntensity, 'exploration', 'BGM intensity should remain exploration after rapid setIntensity calls');
 console.log('✓ Rapid 60 FPS setIntensity loop does not reset timer or disrupt playback');
 
+// 8. 驗證靜音後再開啟 (Mute -> Unmute) 正確恢復播放且狀態完全同步
+const muteResult = bgm.toggle();
+assert.strictEqual(muteResult, false, 'First toggle should mute');
+assert.strictEqual(bgm.enabled, false, 'BGM should be disabled when muted');
+
+const unmuteResult = bgm.toggle();
+assert.strictEqual(unmuteResult, true, 'Second toggle should unmute');
+assert.strictEqual(bgm.enabled, true, 'BGM should be enabled when unmuted');
+
+// 驗證在標題畫面按 'b' 觸發靜音與解除靜音
+game.isTitleScreen = true;
+game.handleKeyDown('b');
+assert.strictEqual(bgm.enabled, false, 'Pressing B on title screen should mute BGM');
+game.handleKeyDown('b');
+assert.strictEqual(bgm.enabled, true, 'Pressing B on title screen again should unmute BGM');
+console.log('✓ BGM mute/unmute toggle and title screen B key verified successfully');
+
 console.log('🎉 Title Screen BGM verification completed successfully!');

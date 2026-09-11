@@ -127,6 +127,9 @@ export class MusicSynthesizer {
 
     // 3. 啟動琶音器定時器 (Arpeggiator Loop)
     this.scheduleArp();
+
+    // 確保解除靜音或重新啟動時立即套用當前強度參數
+    this.applyIntensityParams(this.intensity);
   }
 
   stop(): void {
@@ -153,11 +156,18 @@ export class MusicSynthesizer {
   }
 
   toggle(): boolean {
-    if (this.isPlaying && !this.isMuted) {
+    if (this.isMuted) {
+      // 處於靜音時，切換為解除靜音並啟動
+      this.isMuted = false;
+      this.start();
+      return true;
+    } else if (this.isPlaying) {
+      // 正常播放中，切換為靜音並停止
       this.isMuted = true;
       this.stop();
       return false;
     } else {
+      // 初始尚未播放狀態，切換為啟動
       this.isMuted = false;
       this.start();
       return true;
@@ -165,24 +175,31 @@ export class MusicSynthesizer {
   }
 
   setIntensity(level: MusicIntensity): void {
+    if (this.isMuted) return;
+
     const wasSameIntensity = this.intensity === level;
     this.intensity = level;
 
-    // 若未靜音且尚未播放，自動恢復播放
-    if (!this.isMuted && !this.isPlaying) {
+    if (!this.isPlaying) {
       this.start();
     }
 
-    // 若 ctx 處於 suspended 狀態則調用 resume
     if (this.ctx && this.ctx.state === 'suspended') {
       void this.ctx.resume();
     }
 
-    // 關鍵防禦：若強度未改變且已在播放，立即 return，避免每幀重設 scheduleArp()
     if (wasSameIntensity && this.isPlaying) {
       return;
     }
 
+    this.applyIntensityParams(level);
+
+    if (this.isPlaying) {
+      this.scheduleArp();
+    }
+  }
+
+  private applyIntensityParams(level: MusicIntensity): void {
     if (!this.ctx || !this.filterNode || !this.masterGain) return;
 
     const now = this.ctx.currentTime;
@@ -199,11 +216,6 @@ export class MusicSynthesizer {
     } else if (level === 'boss') {
       this.filterNode.frequency.setTargetAtTime(2400, now, 0.1);
       this.masterGain.gain.setTargetAtTime(0.40, now, 0.2);
-    }
-
-    // 重啟琶音器以匹配戰鬥節奏
-    if (this.isPlaying) {
-      this.scheduleArp();
     }
   }
 
