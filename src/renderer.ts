@@ -1963,7 +1963,7 @@ export class GameRenderer {
       { key: '[3]', label: `EMP: ${empCount}`, color: '#c77dff' },
       { key: '[I]', label: 'INV', color: '#ffaa00' },
       { key: '[U]', label: this.language === 'zh' ? '黑市' : 'SHOP', color: '#c77dff' },
-      { key: '[M]', label: 'MISSIONS', color: '#00ffaa' },
+      { key: '[M]', label: this.language === 'zh' ? '任務' : 'MISSIONS', color: '#00ffaa' },
       { key: '[L]', label: 'ARCHIVE', color: '#ffb700' },
       { key: '[8]', label: 'SAVE', color: '#00f0ff' },
       { key: '[9]', label: 'LOAD', color: '#b388ff' },
@@ -2436,15 +2436,16 @@ export class GameRenderer {
     ctx.lineWidth = 2;
     ctx.strokeRect?.(x + 1, y + 1, boxW - 2, boxH - 2);
 
+    const isZh = this.language === 'zh';
     ctx.fillStyle = '#00e5ff';
-    ctx.font = getTitleFont(14, this.language === 'zh');
+    ctx.font = getTitleFont(14, isZh);
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
-    ctx.fillText?.('// RESISTANCE MISSION INTEL & DIRECTIVES //', x + 20, y + 16);
+    ctx.fillText?.(isZh ? '// 反抗軍作戰任務日誌與戰術指令 //' : '// RESISTANCE MISSION INTEL & DIRECTIVES //', x + 20, y + 16);
 
     ctx.fillStyle = '#6a8e99';
-    ctx.font = '11px monospace';
-    ctx.fillText?.('SECTOR 1 INFILTRATION PROTOCOL // STATUS: ACTIVE', x + 20, y + 36);
+    ctx.font = getFont(11, isZh);
+    ctx.fillText?.(isZh ? '第一分區滲透作戰協議 // 狀態：進行中' : 'SECTOR 1 INFILTRATION PROTOCOL // STATUS: ACTIVE', x + 20, y + 36);
 
     ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
     ctx.lineWidth = 1;
@@ -2465,22 +2466,24 @@ export class GameRenderer {
 
       // Checkbox
       ctx.fillStyle = isDone ? '#00ff88' : '#ff3855';
-      ctx.font = 'bold 12px monospace';
-      ctx.fillText?.(isDone ? '[✓] COMPLETE' : '[ ] ACTIVE', x + 30, oy + 10);
+      ctx.font = getTitleFont(12, isZh);
+      ctx.fillText?.(isDone ? (isZh ? '[✓] 已完成' : '[✓] COMPLETE') : (isZh ? '[ ] 進行中' : '[ ] ACTIVE'), x + 30, oy + 10);
 
+      const title = (isZh && obj.titleZh) ? obj.titleZh : obj.title;
       ctx.fillStyle = isDone ? '#ffffff' : '#d0e5f2';
-      ctx.font = getTitleFont(12, this.language === 'zh');
-      ctx.fillText?.(obj.title, x + 150, oy + 10);
+      ctx.font = getTitleFont(12, isZh);
+      ctx.fillText?.(title, x + 150, oy + 10);
 
+      const desc = (isZh && obj.descriptionZh) ? obj.descriptionZh : obj.description;
       ctx.fillStyle = '#8aa0aa';
-      ctx.font = getFont(11, this.language === 'zh');
-      ctx.fillText?.(obj.description, x + 30, oy + 30);
+      ctx.font = getFont(11, isZh);
+      ctx.fillText?.(desc, x + 30, oy + 30);
     });
 
     ctx.fillStyle = '#00e5ff';
-    ctx.font = getTitleFont(11, this.language === 'zh');
+    ctx.font = getTitleFont(11, isZh);
     ctx.textAlign = 'center';
-    ctx.fillText?.('PRESS [ M ] OR [ ESC ] TO CLOSE MISSION INTEL', x + boxW / 2, y + boxH - 18);
+    ctx.fillText?.(isZh ? '按 [ M ] 或 [ ESC ] 關閉任務情報' : 'PRESS [ M ] OR [ ESC ] TO CLOSE MISSION INTEL', x + boxW / 2, y + boxH - 18);
 
     ctx.shadowBlur = 0;
     ctx.restore?.();

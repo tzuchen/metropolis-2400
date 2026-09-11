@@ -141,7 +141,7 @@ export class GameEngine {
     this.messages = [];
     this.floatingTexts = [];
     this.pushMessage('OPERATION PROMETHEUS: Neural link restored. Operative Raven online.', 'info');
-    this.pushMessage('MISSION: Recover encrypted data slates & breach Checkpoint 01.', 'warning');
+    this.pushMessage(this.language === 'zh' ? '【任務指示】搜集加密數據板並突破 01 號檢查哨。' : 'MISSION: Recover encrypted data slates & breach Checkpoint 01.', 'warning');
     this.pushMessage('INTEL: Speak with Kira [T], check tactical missions [M], inventory [I], archives [L].', 'info');
     this.visibleTiles = new Set<string>();
     this.exploredTiles = new Set<string>();
@@ -1347,7 +1347,7 @@ export class GameEngine {
           const safehouseObj = this.missionObjectives.find((o) => o.id === 'obj-safehouse');
           if (safehouseObj && !safehouseObj.completed) {
             safehouseObj.completed = true;
-            this.pushMessage('MISSION UPDATE: Safehouse Recon objective complete!', 'success');
+            this.pushMessage(this.language === 'zh' ? '【任務更新】安全屋偵察整裝任務完成！' : 'MISSION UPDATE: Safehouse Recon objective complete!', 'success');
           }
         }
 
@@ -1423,7 +1423,7 @@ export class GameEngine {
               const superObj = this.missionObjectives.find((o) => o.id === 'obj-superweapon');
               if (superObj && !superObj.completed) {
                 superObj.completed = true;
-                this.pushMessage('MISSION UPDATE: Project Singularity objective complete!', 'success');
+                this.pushMessage(this.language === 'zh' ? '【任務更新】奇點計畫：量子殲滅砲鍛造完成！' : 'MISSION UPDATE: Project Singularity objective complete!', 'success');
               }
 
               soundFX.victory();
@@ -2801,7 +2801,7 @@ export class GameEngine {
       const scavengeObj = this.missionObjectives.find((o) => o.id === 'obj-scavenge');
       if (scavengeObj && !scavengeObj.completed) {
         scavengeObj.completed = true;
-        this.pushMessage('MISSION UPDATE: Tactical Stockpile objective complete!', 'success');
+        this.pushMessage(this.language === 'zh' ? '【任務更新】戰術物資搜集任務完成！' : 'MISSION UPDATE: Tactical Stockpile objective complete!', 'success');
         this.gainExp(50, 'MISSION_COMPLETE');
       }
     }
@@ -2994,7 +2994,7 @@ export class GameEngine {
         const forcefieldObj = this.missionObjectives.find((o) => o.id === 'obj-forcefield');
         if (forcefieldObj && !forcefieldObj.completed) {
           forcefieldObj.completed = true;
-          this.pushMessage('MISSION UPDATE: Checkpoint 01 forcefield deactivated!', 'success');
+          this.pushMessage(this.language === 'zh' ? '【任務更新】01 號檢查哨能量屏障已解除！' : 'MISSION UPDATE: Checkpoint 01 forcefield deactivated!', 'success');
           this.gainExp(50, 'MISSION_COMPLETE');
         }
         this.pushMessage(`${ffName}: Plasma barrier capacitors short-circuited. Barrier offline.`, 'success');
