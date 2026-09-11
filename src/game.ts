@@ -1322,6 +1322,7 @@ export class GameEngine {
 
       if (key === ' ' || key === 'Enter' || key === 'Space') {
         const npc = this.activeDialogue.npc;
+        this.checkSideQuestDiscovery(npc.id);
         const isZh = this.language === 'zh';
         const zhDialogue = npc.dialogueZh;
         const list = isZh && Array.isArray(zhDialogue) && zhDialogue.length > 0 ? zhDialogue : (npc.dialogue || []);
@@ -1378,6 +1379,7 @@ export class GameEngine {
                 'success'
               );
               this.ramenQuestComplete = true;
+              this.completeSideQuest('side-hiro');
               this.updateNPCDialogues();
             }
           }
@@ -1401,6 +1403,7 @@ export class GameEngine {
               );
               bgm.setSynthwaveTapeMode(true);
               this.synthwaveTapeActive = true;
+              this.completeSideQuest('side-elena');
               this.updateNPCDialogues();
             }
           }
@@ -1475,6 +1478,7 @@ export class GameEngine {
                   : 'Vesper: Thank you, Raven. This wall now has a soul. Your attack power and crit chance increased!',
                 'success'
               );
+              this.completeSideQuest('side-vesper');
               this.updateNPCDialogues();
             }
           }
@@ -1498,6 +1502,7 @@ export class GameEngine {
                   : 'Archie: Thanks for recovering my poetry folio! My check-in timer limit increased by 25 steps and the timer has been reset.',
                 'success'
               );
+              this.completeSideQuest('side-archie');
               this.updateNPCDialogues();
             }
           }
@@ -1670,6 +1675,7 @@ export class GameEngine {
             npc.facing = dy > 0 ? 'down' : 'up';
           }
           this.activeDialogue = { npc, textIndex: 0 };
+          this.checkSideQuestDiscovery(npc.id);
           this.render();
           return;
         }
@@ -1772,6 +1778,7 @@ export class GameEngine {
             targetNPC.facing = dy > 0 ? 'down' : 'up';
           }
           this.activeDialogue = { npc: targetNPC, textIndex: 0 };
+          this.checkSideQuestDiscovery(targetNPC.id);
           this.render();
           return;
         } else {
@@ -2786,6 +2793,51 @@ export class GameEngine {
             : '[LEGENDARY RELIC] Acquired Tzorg Master Keycard! Access any terminal to permanently disarm collar!',
           'success'
         );
+      } else if (item.itemType === 'WEAPON') {
+        const weaponId = item.weaponId || 'VIBRO_KATANA';
+        const weaponName = item.name || 'Molecular Oscillation High-Frequency Blade';
+        const weaponObj: Item = {
+          id: `weapon-${weaponId}`,
+          name: weaponName,
+          type: 'WEAPON' as const,
+          itemType: 'WEAPON' as const,
+          weaponId,
+          power: item.power || 48,
+          energyCost: 6,
+          range: 1,
+          isSuppressed: true,
+          iconColor: item.iconColor || '#00ffff',
+          description: item.description || 'A high-frequency blade that cuts through molecular bonds.',
+          equipped: false,
+        } as Item;
+
+        let inventory = this.player.inventory;
+        if (!Array.isArray(inventory)) {
+          inventory = [];
+          this.player.inventory = inventory;
+        }
+        if (!inventory.some((it: any) => it?.id === weaponObj.id)) {
+          inventory.push(weaponObj);
+        }
+
+        let weapons = this.player.weapons;
+        if (!Array.isArray(weapons)) {
+          weapons = [];
+          this.player.weapons = weapons;
+        }
+        if (!weapons.some((w: any) => w?.id === weaponObj.id)) {
+          weapons.push(weaponObj);
+        }
+
+        soundFX.victory();
+        const isZh = this.language === 'zh';
+        this.pushFloatingText(this.player.x, this.player.y, weaponName, '#00ffff');
+        this.pushMessage(
+          isZh
+            ? `【獲得武器】你獲得了【${weaponName}】！按 [Q] 輪換武器。`
+            : `[WEAPON ACQUIRED] You acquired [${weaponName}]! Press [Q] to cycle weapons.`,
+          'success'
+        );
       } else if (item.itemType === 'DATA_SLATE') {
         const foundLog = this.storyLogs.find((l) => l.id === item.storyLogId);
         if (foundLog) {
@@ -2890,6 +2942,59 @@ export class GameEngine {
 
   private updateNPCDialogues(): void {
     _updateNPCDialogues(this);
+  }
+
+  checkSideQuestDiscovery(npcId: string): void {
+    const questIdMap: Record<string, string> = {
+      'npc-hiro': 'side-hiro',
+      'npc-elena': 'side-elena',
+      'npc-vesper': 'side-vesper',
+      'npc-archie': 'side-archie',
+    };
+    const questId = questIdMap[npcId];
+    if (!questId) return;
+    const quest = this.missionObjectives.find((o) => o.id === questId);
+    if (quest && !quest.discovered) {
+      quest.discovered = true;
+      const isZh = this.language === 'zh';
+      const questNames: Record<string, { zh: string; en: string }> = {
+        'side-hiro': { zh: '拉麵食譜', en: 'Ramen Recipe' },
+        'side-elena': { zh: '合成母帶', en: 'Synth Master Tape' },
+        'side-vesper': { zh: '色劑塗鴉', en: 'Chromatic Aerosol Mural' },
+        'side-archie': { zh: '詩集回收', en: 'Poetry Folio Recovery' },
+      };
+      const name = questNames[questId];
+      this.pushMessage(
+        isZh
+          ? `【支線任務發現】新任務：${name ? name.zh : questId}`
+          : `[SIDE QUEST DISCOVERED] New quest: ${name ? name.en : questId}`,
+        'info'
+      );
+      this.render();
+    }
+  }
+
+  private completeSideQuest(questId: string): void {
+    const quest = this.missionObjectives.find((o) => o.id === questId);
+    if (quest && !quest.completed) {
+      quest.completed = true;
+      quest.discovered = true;
+      const isZh = this.language === 'zh';
+      const questNames: Record<string, { zh: string; en: string }> = {
+        'side-hiro': { zh: '拉麵食譜', en: 'Ramen Recipe' },
+        'side-elena': { zh: '合成母帶', en: 'Synth Master Tape' },
+        'side-vesper': { zh: '色劑塗鴉', en: 'Chromatic Aerosol Mural' },
+        'side-archie': { zh: '詩集回收', en: 'Poetry Folio Recovery' },
+      };
+      const name = questNames[questId];
+      this.pushMessage(
+        isZh
+          ? `【支線任務完成】${name ? name.zh : questId}`
+          : `[SIDE QUEST COMPLETE] ${name ? name.en : questId}`,
+        'success'
+      );
+      this.render();
+    }
   }
 
   disarmCollar(): void {

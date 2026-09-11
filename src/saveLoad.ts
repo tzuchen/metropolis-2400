@@ -7,6 +7,8 @@ export interface SaveData {
   sectorId: string;
   checkInAlertActive?: boolean;
   securityLevel?: string;
+  ramenQuestComplete?: boolean;
+  synthwaveTapeActive?: boolean;
   graffitiMuralComplete?: boolean;
   poetryQuestComplete?: boolean;
   isGearConfiscated?: boolean;
@@ -66,7 +68,7 @@ export interface SaveData {
     actionStateZh?: string;
   }>;
   storyLogs: Array<{ id: string; read: boolean }>;
-  missionObjectives: Array<{ id: string; completed: boolean }>;
+  missionObjectives: Array<{ id: string; completed: boolean; discovered?: boolean }>;
   exploredTiles: string[];
   groundItems: any[];
   pushableBlocks?: any[];
@@ -151,6 +153,7 @@ export function saveGameState(game: any): boolean {
       missionObjectives: (game.missionObjectives || []).map((o: MissionObjective) => ({
         id: o.id,
         completed: o.completed,
+        discovered: (o as any).discovered,
       })),
       exploredTiles: Array.from(game.exploredTiles || []),
       groundItems: game.groundItems || [],
@@ -270,8 +273,29 @@ export function loadGameState(game: any): boolean {
     if (Array.isArray(data.missionObjectives)) {
       data.missionObjectives.forEach((so) => {
         const obj = (game.missionObjectives || []).find((o: any) => o.id === so.id);
-        if (obj) obj.completed = so.completed;
+        if (obj) {
+          obj.completed = so.completed;
+          if (typeof so.discovered === 'boolean') obj.discovered = so.discovered;
+        }
       });
+    }
+
+    // Ensure side-hiro, side-elena, side-vesper, side-archie are marked completed & discovered
+    // when their corresponding quest flags are true (backward compatibility).
+    const questFlagToObjectiveId: Array<[boolean | undefined, string]> = [
+      [data.ramenQuestComplete, 'side-hiro'],
+      [data.synthwaveTapeActive, 'side-elena'],
+      [data.graffitiMuralComplete, 'side-vesper'],
+      [data.poetryQuestComplete, 'side-archie'],
+    ];
+    for (const [flag, objectiveId] of questFlagToObjectiveId) {
+      if (flag === true) {
+        const obj = (game.missionObjectives || []).find((o: any) => o.id === objectiveId);
+        if (obj) {
+          obj.completed = true;
+          obj.discovered = true;
+        }
+      }
     }
 
     // Restore explored tiles

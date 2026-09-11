@@ -1,6 +1,17 @@
 import type { Robot, Position, GroundItem } from './types';
 import { createRobot } from './entities';
 import { soundFX } from './audio';
+import { TileType, RobotType } from './types';
+
+export const BOSS_CONFIG = {
+  HP: 250,
+  ATTACK_POWER: 22,
+  PHASE2_THRESHOLD: 125,
+  PHASE2_DAMAGE_REDUCTION: 0.35,
+  CREDIT_REWARD: 200,
+  XP_REWARD: 250,
+  MAX_STUN_TURNS: 3,
+} as const;
 
 export function createBossExterminator(pos: Position = { x: 32, y: 18 }): Robot {
   return {
@@ -8,10 +19,10 @@ export function createBossExterminator(pos: Position = { x: 32, y: 18 }): Robot 
     name: 'EXTERMINATOR-PRIME',
     x: pos.x,
     y: pos.y,
-    hp: 250,
-    maxHp: 250,
+    hp: BOSS_CONFIG.HP,
+    maxHp: BOSS_CONFIG.HP,
     isAlive: true,
-    robotType: 'EXTERMINATOR',
+    robotType: RobotType.EXTERMINATOR,
     aiState: 'patrol',
     patrolPath: [
       { x: 30, y: 18 },
@@ -22,7 +33,7 @@ export function createBossExterminator(pos: Position = { x: 32, y: 18 }): Robot 
     currentPatrolIndex: 0,
     targetPos: null,
     alertCooldown: 0,
-    attackPower: 22,
+    attackPower: BOSS_CONFIG.ATTACK_POWER,
     attackRange: 5,
     scanRange: 9,
     stunnedTurns: 0,
@@ -37,13 +48,17 @@ export function isBossRobot(robot: Robot): boolean {
  * Handle damage calculation and Phase 2 overdrive trigger for the Boss
  */
 export function applyBossDamage(boss: Robot, rawDamage: number, game: any): number {
-  const b = boss as any;
+  // 死亡保護與致死傷害保護
+  if (!boss.isAlive || rawDamage <= 0) {
+    return 0;
+  }
+
   let finalDamage = rawDamage;
 
   const isQuantum = (game?.player?.equippedWeapon as any)?.weaponId === 'QUANTUM_ANNIHILATOR';
 
   // 二階段護盾減傷 35%
-  if (b.phase2Overclock) {
+  if (boss.phase2Overclock) {
     if (isQuantum) {
       finalDamage = rawDamage;
       game?.pushFloatingText?.(boss.x, boss.y, 'SHIELD BYPASS!', '#b388ff');
@@ -52,26 +67,26 @@ export function applyBossDamage(boss: Robot, rawDamage: number, game: any): numb
         : '⚡ QUANTUM_ANNIHILATOR bypassed Phase 2 Overclocked Shield!';
       game?.pushMessage?.(bypassMsg, 'info');
     } else {
-      finalDamage = Math.max(1, Math.round(rawDamage * 0.65));
+      finalDamage = Math.max(1, Math.round(rawDamage * (1 - BOSS_CONFIG.PHASE2_DAMAGE_REDUCTION)));
     }
   }
 
   // 量子殲滅重砲電磁震盪癱瘓
   if (isQuantum) {
-    boss.stunnedTurns = Math.max(boss.stunnedTurns ?? 0, 1);
+    boss.stunnedTurns = Math.min(BOSS_CONFIG.MAX_STUN_TURNS, Math.max(boss.stunnedTurns ?? 0, 1));
   }
 
   const remainingHp = boss.hp - finalDamage;
 
   // 檢查是否觸發二階段狂暴 (< 50% HP)
-  if (remainingHp <= 125 && !b.phase2Overclock) {
-    b.phase2Overclock = true;
+  if (remainingHp > 0 && remainingHp <= BOSS_CONFIG.PHASE2_THRESHOLD && !boss.phase2Overclock) {
+    boss.phase2Overclock = true;
     soundFX.alarm();
 
     // 空投兩架支援無人機
     try {
-      const drone1 = createRobot('SERVICE_BOT' as any, { x: boss.x - 1, y: boss.y }, [{ x: boss.x - 1, y: boss.y }, { x: boss.x, y: boss.y }]);
-      const drone2 = createRobot('SCOUT_DRONE' as any, { x: boss.x + 1, y: boss.y }, [{ x: boss.x + 1, y: boss.y }, { x: boss.x, y: boss.y }]);
+      const drone1 = createRobot(RobotType.SERVICE_BOT, { x: boss.x - 1, y: boss.y }, [{ x: boss.x - 1, y: boss.y }, { x: boss.x, y: boss.y }]);
+      const drone2 = createRobot(RobotType.SCOUT_DRONE, { x: boss.x + 1, y: boss.y }, [{ x: boss.x + 1, y: boss.y }, { x: boss.x, y: boss.y }]);
       if (Array.isArray(game.robots)) {
         game.robots.push(drone1, drone2);
       }
@@ -119,7 +134,9 @@ export function handleBossDeath(boss: Robot, game: any): void {
   const vibroBlade: GroundItem = {
     id: 'item-vibro-katana',
     name: isZh ? '分子震盪高頻刀' : 'Vibro-Katana',
-    itemType: 'KEYCARD', // Available for pickup and inventory
+    itemType: 'WEAPON',
+    weaponId: 'VIBRO_KATANA',
+    power: 48,
     x: boss.x + 1,
     y: boss.y,
     description: isZh
@@ -135,23 +152,23 @@ export function handleBossDeath(boss: Robot, game: any): void {
   // 標記玩家獲得擊殺首領徽記
   if (game.player) {
     (game.player as any).hasDefeatedBoss = true;
-    (game.player as any).credits += 200;
+    (game.player as any).credits += BOSS_CONFIG.CREDIT_REWARD;
   }
 
   // 給予 250 點經驗值獎勵
-  game?.gainExp?.(250);
+  game?.gainExp?.(BOSS_CONFIG.XP_REWARD);
 
   // 若當前地圖為 sector-citadel，關閉通往中央主腦核心的力場
   const currentSector = game?.map?.id || (game?.player as any)?.currentSectorId || game?.mapId;
   const tiles = game?.map?.tiles || game?.grid;
   if (currentSector === 'sector-citadel' && Array.isArray(tiles)) {
     for (let y = 14; y <= 16; y++) {
-      if (tiles[y]) {
+      if (tiles[y] && y < tiles.length) {
         if (tiles[y][31] !== undefined) {
-          tiles[y][31] = 1; // FLOOR
+          tiles[y][31] = TileType.FLOOR;
         }
         if (tiles[y][33] !== undefined) {
-          tiles[y][33] = 1; // FLOOR
+          tiles[y][33] = TileType.FLOOR;
         }
       }
     }

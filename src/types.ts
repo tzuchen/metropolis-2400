@@ -167,6 +167,7 @@ export interface Robot extends Entity {
   attackRange?: number;
   stunnedTurns?: number;
   pursuitTurns?: number;
+  phase2Overclock?: boolean;
 }
 
 export interface TerminalData {
@@ -235,13 +236,15 @@ export interface DialogueSession {
 export interface GroundItem {
   id: string;
   name: string;
-  itemType: 'MEDKIT' | 'BATTERY' | 'EMP_GRENADE' | 'KEYCARD' | 'CREDIT_CHIP' | 'DATA_SLATE';
+  itemType: 'MEDKIT' | 'BATTERY' | 'EMP_GRENADE' | 'KEYCARD' | 'CREDIT_CHIP' | 'DATA_SLATE' | 'WEAPON';
   x: number;
   y: number;
   description: string;
   amount?: number;
   iconColor: string;
   storyLogId?: string;
+  weaponId?: string;
+  power?: number;
 }
 
 export interface MissionObjective {
@@ -251,6 +254,8 @@ export interface MissionObjective {
   description: string;
   descriptionZh?: string;
   completed: boolean;
+  isSideQuest?: boolean;
+  discovered?: boolean;
 }
 
 export interface StoryLog {

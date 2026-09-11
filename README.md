@@ -129,6 +129,17 @@ Your objective:
   - **Silenced Dart Gun**: Pneumatic stealth needle thrower (25 DMG, 3 EN, Range 5). Completely **SUPPRESSED**—eliminates enemies with zero acoustic soundwave and prevents alert cascades!
   - **Scatter Plasma Shotgun**: Heavy close-quarter breach scattergun (65 DMG, 9 EN, Range 3). Devastating close-range burst damage to punch through armored Hunter-Killers.
   - **Quantum Annihilator**: Endgame antimatter cannon (220 DMG, 15 EN, Range 7) that bypasses Exterminator phase shields.
+  - **Vibro-Katana (分子震盪高頻刀)**: High-frequency molecular blade dropped by the Exterminator Boss. Deals 48 DMG and triggers a 100% Ambush Critical (144 DMG) on unalerted targets, accompanied by exclusive blade-trail VFX.
+
+### 10.5. 📋 Mission Intel Log & Dynamic Side Quests (`[M]`)
+- **Mission Intel Log (`[M]`)**: A dedicated overlay tracking your operational progress.
+- **Core Objectives**: Tracks the 5 main storyline milestones (Infiltration, Data Slates, Forcefield, Core Vault, and Tzorg Destruction).
+- **Dynamic Side Quests**: Four hidden quests that unlock dynamically upon interacting with key NPCs:
+  - **Hiro's Ramen Recipe**: Assist Hiro in the Cyber-Alley to unlock a **+50 HP** bonus.
+  - **Elena's Analog Master**: Help Elena in the Data Hub to gain **+20 EN** and unlock a new BGM mode.
+  - **Vesper's Quantum Pigment**: Deliver the pigment to Vesper to gain **+5 Weapon Power** and **+15% Critical Chance**.
+  - **Archie's Unburned Poems**: Retrieve the poems for Archie to increase your Neural Collar limit by **+25 steps**.
+- **Exploration Mechanic**: Side quests are hidden until you speak to the relevant NPC. They dynamically unlock in the log and are marked with a **[✓]** upon item delivery/completion.
 
 ### 11. 👥 NPC 自主行動、有限範圍遊蕩與動態環境表現 (Autonomous NPC Action & Living Metropolis)
 - **有限範圍遊蕩 (Tethered Bounded Wandering)**：每位 NPC 具備專屬原點 (`homeX`, `homeY`) 與限制半徑 (`wanderRadius` 1~2格)，具備安全碰撞避免走出所屬店鋪或崗位。
@@ -175,6 +186,11 @@ Your objective:
 - **密寶尋寶**：隱藏於舊城廢棄下水道 (Sub-Sector Zero) 東北暗門密室 (32, 5)。
 - **永久解除項圈限制**：取得後於任一終端機操作或輸入 DISARM，永久解除項圈 100 步監控限制！
 - **全地圖自由探索**：頂部 HUD 狀態轉化為綠色 CHK: UNLOCKED [∞]，永不再觸發步數倒數與逾期警報，享受無限自由行動。
+
+### 16. 🛡️ Boss 首領戰與力場解鎖系統修復 (Boss Encounters & Forcefield Logic)
+- **一擊致死保護 (One-Hit Kill Protection)**: 針對高階 Boss 與關鍵 NPC 實施了生命保護機制，防止因單次異常傷害導致遊戲崩潰或進度中斷。
+- **二階段過載 (Phase 2 Overload)**: Boss 戰引入動態過載階段，當 Boss 血量低於特定閾值時，會觸發狂暴狀態並改變攻擊模式，提升戰術深度。
+- **正規力場解鎖機制**: 修復了 Checkpoint 01 力場解鎖邏輯，確保玩家必須透過終端機 `CHECKPOINT_FF` 執行 `OVERRIDE` 或 `HACK` 指令，並完成必要的劇情前置條件後，力場才會正式消散，避免跳過關鍵戰術環節。
 
 ---
 

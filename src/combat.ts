@@ -322,6 +322,8 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
   // Play sound
   if (weaponId === 'DART_GUN') {
     soundFX.dart();
+  } else if (weaponId === 'VIBRO_KATANA') {
+    soundFX.hit();
   } else if (isQuantum) {
     soundFX.laser();
   } else {
@@ -343,6 +345,11 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
     sparkColor = '#b388ff';
     sparkCount = 25;
     shakeIntensity = 10;
+  }
+
+  if (weaponId === 'VIBRO_KATANA') {
+    beamColor = '#00ffff';
+    sparkColor = '#00ffff';
   }
 
   const playerBeam = {
@@ -373,7 +380,8 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
     const isBackstab =
       game.player.isDisguised ||
       hitRobot.aiState === 'patrol' ||
-      (hitRobot.stunnedTurns ?? 0) > 0;
+      (hitRobot.stunnedTurns ?? 0) > 0 ||
+      weaponId === 'VIBRO_KATANA';
 
     const baseDamage = weapon.power ?? 35;
     let damage = isBackstab ? Math.round(baseDamage * 3) : baseDamage;

@@ -2607,8 +2607,20 @@ export class GameRenderer {
     now: number
   ): void {
     ctx.save?.();
+    
+    // 1. 過濾顯示任務：主線任務 + 已發現的支線任務
+    const visibleList = objectives.filter(obj => !obj.isSideQuest || obj.discovered);
+    
     const boxW = Math.min(width - 40, 680);
-    const boxH = Math.min(height - 60, 420);
+    const headerH = 54;
+    const footerH = 30;
+    const itemH = 52;
+    const itemGap = 10;
+    const padding = 20;
+    
+    // 3. 動態計算彈窗高度
+    const contentH = visibleList.length * (itemH + itemGap);
+    const boxH = Math.min(height - 40, headerH + contentH + footerH + padding * 2);
     const x = (width - boxW) / 2;
     const y = (height - boxH) / 2;
 
@@ -2628,10 +2640,11 @@ export class GameRenderer {
     ctx.textAlign = 'left';
     ctx.fillText?.(isZh ? '// 反抗軍作戰任務日誌與戰術指令 //' : '// RESISTANCE MISSION INTEL & DIRECTIVES //', x + 20, y + 16);
 
+    // 2. 頂部進度統計以 visibleList 為準
     ctx.fillStyle = '#6a8e99';
     ctx.font = getFont(11, isZh);
-    const completedCount = objectives.filter(obj => obj.completed).length;
-    const totalCount = objectives.length;
+    const completedCount = visibleList.filter(obj => obj.completed).length;
+    const totalCount = visibleList.length;
     ctx.fillText?.(isZh ? `第一分區滲透作戰協議 // 狀態：進行中 // 已完成 ${completedCount}/${totalCount}` : `SECTOR 1 INFILTRATION PROTOCOL // STATUS: ACTIVE // ${completedCount}/${totalCount} COMPLETE`, x + 20, y + 36);
 
     ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
@@ -2641,25 +2654,33 @@ export class GameRenderer {
     ctx.lineTo?.(x + boxW - 20, y + 54);
     ctx.stroke?.();
 
-    objectives.forEach((obj, i) => {
-      const oy = y + 70 + i * 62;
+    visibleList.forEach((obj, i) => {
+      const oy = y + 70 + i * (itemH + itemGap);
       const isDone = obj.completed;
+      const isSideQuest = obj.isSideQuest;
 
       ctx.fillStyle = isDone ? 'rgba(0, 40, 25, 0.6)' : 'rgba(15, 25, 35, 0.7)';
-      ctx.fillRect?.(x + 20, oy, boxW - 40, 52);
+      ctx.fillRect?.(x + 20, oy, boxW - 40, itemH);
 
       ctx.strokeStyle = isDone ? '#00ff88' : '#005577';
-      ctx.strokeRect?.(x + 20, oy, boxW - 40, 52);
+      ctx.strokeRect?.(x + 20, oy, boxW - 40, itemH);
 
-      // Checkbox
+      // 4. 項目上標示【主線】（藍色）與【支線】（金黃色 #ffaa00）標籤
+      const tagText = isSideQuest ? (isZh ? '【支線】' : '[SIDE]') : (isZh ? '【主線】' : '[MAIN]');
+      const tagColor = isSideQuest ? '#ffaa00' : '#00e5ff';
+      ctx.fillStyle = tagColor;
+      ctx.font = getTitleFont(10, isZh);
+      ctx.fillText?.(tagText, x + 30, oy + 10);
+
+      // 5. 完成狀態顯示 [✓] 已完成（綠色 #00ff88），未完成顯示 [ ] 進行中
       ctx.fillStyle = isDone ? '#00ff88' : '#ff3855';
       ctx.font = getTitleFont(12, isZh);
-      ctx.fillText?.(isDone ? (isZh ? '[✓] 已完成' : '[✓] COMPLETE') : (isZh ? '[ ] 進行中' : '[ ] ACTIVE'), x + 30, oy + 10);
+      ctx.fillText?.(isDone ? (isZh ? '[✓] 已完成' : '[✓] COMPLETE') : (isZh ? '[ ] 進行中' : '[ ] ACTIVE'), x + 85, oy + 10);
 
       const title = (isZh && obj.titleZh) ? obj.titleZh : obj.title;
       ctx.fillStyle = isDone ? '#ffffff' : '#d0e5f2';
       ctx.font = getTitleFont(12, isZh);
-      ctx.fillText?.(title, x + 150, oy + 10);
+      ctx.fillText?.(title, x + 190, oy + 10);
 
       const desc = (isZh && obj.descriptionZh) ? obj.descriptionZh : obj.description;
       ctx.fillStyle = '#8aa0aa';
