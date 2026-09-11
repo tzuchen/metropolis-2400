@@ -2445,7 +2445,9 @@ export class GameRenderer {
 
     ctx.fillStyle = '#6a8e99';
     ctx.font = getFont(11, isZh);
-    ctx.fillText?.(isZh ? '第一分區滲透作戰協議 // 狀態：進行中' : 'SECTOR 1 INFILTRATION PROTOCOL // STATUS: ACTIVE', x + 20, y + 36);
+    const completedCount = objectives.filter(obj => obj.completed).length;
+    const totalCount = objectives.length;
+    ctx.fillText?.(isZh ? `第一分區滲透作戰協議 // 狀態：進行中 // 已完成 ${completedCount}/${totalCount}` : `SECTOR 1 INFILTRATION PROTOCOL // STATUS: ACTIVE // ${completedCount}/${totalCount} COMPLETE`, x + 20, y + 36);
 
     ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
     ctx.lineWidth = 1;

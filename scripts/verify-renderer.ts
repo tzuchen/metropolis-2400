@@ -54,3 +54,61 @@ if (fillTextCalls < 2) {
 }
 
 console.log('Rigorous renderer test passed! fillRect:', fillRectCalls, 'fillText:', fillTextCalls);
+
+// Mission Log Modal Test
+let recordedTexts: string[] = [];
+const recordingCtx = {
+  save: () => {},
+  restore: () => {},
+  fillRect: () => {},
+  strokeRect: () => {},
+  fillText: (text: string) => { recordedTexts.push(text); },
+  beginPath: () => {},
+  closePath: () => {},
+  moveTo: () => {},
+  lineTo: () => {},
+  arc: () => {},
+  fill: () => {},
+  stroke: () => {},
+  setLineDash: () => {},
+  measureText: () => ({ width: 50 }),
+};
+const recordingCanvas = {
+  width: 800,
+  height: 600,
+  getContext: () => recordingCtx
+} as unknown as HTMLCanvasElement;
+
+const missionRenderer = new GameRenderer(recordingCanvas);
+
+const objectives = [
+  { id: '1', title: 'Objective 1', description: 'Desc 1', completed: true },
+  { id: '2', title: 'Objective 2', description: 'Desc 2', completed: true },
+  { id: '3', title: 'Objective 3', description: 'Desc 3', completed: false },
+];
+
+// Test English
+recordedTexts = [];
+missionRenderer.language = 'en';
+missionRenderer.drawMissionLogModal(objectives, 800, 600, recordingCtx, 0);
+if (!recordedTexts.includes('SECTOR 1 INFILTRATION PROTOCOL // STATUS: ACTIVE // 2/3 COMPLETE')) {
+  throw new Error('Mission Log Modal English assertion failed');
+}
+
+// Test Chinese
+recordedTexts = [];
+missionRenderer.language = 'zh';
+missionRenderer.drawMissionLogModal(objectives, 800, 600, recordingCtx, 0);
+if (!recordedTexts.includes('第一分區滲透作戰協議 // 狀態：進行中 // 已完成 2/3')) {
+  throw new Error('Mission Log Modal Chinese assertion failed');
+}
+
+// Test Empty
+recordedTexts = [];
+missionRenderer.language = 'en';
+missionRenderer.drawMissionLogModal([], 800, 600, recordingCtx, 0);
+if (!recordedTexts.includes('SECTOR 1 INFILTRATION PROTOCOL // STATUS: ACTIVE // 0/0 COMPLETE')) {
+  throw new Error('Mission Log Modal Empty assertion failed');
+}
+
+console.log('Mission Log Modal test passed!');
