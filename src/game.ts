@@ -2466,6 +2466,11 @@ export class GameEngine {
 
     // Switch to sector-1 detention cell
     this.switchSector('sector-1');
+    // Ensure postcondition: map and player are in sector-1
+    if (this.map?.id !== 'sector-1') {
+      this.map = buildSector1Map();
+    }
+    this.player.currentSectorId = 'sector-1';
     this.resetDetentionCell();
     this.player.x = 35;
     this.player.y = 5;

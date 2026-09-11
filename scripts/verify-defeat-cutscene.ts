@@ -194,4 +194,90 @@ if (!freshGame.player.isAlive) {
 }
 console.log('✅ 重複調用後過場動畫正確推進至 wake_up，特工在禁閉室甦醒且裝備已扣押！');
 
+// 10. 測試從 Sector-2 戰敗後過場動畫正確傳送至 Sector-1 禁閉室
+console.log('\n10. 測試從 Sector-2 戰敗後過場動畫正確傳送至 Sector-1 禁閉室...');
+const sector2Game = new GameEngine(createMockCanvas(960, 600) as any);
+sector2Game.switchSector('sector-2');
+
+if (sector2Game.map.id !== 'sector-2') {
+  throw new Error(`❌ switchSector('sector-2') 後 map.id 應為 sector-2，實際為 ${sector2Game.map.id}`);
+}
+if (sector2Game.player.currentSectorId !== 'sector-2') {
+  throw new Error(`❌ switchSector('sector-2') 後 player.currentSectorId 應為 sector-2，實際為 ${sector2Game.player.currentSectorId}`);
+}
+
+sector2Game.player.hp = 0;
+sector2Game.handlePlayerDefeat(false);
+
+if (!sector2Game.defeatCutscene) {
+  throw new Error('❌ handlePlayerDefeat(false) 後應初始化 defeatCutscene');
+}
+if (sector2Game.defeatCutscene.stage !== 'swarm') {
+  throw new Error(`❌ 初始過場階段應為 swarm，實際為 ${sector2Game.defeatCutscene.stage}`);
+}
+
+// 推進 swarm -> blur_out
+const s2SwarmEnd = sector2Game.defeatCutscene.stageStartTime + sector2Game.defeatCutscene.duration + 100;
+sector2Game.updateDefeatCutscene(s2SwarmEnd);
+
+if (sector2Game.defeatCutscene?.stage !== 'blur_out') {
+  throw new Error(`❌ 推進 swarm 後應進入 blur_out，實際為 ${sector2Game.defeatCutscene?.stage}`);
+}
+
+// 推進 blur_out -> wake_up
+const s2BlurEnd = sector2Game.defeatCutscene.stageStartTime + sector2Game.defeatCutscene.duration + 100;
+sector2Game.updateDefeatCutscene(s2BlurEnd);
+
+if (sector2Game.defeatCutscene?.stage !== 'wake_up') {
+  throw new Error(`❌ 推進 blur_out 後應進入 wake_up，實際為 ${sector2Game.defeatCutscene?.stage}`);
+}
+if (sector2Game.map.id !== 'sector-1') {
+  throw new Error(`❌ wake_up 時 map.id 應為 sector-1，實際為 ${sector2Game.map.id}`);
+}
+if (sector2Game.player.currentSectorId !== 'sector-1') {
+  throw new Error(`❌ wake_up 時 player.currentSectorId 應為 sector-1，實際為 ${sector2Game.player.currentSectorId}`);
+}
+if (sector2Game.player.x !== 35 || sector2Game.player.y !== 5) {
+  throw new Error(`❌ wake_up 時特工應在禁閉室 (35, 5)，實際為 (${sector2Game.player.x}, ${sector2Game.player.y})`);
+}
+if (!sector2Game.player.isAlive) {
+  throw new Error('❌ wake_up 時特工應已甦醒 (isAlive 應為 true)');
+}
+if (!sector2Game.isGearConfiscated) {
+  throw new Error('❌ wake_up 時裝備應已被扣押');
+}
+console.log('✅ 從 Sector-2 戰敗後過場動畫正確傳送至 Sector-1 禁閉室 (35, 5)，特工甦醒且裝備已扣押！');
+
+// 11. 測試從 Sector-2 戰敗後 Instant 模式直接傳送至 Sector-1 禁閉室
+console.log('\n11. 測試從 Sector-2 戰敗後 Instant 模式直接傳送至 Sector-1 禁閉室...');
+const sector2InstantGame = new GameEngine(createMockCanvas(960, 600) as any);
+sector2InstantGame.switchSector('sector-2');
+
+if (sector2InstantGame.map.id !== 'sector-2') {
+  throw new Error(`❌ switchSector('sector-2') 後 map.id 應為 sector-2，實際為 ${sector2InstantGame.map.id}`);
+}
+if (sector2InstantGame.player.currentSectorId !== 'sector-2') {
+  throw new Error(`❌ switchSector('sector-2') 後 player.currentSectorId 應為 sector-2，實際為 ${sector2InstantGame.player.currentSectorId}`);
+}
+
+sector2InstantGame.player.hp = 0;
+sector2InstantGame.handlePlayerDefeat(true);
+
+if (sector2InstantGame.map.id !== 'sector-1') {
+  throw new Error(`❌ Instant 模式下 map.id 應為 sector-1，實際為 ${sector2InstantGame.map.id}`);
+}
+if (sector2InstantGame.player.currentSectorId !== 'sector-1') {
+  throw new Error(`❌ Instant 模式下 player.currentSectorId 應為 sector-1，實際為 ${sector2InstantGame.player.currentSectorId}`);
+}
+if (sector2InstantGame.player.x !== 35 || sector2InstantGame.player.y !== 5) {
+  throw new Error(`❌ Instant 模式下特工應在禁閉室 (35, 5)，實際為 (${sector2InstantGame.player.x}, ${sector2InstantGame.player.y})`);
+}
+if (!sector2InstantGame.player.isAlive) {
+  throw new Error('❌ Instant 模式下特工應已甦醒 (isAlive 應為 true)');
+}
+if (!sector2InstantGame.isGearConfiscated) {
+  throw new Error('❌ Instant 模式下裝備應已被扣押');
+}
+console.log('✅ 從 Sector-2 戰敗後 Instant 模式直接傳送至 Sector-1 禁閉室 (35, 5)，特工甦醒且裝備已扣押！');
+
 console.log('\n🎉 所有玩家戰敗圍捕、模糊轉場與禁閉室甦醒測試全數通過！');
