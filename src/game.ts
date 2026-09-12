@@ -31,6 +31,7 @@ import {
   createSectorPushableBlocks,
 } from './worldBuilder';
 import { handleTerminalInput as _handleTerminalInput } from './terminalRunner';
+import { processConveyors as _processConveyors, detonateCanister as _detonateCanister } from './hazardSystem';
 
 
 export interface ResolutionPreset {
@@ -2401,41 +2402,17 @@ export class GameEngine {
   }
 
   private detonateCanister(canister: Hazard): void {
-    canister.exploded = true;
-    canister.hp = 0;
+    const result = _detonateCanister(canister, this.player, this.robots);
+    if (!canister.exploded || (result.damagedRobots.length === 0 && !result.playerDamaged && canister.hp !== 0)) return;
     soundFX.explosion();
     soundFX.emp();
     this.pushFloatingText(canister.x, canister.y, 'PLASMA DETONATION!', '#ff6d00');
-    const canisterTileSize = this.renderer.tileSize;
-    const centerX = canister.x * canisterTileSize + canisterTileSize / 2;
-    const centerY = canister.y * canisterTileSize + canisterTileSize / 2;
-    const blastRadius = canisterTileSize * 2 + 9;
-    this.fx.spawnPlasmaCanisterExplosion(centerX, centerY, blastRadius);
+    const tileSize = this.renderer.tileSize;
+    this.fx.spawnPlasmaCanisterExplosion(canister.x * tileSize + tileSize / 2, canister.y * tileSize + tileSize / 2, tileSize * 2.2);
     this.fx.triggerShake(10);
-
-    for (const r of this.robots) {
-      if (!r.isAlive) continue;
-      const dist = Math.abs(r.x - canister.x) + Math.abs(r.y - canister.y);
-      if (dist <= 2) {
-        r.hp -= 70;
-        this.pushFloatingText(r.x, r.y, '-70', '#ff6d00');
-        if (r.hp <= 0) {
-          r.isAlive = false;
-          soundFX.explosion();
-          this.pushMessage(r.name + ' destroyed by plasma explosion!', 'success');
-        }
-      }
-    }
-
-    const playerDist = Math.abs(this.player.x - canister.x) + Math.abs(this.player.y - canister.y);
-    if (playerDist <= 2) {
-      this.player.hp = Math.max(0, this.player.hp - 20);
-      this.pushFloatingText(this.player.x, this.player.y, '-20', '#ff1744');
-      this.pushMessage('Plasma explosion! -20 HP from blast damage.', 'danger');
-      if (this.player.hp <= 0) {
-        this.handlePlayerDefeat();
-      }
-    }
+    for (const robot of result.damagedRobots) this.pushFloatingText(robot.x, robot.y, '-70', '#ff6d00');
+    for (const robot of result.destroyedRobots) { soundFX.explosion(); this.pushMessage(robot.name + ' destroyed by plasma explosion!', 'success'); }
+    if (result.playerDamaged) { this.pushFloatingText(this.player.x, this.player.y, '-20', '#ff1744'); this.pushMessage('Plasma explosion! -20 HP from blast damage.', 'danger'); if (this.player.hp <= 0) this.handlePlayerDefeat(); }
   }
 
   handlePlayerDefeat(instant: boolean = (typeof window === 'undefined')): void {
@@ -2878,62 +2855,14 @@ export class GameEngine {
   }
 
   processConveyors(): void {
-    // Process player conveyor movement
-    if (this.player.isAlive && this.isConveyorTile(this.player.x, this.player.y)) {
-      const { dx, dy } = this.getConveyorDirection(this.player.x, this.player.y);
-      const targetX = this.player.x + dx;
-      const targetY = this.player.y + dy;
-
-      // Check if target is walkable and no robot blocking
-      const targetTile = getTile(this.map, { x: targetX, y: targetY });
-      const targetWalkable = targetTile !== undefined && isWalkable(targetTile);
-      const blockingRobot = this.robots.find((r) => r.isAlive && r.x === targetX && r.y === targetY);
-
-      if (targetWalkable && !blockingRobot) {
-        this.player.x = targetX;
-        this.player.y = targetY;
-
-        // Update facing
-        if (dx === 1) this.player.facing = 'right';
-        else if (dx === -1) this.player.facing = 'left';
-        else if (dy === 1) this.player.facing = 'down';
-        else if (dy === -1) this.player.facing = 'up';
-
-        // Trigger item pickup
-        this.checkItemPickup();
-
-        // Play sound and show feedback
-        soundFX.step();
-        const directionText = dx === 1 ? '»» CONVEYOR »»' : dx === -1 ? '«« CONVEYOR ««' : 'CONVEYOR';
-        this.pushFloatingText(this.player.x, this.player.y, directionText, '#00f0ff');
-        this.pushMessage('Conveyor belt transport: Operative moved to new position.', 'info');
-      }
-    }
-
-    // Process robot conveyor movement
-    for (const robot of this.robots) {
-      if (!robot.isAlive) continue;
-      if (!this.isConveyorTile(robot.x, robot.y)) continue;
-
-      const { dx, dy } = this.getConveyorDirection(robot.x, robot.y);
-      const targetX = robot.x + dx;
-      const targetY = robot.y + dy;
-
-      // Check if target is walkable and no blocking entities
-      const targetTile = getTile(this.map, { x: targetX, y: targetY });
-      const targetWalkable = targetTile !== undefined && isWalkable(targetTile);
-
-      // Check if player is blocking
-      const playerBlocking = this.player.isAlive && this.player.x === targetX && this.player.y === targetY;
-
-      // Check if another robot is blocking
-      const robotBlocking = this.robots.find((r) => r.isAlive && r !== robot && r.x === targetX && r.y === targetY);
-
-      if (targetWalkable && !playerBlocking && !robotBlocking) {
-        robot.x = targetX;
-        robot.y = targetY;
-      }
-    }
+    _processConveyors({
+      player: this.player,
+      robots: this.robots,
+      isConveyorTile: (x, y) => this.isConveyorTile(x, y),
+      getDirection: (x, y) => this.getConveyorDirection(x, y),
+      isWalkableAt: (x, y) => { const tile = getTile(this.map, { x, y }); return tile !== undefined && isWalkable(tile); },
+      onPlayerMoved: (direction) => { this.checkItemPickup(); soundFX.step(); const label = direction.dx === 1 ? '»» CONVEYOR »»' : direction.dx === -1 ? '«« CONVEYOR ««' : 'CONVEYOR'; this.pushFloatingText(this.player.x, this.player.y, label, '#00f0ff'); this.pushMessage('Conveyor belt transport: Operative moved to new position.', 'info'); },
+    });
   }
 
   fireEquippedWeapon(direction?: { dx: number; dy: number }): boolean {
