@@ -1,0 +1,43 @@
+{
+  "root": "/home/orin/metropolis-2400",
+  "objective": "Modularize src/game.ts by extracting player defeat cinematic and detention transition logic into src/defeatCutscene.ts with 100% backward compatibility.",
+  "allowed_files": [
+    "src/game.ts",
+    "src/defeatCutscene.ts"
+  ],
+  "tasks": [
+    {
+      "file": "src/defeatCutscene.ts",
+      "objective": "Create src/defeatCutscene.ts to manage the 3-stage defeat cutscene (swarm, blur_out, wake_up) and detention cell relocation logic currently embedded in src/game.ts. Export helper functions or a DefeatCutsceneManager class handling handlePlayerDefeat and updateDefeatCutscene.",
+      "constraints": [
+        "Preserve exact cutscene timing, equipment impounding, and teleport coordinates (35, 5).",
+        "Keep escape-skipping behavior and headless/instant compatibility intact.",
+        "Zero new external dependencies."
+      ],
+      "context_files": [
+        "src/types.ts",
+        "scripts/verify-defeat-cinematic.ts"
+      ],
+      "verification_command": "npx tsx scripts/verify-defeat-cinematic.ts",
+      "max_retries": 2
+    },
+    {
+      "file": "src/game.ts",
+      "objective": "Refactor src/game.ts to delegate handlePlayerDefeat and updateDefeatCutscene calls to src/defeatCutscene.ts while keeping all existing GameEngine public properties and method signatures intact.",
+      "constraints": [
+        "Preserve GameEngine public API intact.",
+        "Ensure all 12 regression assertions in verify-defeat-cinematic.ts pass."
+      ],
+      "context_files": [
+        "src/defeatCutscene.ts",
+        "scripts/verify-defeat-cinematic.ts"
+      ],
+      "verification_command": "npx tsx scripts/verify-defeat-cinematic.ts",
+      "max_retries": 2
+    }
+  ],
+  "final_verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-defeat-cinematic.ts"
+  ]
+}

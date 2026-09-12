@@ -1,0 +1,44 @@
+{
+  "root": "/home/orin/metropolis-2400",
+  "objective": "Modularize src/game.ts by extracting terminal command execution and key handling into src/terminalRunner.ts with 100% backward compatibility.",
+  "allowed_files": [
+    "src/game.ts",
+    "src/terminalRunner.ts"
+  ],
+  "tasks": [
+    {
+      "file": "src/terminalRunner.ts",
+      "objective": "Create src/terminalRunner.ts to execute terminal commands (CHECKIN, CLEAR_ALARM, STATUS, LOGS, SCAN, SIPHON, OVERLOAD, SUBVERSION, BREACH, POETRY, HELP) and handle terminal keystrokes. Export executeTerminalCommand or TerminalCommandRunner.",
+      "constraints": [
+        "Preserve exact command output text, credit/energy siphoning rules, and alarm clearing.",
+        "Maintain valid commands filtering by terminal type.",
+        "Zero new external dependencies."
+      ],
+      "context_files": [
+        "src/types.ts",
+        "src/terminal.ts",
+        "scripts/verify-terminal-commands.ts"
+      ],
+      "verification_command": "npx tsx scripts/verify-terminal-commands.ts",
+      "max_retries": 2
+    },
+    {
+      "file": "src/game.ts",
+      "objective": "Refactor src/game.ts to delegate handleTerminalInput and command dispatching to src/terminalRunner.ts, keeping GameEngine interface identical.",
+      "constraints": [
+        "Preserve GameEngine public API intact.",
+        "Ensure all assertions in verify-terminal-commands.ts pass."
+      ],
+      "context_files": [
+        "src/terminalRunner.ts",
+        "scripts/verify-terminal-commands.ts"
+      ],
+      "verification_command": "npx tsx scripts/verify-terminal-commands.ts",
+      "max_retries": 2
+    }
+  ],
+  "final_verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-terminal-commands.ts"
+  ]
+}
