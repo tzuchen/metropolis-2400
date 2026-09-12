@@ -41,7 +41,7 @@ export function createBossExterminator(pos: Position = { x: 32, y: 18 }): Robot 
 }
 
 export function isBossRobot(robot: Robot): boolean {
-  return robot?.id === 'boss-exterminator-prime' || robot?.robotType === 'EXTERMINATOR';
+  return robot?.id === 'boss-exterminator-prime' || robot?.robotType === RobotType.EXTERMINATOR;
 }
 
 /**
@@ -95,8 +95,8 @@ export function applyBossDamage(boss: Robot, rawDamage: number, game: any): numb
     const warnMsg = game.language === 'zh'
       ? '⚠️ 警告：滅絕者原型機啟動【二階段過載護盾】，修復機已空投！'
       : '⚠️ ALERT: EXTERMINATOR-PRIME initiated Phase 2 Overclocked Shield, Support Drones deployed!';
-    game.pushFloatingText(boss.x, boss.y, 'PHASE 2 OVERDRIVE!', '#ff0055');
-    game.pushMessage(warnMsg, 'danger');
+    game?.pushFloatingText?.(boss.x, boss.y, 'PHASE 2 OVERDRIVE!', '#ff0055');
+    game?.pushMessage?.(warnMsg, 'danger');
   }
 
   boss.hp = Math.max(0, remainingHp);
@@ -161,14 +161,18 @@ export function handleBossDeath(boss: Robot, game: any): void {
   // 若當前地圖為 sector-citadel，關閉通往中央主腦核心的力場
   const currentSector = game?.map?.id || (game?.player as any)?.currentSectorId || game?.mapId;
   const tiles = game?.map?.tiles || game?.grid;
+  const FORCEFIELD_GATE_X_LEFT = 31;
+  const FORCEFIELD_GATE_X_RIGHT = 33;
+  const FORCEFIELD_GATE_Y_START = 14;
+  const FORCEFIELD_GATE_Y_END = 16;
   if (currentSector === 'sector-citadel' && Array.isArray(tiles)) {
-    for (let y = 14; y <= 16; y++) {
+    for (let y = FORCEFIELD_GATE_Y_START; y <= FORCEFIELD_GATE_Y_END; y++) {
       if (tiles[y] && y < tiles.length) {
-        if (tiles[y][31] !== undefined) {
-          tiles[y][31] = TileType.FLOOR;
+        if (tiles[y][FORCEFIELD_GATE_X_LEFT] !== undefined) {
+          tiles[y][FORCEFIELD_GATE_X_LEFT] = TileType.FLOOR;
         }
-        if (tiles[y][33] !== undefined) {
-          tiles[y][33] = TileType.FLOOR;
+        if (tiles[y][FORCEFIELD_GATE_X_RIGHT] !== undefined) {
+          tiles[y][FORCEFIELD_GATE_X_RIGHT] = TileType.FLOOR;
         }
       }
     }

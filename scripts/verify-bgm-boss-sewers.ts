@@ -220,6 +220,51 @@ const boss = createBossExterminator({ x: 10, y: 10 });
 if (!isBossRobot(boss)) {
   throw new Error('isBossRobot should identify EXTERMINATOR boss');
 }
+
+// Verify isBossRobot recognizes RobotType.EXTERMINATOR directly
+import { RobotType } from '../src/types';
+const syntheticExterminator = {
+  id: 'synthetic-exterminator',
+  name: 'Synthetic Exterminator',
+  x: 0,
+  y: 0,
+  hp: 100,
+  maxHp: 100,
+  isAlive: true,
+  robotType: RobotType.EXTERMINATOR,
+  aiState: 'patrol',
+  patrolPath: [],
+  currentPatrolIndex: 0,
+  targetPos: null,
+  alertCooldown: 0,
+  attackPower: 10,
+  scanRange: 5,
+};
+if (!isBossRobot(syntheticExterminator)) {
+  throw new Error('isBossRobot should recognize any robot with RobotType.EXTERMINATOR');
+}
+
+// Verify isBossRobot returns false for non-boss robots
+const syntheticScout = {
+  id: 'synthetic-scout',
+  name: 'Synthetic Scout',
+  x: 0,
+  y: 0,
+  hp: 50,
+  maxHp: 50,
+  isAlive: true,
+  robotType: RobotType.SCOUT_DRONE,
+  aiState: 'patrol',
+  patrolPath: [],
+  currentPatrolIndex: 0,
+  targetPos: null,
+  alertCooldown: 0,
+  attackPower: 5,
+  scanRange: 3,
+};
+if (isBossRobot(syntheticScout)) {
+  throw new Error('isBossRobot should return false for non-EXTERMINATOR robots');
+}
 if (boss.hp !== 250) {
   throw new Error('Boss should start with 250 HP');
 }
@@ -231,6 +276,26 @@ if (boss.hp !== 120) {
 }
 if (!(boss as any).phase2Overclock) {
   throw new Error('Boss should have entered Phase 2 Overclocked state');
+}
+
+// Verify Phase 2 trigger works with minimal game object lacking UI callbacks
+const minimalGame = {
+  player: { equippedWeapon: null },
+  robots: [],
+  groundItems: [],
+  language: 'en',
+};
+const minimalBoss = createBossExterminator({ x: 5, y: 5 });
+try {
+  applyBossDamage(minimalBoss, 130, minimalGame);
+} catch (e) {
+  throw new Error(`Phase 2 trigger with minimal game object should not throw: ${e}`);
+}
+if (!(minimalBoss as any).phase2Overclock) {
+  throw new Error('Minimal game object should still trigger Phase 2 Overclocked state');
+}
+if (minimalBoss.hp !== 120) {
+  throw new Error(`Minimal game object: expected boss HP to be 120, got ${minimalBoss.hp}`);
 }
 
 // Next hit should receive 35% damage reduction

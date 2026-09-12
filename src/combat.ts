@@ -161,7 +161,7 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
 
           (game as any).pushFloatingText(hitRobot.x, hitRobot.y, '-' + damage, '#ff3855');
 
-          if (hitRobot.hp <= 0) {
+          if (hitRobot.hp <= 0 && !isBossRobot(hitRobot)) {
             hitRobot.isAlive = false;
             soundFX.explosion();
             (game.fx as any).spawnExplosion(
@@ -178,7 +178,7 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
             const dropRoll = Math.random();
             if (dropRoll < 0.4) {
               game.groundItems.push({
-                id: `drop-${Date.now()}`,
+                id: `drop-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
                 name: 'Plasma Battery',
                 itemType: 'BATTERY',
                 x: hitRobot.x,
@@ -189,7 +189,7 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
               } as GroundItem);
             } else if (dropRoll < 0.7) {
               game.groundItems.push({
-                id: `drop-${Date.now()}`,
+                id: `drop-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
                 name: 'Credit Chip',
                 itemType: 'CREDIT_CHIP',
                 x: hitRobot.x,
@@ -215,7 +215,7 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
               game.securityLevel = 'CLEAR' as SecurityLevel;
               (game as any).pushMessage('All nearby hostiles eliminated. Area secure.', 'info');
             }
-          } else {
+          } else if (!isBossRobot(hitRobot)) {
             soundFX.hit();
             hitRobot.aiState = 'chase';
             hitRobot.targetPos = { x: game.player.x, y: game.player.y };
@@ -418,7 +418,7 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
       (game as any).pushMessage('Fired laser at ' + hitRobot.name + ' for ' + damage + ' dmg!', 'danger');
     }
 
-    if (hitRobot.hp <= 0) {
+    if (hitRobot.hp <= 0 && !isBossRobot(hitRobot)) {
       hitRobot.isAlive = false;
       soundFX.explosion();
       (game.fx as any).spawnExplosion(
@@ -435,7 +435,7 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
       const dropRoll = Math.random();
       if (dropRoll < 0.4) {
         game.groundItems.push({
-          id: `drop-${Date.now()}`,
+          id: `drop-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
           name: 'Plasma Battery',
           itemType: 'BATTERY',
           x: hitRobot.x,
@@ -446,7 +446,7 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
         } as GroundItem);
       } else if (dropRoll < 0.7) {
         game.groundItems.push({
-          id: `drop-${Date.now()}`,
+          id: `drop-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
           name: 'Credit Chip',
           itemType: 'CREDIT_CHIP',
           x: hitRobot.x,
@@ -472,7 +472,7 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
         game.securityLevel = 'CLEAR' as SecurityLevel;
         (game as any).pushMessage('All nearby hostiles eliminated. Area secure.', 'info');
       }
-    } else {
+    } else if (!isBossRobot(hitRobot)) {
       soundFX.hit();
       hitRobot.aiState = 'chase';
       hitRobot.targetPos = { x: game.player.x, y: game.player.y };
@@ -481,9 +481,12 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
 
     // 槍響聲學偵測與警戒連鎖 (Gunfire Acoustics)
     const isSuppressed = (weapon as any)?.isSuppressed === true;
-    if (isSuppressed) {
-      (game as any).pushMessage('Suppressed shot fired! No acoustic signature detected.', 'info');
-    } else if (!isBackstab) {
+    const isVibroKatana = weaponId === 'VIBRO_KATANA';
+    const isSilentTakedown = isSuppressed || isVibroKatana;
+    
+    if (isSilentTakedown) {
+      (game as any).pushMessage('Silent takedown executed! Acoustic suppression maintained.', 'info');
+    } else {
       game.securityLevel = 'ALERT' as SecurityLevel;
       soundFX.alarm();
 
@@ -497,8 +500,6 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
           (r as any).pursuitTurns = 6;
         }
       }
-    } else {
-      (game as any).pushMessage('Silent takedown executed! Acoustic suppression maintained.', 'info');
     }
   } else if (hitCanister) {
     (game as any).detonateCanister(hitCanister);
