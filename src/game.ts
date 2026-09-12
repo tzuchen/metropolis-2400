@@ -12,6 +12,7 @@ import { createBreachSession, moveBreachCursor, selectBreachCell, type BreachSes
 import { handleSpecialInput } from './inputHandler';
 import { bgm } from './music';
 import { executeDetentionRelocation, startDefeatCutscene, updateDefeatCutscene } from './defeatCutscene';
+import { triggerCitadelHorde as _triggerCitadelHorde, updateCitadelHorde as _updateCitadelHorde } from './citadelHorde';
 import { setupSubSectorZero, getNextSectorId } from './sewerMap';
 import { setupCitadel, buildCitadelMap } from './citadelMap';
 import { FXManager } from './fx';
@@ -2975,64 +2976,14 @@ export class GameEngine {
   }
 
   triggerCitadelHorde(): void {
+    _triggerCitadelHorde(this.robots, this.player, (message, type) => this.pushMessage(message, type));
     this.isCitadelHordeActive = true;
-    const hordePositions: Position[] = [
-      { x: 19, y: 7 },
-      { x: 19, y: 21 },
-      { x: 25, y: 6 },
-      { x: 25, y: 22 },
-      { x: 31, y: 7 },
-      { x: 31, y: 21 },
-      { x: 18, y: 14 },
-      { x: 32, y: 13 },
-    ];
-    const types: RobotType[] = ['HUNTER_KILLER', 'SHOCK_ENFORCER', 'SCOUT_DRONE'];
-    const count = 8 + Math.floor(Math.random() * 3); // 8-10
-    for (let i = 0; i < count; i++) {
-      const pos = hordePositions[i % hordePositions.length];
-      const type = types[i % types.length];
-      const robot = createRobot(type, pos, [pos]);
-      robot.aiState = 'chase';
-      robot.targetPos = { x: this.player.x, y: this.player.y };
-      robot.alertCooldown = 999;
-      this.robots.push(robot);
-    }
-    this.pushMessage('CITADEL HORDE: Reinforcements swarming the arena!', 'danger');
     this.render();
   }
 
   private updateCitadelHorde(): void {
     if (!this.isCitadelHordeActive || this.victory || this.map?.id !== 'sector-citadel') return;
-
-    // Lock all alive robots onto the player
-    for (const r of this.robots) {
-      if (!r.isAlive) continue;
-      r.aiState = 'chase';
-      r.targetPos = { x: this.player.x, y: this.player.y };
-    }
-
-    const aliveCount = this.robots.filter((r) => r.isAlive).length;
-    const shouldSpawn = aliveCount < 8 || (this.turnCounter % 2 === 0 && aliveCount < 14);
-    if (shouldSpawn) {
-      const spawnPositions: Position[] = [
-        { x: 19, y: 7 },
-        { x: 19, y: 21 },
-        { x: 25, y: 6 },
-        { x: 25, y: 22 },
-        { x: 31, y: 7 },
-        { x: 31, y: 21 },
-        { x: 18, y: 14 },
-        { x: 32, y: 13 },
-      ];
-      const types: RobotType[] = ['HUNTER_KILLER', 'SHOCK_ENFORCER', 'SCOUT_DRONE'];
-      const pos = spawnPositions[Math.floor(Math.random() * spawnPositions.length)];
-      const type = types[Math.floor(Math.random() * types.length)];
-      const robot = createRobot(type, pos, [pos]);
-      robot.aiState = 'chase';
-      robot.targetPos = { x: this.player.x, y: this.player.y };
-      robot.alertCooldown = 999;
-      this.robots.push(robot);
-    }
+    _updateCitadelHorde(this.robots, this.player, this.turnCounter);
   }
 }
 
