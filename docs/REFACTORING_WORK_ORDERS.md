@@ -9,12 +9,12 @@
 | 階段 | 目標模組 | 抽離出之新模組 | 預計瘦身 | 專屬驗證腳本 | 狀態 | 工單檔案 |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Phase 1** | `src/renderer.ts` | `src/beamRenderer.ts` (武器光束與攻擊特效) | **-371 行** | `verify-enemy-weapon-fx.ts` | **✅ 已完成 (03f335d)** | [`01-weapon-fx-renderer.json`](./work-orders/01-weapon-fx-renderer.json) |
-| **Phase 2** | `src/game.ts` | `src/defeatCutscene.ts` (戰敗過場與禁閉室傳送) | **-210 行** | `verify-defeat-cutscene.ts` | **✅ 已完成** | [`02-defeat-cutscene-engine.json`](./work-orders/02-defeat-cutscene-engine.json) |
-| **Phase 3** | `src/game.ts` | `src/terminalRunner.ts` (終端機指令直譯與權限) | **~300 行** | `verify-detention-terminal-and-effective-commands.ts` | **🟢 工單就緒** | [`03-terminal-command-runner.json`](./work-orders/03-terminal-command-runner.json) |
-| **Phase 4** | `src/renderer.ts` | `src/atmosphereRenderer.ts` (酸雨/濃霧/毒瘴/火花) | **~500 行** | `verify-renderer.ts` | **🟢 工單就緒** | [`04-atmosphere-renderer.json`](./work-orders/04-atmosphere-renderer.json) |
-| **Phase 5** | `src/game.ts` | `src/citadelHorde.ts` (佐格堡壘無盡蜂擁圍攻) | **~200 行** | `verify-citadel-intense-boss-horde.ts` | **🟢 工單就緒** | [`05-citadel-horde-controller.json`](./work-orders/05-citadel-horde-controller.json) |
-| **Phase 6** | `src/renderer.ts` | `src/modalRenderer.ts` (UI 彈窗與通關遮罩) | **~800 行** | `verify-renderer.ts` | **🟢 工單就緒** | [`06-modal-overlay-renderer.json`](./work-orders/06-modal-overlay-renderer.json) |
-| **Phase 7** | `src/game.ts` | `src/hazardSystem.ts` (傳送帶物理與電漿鋼瓶) | **~200 行** | `verify-plasma-canister-fx-and-npc-intel.ts` | **🟢 工單就緒** | [`07-conveyor-hazard-engine.json`](./work-orders/07-conveyor-hazard-engine.json) |
+| **Phase 2** | `src/game.ts` | `src/defeatCutscene.ts` (戰敗過場與禁閉室傳送) | **-210 行** | `verify-defeat-cutscene.ts` | **✅ 已完成 (7d2e434)** | [`02-defeat-cutscene-engine.json`](./work-orders/02-defeat-cutscene-engine.json) |
+| **Phase 3** | `src/game.ts` | `src/terminalRunner.ts` (終端機指令直譯與權限) | **-141 行** | `verify-detention-terminal-and-effective-commands.ts` | **✅ 已完成 (b84bf92)** | [`03-terminal-command-runner.json`](./work-orders/03-terminal-command-runner.json) |
+| **Phase 4** | `src/renderer.ts` | `src/atmosphereRenderer.ts` (酸雨/濃霧/毒瘴/火花) | **-177 行** | `verify-renderer.ts` | **✅ 已完成 (43f559b)** | [`04-atmosphere-renderer.json`](./work-orders/04-atmosphere-renderer.json) |
+| **Phase 5** | `src/game.ts` | `src/citadelHorde.ts` (佐格堡壘無盡蜂擁圍攻) | **-52 行** | `verify-citadel-intense-boss-horde.ts` | **✅ 已完成 (da52ad2)** | [`05-citadel-horde-controller.json`](./work-orders/05-citadel-horde-controller.json) |
+| **Phase 6** | `src/renderer.ts` | `src/modalRenderer.ts` (UI 彈窗與通關遮罩) | **-1005 行** | `verify-renderer.ts` | **✅ 已完成 (dceaf8c)** | [`06-modal-overlay-renderer.json`](./work-orders/06-modal-overlay-renderer.json) |
+| **Phase 7** | `src/game.ts` | `src/hazardSystem.ts` (傳送帶物理與電漿鋼瓶) | **-87 行** | `verify-plasma-canister-fx-and-npc-intel.ts` | **✅ 已完成 (cd63a79)** | [`07-conveyor-hazard-engine.json`](./work-orders/07-conveyor-hazard-engine.json) |
 
 ---
 
