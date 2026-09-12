@@ -16,9 +16,9 @@
       ],
       "context_files": [
         "src/types.ts",
-        "scripts/verify-random-acid-rain.ts"
+        "scripts/verify-renderer.ts"
       ],
-      "verification_command": "npx tsx scripts/verify-random-acid-rain.ts",
+      "verification_command": "npx tsx scripts/verify-renderer.ts",
       "max_retries": 2
     },
     {
@@ -26,18 +26,19 @@
       "objective": "Refactor src/renderer.ts to delegate atmospheric rendering methods to src/atmosphereRenderer.ts while preserving all existing public method signatures on GameRenderer.",
       "constraints": [
         "Preserve GameRenderer public API intact.",
-        "Ensure verify-random-acid-rain.ts and verify-sewer-bidirectional-transit.ts pass."
+        "Ensure verify-renderer.ts passes."
       ],
       "context_files": [
         "src/atmosphereRenderer.ts",
-        "scripts/verify-random-acid-rain.ts"
+        "scripts/verify-renderer.ts"
       ],
-      "verification_command": "npx tsx scripts/verify-random-acid-rain.ts",
+      "verification_command": "npx tsx scripts/verify-renderer.ts",
       "max_retries": 2
     }
   ],
   "final_verification_commands": [
     "npm run typecheck",
-    "npx tsx scripts/verify-random-acid-rain.ts"
+    "npx tsx scripts/verify-renderer.ts",
+    "npm test"
   ]
 }

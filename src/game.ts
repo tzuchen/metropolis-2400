@@ -11,6 +11,7 @@ import { createBossExterminator, isBossRobot, applyBossDamage } from './boss';
 import { createBreachSession, moveBreachCursor, selectBreachCell, type BreachSession } from './breachProtocol';
 import { handleSpecialInput } from './inputHandler';
 import { bgm } from './music';
+import { executeDetentionRelocation, startDefeatCutscene, updateDefeatCutscene } from './defeatCutscene';
 import { setupSubSectorZero, getNextSectorId } from './sewerMap';
 import { setupCitadel, buildCitadelMap } from './citadelMap';
 import { FXManager } from './fx';
@@ -555,7 +556,7 @@ export class GameEngine {
     }
   }
 
-  private pushMessage(text: string, type: GameMessage['type']): void {
+  pushMessage(text: string, type: GameMessage['type']): void {
     this.messages.push({ text, type });
     if (this.messages.length > 50) {
       this.messages.splice(0, this.messages.length - 50);
@@ -2447,212 +2448,15 @@ export class GameEngine {
   }
 
   private executeDetentionRelocation(showMessages: boolean = true): void {
-    // Confiscate gear
-    const p = this.player;
-    this.confiscatedGear = {
-      weapons: Array.isArray(p.weapons) ? [...p.weapons] : [],
-      equippedWeapon: p.equippedWeapon ? { ...p.equippedWeapon } : null,
-      inventory: Array.isArray(p.inventory) ? [...p.inventory] : [],
-      consumables: p.consumables ? { ...p.consumables } : null,
-      augments: p.augments ? { ...p.augments } : null,
-      equippedShield: p.equippedShield ? { ...p.equippedShield } : null,
-    };
-    this.isGearConfiscated = true;
-
-    // Clear player gear
-    p.weapons = [];
-    p.equippedWeapon = null;
-    p.inventory = [];
-    p.consumables = { medkits: 0, batteries: 0, empGrenades: 0 };
-    p.augments = {};
-    p.equippedShield = null;
-
-    // Revive at 40% HP
-    this.player.hp = Math.round(this.player.maxHp * 0.4);
-    this.player.isAlive = true;
-
-    // Clear alert and reset robots
-    this.securityLevel = 'CLEAR' as SecurityLevel;
-    this.checkInAlertActive = false;
-    for (const r of this.robots) {
-      if (!r.isAlive) continue;
-      r.aiState = 'patrol';
-      r.targetPos = null;
-      r.pursuitTurns = 0;
-    }
-
-    // Switch to sector-1 detention cell
-    this.switchSector('sector-1');
-    // Ensure postcondition: map and player are in sector-1
-    if (this.map?.id !== 'sector-1') {
-      this.map = buildSector1Map();
-    }
-    this.player.currentSectorId = 'sector-1';
-    this.resetDetentionCell();
-    this.player.x = 35;
-    this.player.y = 5;
-    this.updateFOV();
-
-    // Ensure BGM continues seamlessly
-    bgm.setIntensity('exploration');
-    if (!bgm.enabled) {
-      bgm.start();
-    }
-
-    // Spawn confiscated locker in guard room
-    const lockerIndex = this.groundItems.findIndex((it) => it.id === 'item-confiscated-locker');
-    const lockerItem: GroundItem = {
-      id: 'item-confiscated-locker',
-      name: 'Tzorg Evidence Locker',
-      itemType: 'KEYCARD' as const,
-      x: 32,
-      y: 6,
-      description: '佐格證物保管箱：內含被扣押的個人裝備與武器。',
-      amount: 1,
-      iconColor: '#ff2a4b',
-    };
-    if (lockerIndex !== -1) {
-      this.groundItems[lockerIndex] = lockerItem;
-    } else {
-      this.groundItems.push(lockerItem);
-    }
-    // Sync to sector-1 ground items
-    if (this.sectorGroundItems['sector-1']) {
-      const secLockerIndex = this.sectorGroundItems['sector-1'].findIndex((it) => it.id === 'item-confiscated-locker');
-      if (secLockerIndex !== -1) {
-        this.sectorGroundItems['sector-1'][secLockerIndex] = lockerItem;
-      } else {
-        this.sectorGroundItems['sector-1'].push(lockerItem);
-      }
-    }
-
-    if (showMessages) {
-      this.pushFloatingText(this.player.x, this.player.y, 'DETENTION CELL', '#ff2a4b');
-      this.pushMessage(
-        this.language === 'zh'
-          ? '【禁閉室】你被佐格安保單位扣押。所有裝備已被移送至守衛室 (32, 6) 證物保管箱。'
-          : '[DETENTION CELL] You have been detained by Tzorg security. All gear has been moved to the Evidence Locker at Guard Room (32, 6).',
-        'danger'
-      );
-      this.pushMessage(
-        this.language === 'zh'
-          ? '【脫逃提示】右上角 (36, 4) 為【鬆動的通風金屬柵板】！可按 [E] 拆開或推動它以顯現通風暗門！'
-          : '[ESCAPE HINT] Top-right (36, 4) is a [Loose Ventilation Metal Grate]! Press [E] to pry it open or push it to reveal the ventilation secret door!',
-        'info'
-      );
-      this.pushFloatingText(36, 4, 'LOOSE VENT [E]', '#00ff88');
-    }
-    this.render();
+    executeDetentionRelocation(this, showMessages);
   }
 
-  private startDefeatCutscene(): void {
-    this.player.isAlive = false;
-    this.player.isWeaponDrawn = false;
-    this.laserBeams = [];
-    soundFX.powerDown();
-
-    // Find nearest robots for swarm
-    const swarmRobots: Robot[] = [];
-    const sortedRobots = this.robots
-      .filter((r) => r.isAlive)
-      .sort((a, b) => {
-        const distA = Math.abs(a.x - this.player.x) + Math.abs(a.y - this.player.y);
-        const distB = Math.abs(b.x - this.player.x) + Math.abs(b.y - this.player.y);
-        return distA - distB;
-      });
-    
-    const px = this.player.x;
-    const py = this.player.y;
-    // Define adjacent positions for surrounding
-    const adjacentPositions: { x: number; y: number }[] = [
-      { x: px + 1, y: py },
-      { x: px - 1, y: py },
-      { x: px, y: py + 1 },
-      { x: px, y: py - 1 },
-      { x: px + 1, y: py + 1 },
-      { x: px - 1, y: py - 1 },
-      { x: px + 1, y: py - 1 },
-      { x: px - 1, y: py + 1 }
-    ];
-
-    let posIndex = 0;
-    for (const r of sortedRobots.slice(0, 4)) {
-      const dist = Math.abs(r.x - px) + Math.abs(r.y - py);
-      if (dist <= 10) {
-        // Find a valid adjacent position
-        let targetPos = null;
-        while (posIndex < adjacentPositions.length) {
-          const candidate = adjacentPositions[posIndex];
-          const tile = getTile(this.map, candidate);
-          const isTileWalkable = tile !== undefined && isWalkable(tile);
-          const isOccupied = this.robots.some(other => other.isAlive && other !== r && other.x === candidate.x && other.y === candidate.y);
-          
-          if (isTileWalkable && !isOccupied) {
-            targetPos = candidate;
-            posIndex++;
-            break;
-          }
-          posIndex++;
-        }
-        
-        if (targetPos) {
-          r.x = targetPos.x;
-          r.y = targetPos.y;
-        }
-      }
-      r.aiState = 'chase';
-      r.targetPos = { x: px, y: py };
-      swarmRobots.push(r);
-    }
-
-    this.defeatCutscene = {
-      stage: 'swarm',
-      startTime: Date.now(),
-      stageStartTime: Date.now(),
-      duration: 2200,
-      playerDownPos: { x: this.player.x, y: this.player.y },
-      swarmRobots,
-    };
-
-    this.pushMessage(
-      this.language === 'zh' ? '【被擊倒】佐格安保單位正在壓制你……' : '[DOWNED] Tzorg security units are subduing you...',
-      'danger'
-    );
-    this.render();
+  startDefeatCutscene(): void {
+    startDefeatCutscene(this);
   }
 
-  private updateDefeatCutscene(now: number): void {
-    if (!this.defeatCutscene) return;
-    const cs = this.defeatCutscene;
-    const elapsed = now - cs.stageStartTime;
-
-    if (cs.stage === 'swarm') {
-      if (elapsed >= cs.duration) {
-        cs.stage = 'blur_out';
-        cs.stageStartTime = now;
-        cs.duration = 1600;
-      }
-    } else if (cs.stage === 'blur_out') {
-      if (elapsed >= cs.duration) {
-        cs.stage = 'wake_up';
-        cs.stageStartTime = now;
-        cs.duration = 1400;
-        this.executeDetentionRelocation(false);
-      }
-    } else if (cs.stage === 'wake_up') {
-      if (elapsed >= cs.duration) {
-        this.defeatCutscene = null;
-        bgm.setIntensity('exploration');
-        this.pushMessage(
-          this.language === 'zh'
-            ? '【脫逃提示】右上角 (36, 4) 為【鬆動的通風金屬柵板】！可按 [E] 拆開或推動它以顯現通風暗門！'
-            : '[ESCAPE HINT] Top-right (36, 4) is a [Loose Ventilation Metal Grate]! Press [E] to pry it open or push it to reveal the ventilation secret door!',
-          'info'
-        );
-        this.pushFloatingText(36, 4, 'LOOSE VENT [E]', '#00ff88');
-        this.render();
-      }
-    }
+  updateDefeatCutscene(now: number): void {
+    updateDefeatCutscene(this, now);
   }
 
   recoverConfiscatedGear(): void {

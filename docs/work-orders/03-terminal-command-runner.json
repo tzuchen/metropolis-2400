@@ -17,9 +17,9 @@
       "context_files": [
         "src/types.ts",
         "src/terminal.ts",
-        "scripts/verify-terminal-commands.ts"
+        "scripts/verify-detention-terminal-and-effective-commands.ts"
       ],
-      "verification_command": "npx tsx scripts/verify-terminal-commands.ts",
+      "verification_command": "npx tsx scripts/verify-detention-terminal-and-effective-commands.ts",
       "max_retries": 2
     },
     {
@@ -27,18 +27,20 @@
       "objective": "Refactor src/game.ts to delegate handleTerminalInput and command dispatching to src/terminalRunner.ts, keeping GameEngine interface identical.",
       "constraints": [
         "Preserve GameEngine public API intact.",
-        "Ensure all assertions in verify-terminal-commands.ts pass."
+        "Ensure all assertions in verify-detention-terminal-and-effective-commands.ts and verify-terminal-text-overflow.ts pass."
       ],
       "context_files": [
         "src/terminalRunner.ts",
-        "scripts/verify-terminal-commands.ts"
+        "scripts/verify-detention-terminal-and-effective-commands.ts"
       ],
-      "verification_command": "npx tsx scripts/verify-terminal-commands.ts",
+      "verification_command": "npx tsx scripts/verify-detention-terminal-and-effective-commands.ts",
       "max_retries": 2
     }
   ],
   "final_verification_commands": [
     "npm run typecheck",
-    "npx tsx scripts/verify-terminal-commands.ts"
+    "npx tsx scripts/verify-detention-terminal-and-effective-commands.ts",
+    "npx tsx scripts/verify-terminal-text-overflow.ts",
+    "npm test"
   ]
 }

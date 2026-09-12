@@ -16,10 +16,10 @@
       ],
       "context_files": [
         "src/types.ts",
-        "scripts/verify-conveyor-belts.ts",
-        "scripts/verify-canister-fx-npc-intel.ts"
+        "scripts/verify-plasma-canister-fx-and-npc-intel.ts",
+        "scripts/verify-districts.ts"
       ],
-      "verification_command": "npx tsx scripts/verify-conveyor-belts.ts",
+      "verification_command": "npx tsx scripts/verify-plasma-canister-fx-and-npc-intel.ts",
       "max_retries": 2
     },
     {
@@ -27,18 +27,20 @@
       "objective": "Refactor src/game.ts to delegate conveyor belt processing and canister detonation to src/hazardSystem.ts, preserving all existing GameEngine public properties and method signatures.",
       "constraints": [
         "Preserve GameEngine public API intact.",
-        "Ensure all assertions in verify-conveyor-belts.ts and verify-canister-fx-npc-intel.ts pass."
+        "Ensure all assertions in verify-plasma-canister-fx-and-npc-intel.ts and verify-districts.ts pass."
       ],
       "context_files": [
         "src/hazardSystem.ts",
-        "scripts/verify-conveyor-belts.ts"
+        "scripts/verify-plasma-canister-fx-and-npc-intel.ts"
       ],
-      "verification_command": "npx tsx scripts/verify-conveyor-belts.ts",
+      "verification_command": "npx tsx scripts/verify-plasma-canister-fx-and-npc-intel.ts",
       "max_retries": 2
     }
   ],
   "final_verification_commands": [
     "npm run typecheck",
-    "npx tsx scripts/verify-conveyor-belts.ts"
+    "npx tsx scripts/verify-plasma-canister-fx-and-npc-intel.ts",
+    "npx tsx scripts/verify-districts.ts",
+    "npm test"
   ]
 }
