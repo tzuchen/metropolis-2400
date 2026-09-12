@@ -8,9 +8,18 @@ For every completed code-changing task in this repository:
 
 ## Local LLM Code Review
 
-For read-only code reviews, call the local OpenAI-compatible endpoint `http://localhost:8000/v1/chat/completions` with model `spark-vllm-docker` and `chat_template_kwargs.enable_thinking` set to `false`, so conclusions are returned in `message.content` rather than `reasoning_content`.
+Use `/home/orin/.local/bin/local-llm` for read-only code reviews. It defaults to non-thinking mode; do not pass `--thinking` for routine review so findings are returned directly in the output.
 
-- Split large reviews into focused modules or files.
+- Target at most about 500 lines or one focused module per prompt.
 - The prompt must prohibit patches, commands, writes, and external side effects.
 - Report only evidence-backed findings, including severity, location, risk, and minimal verification.
 - This is read-only and does not authorize edits, tests that write files, commits, pushes, or server restarts.
+
+Start longer review commands with `setsid ... > /tmp/review.stderr 2>&1 < /dev/null &` rather than `nohup` or background heredocs, because `setsid` detaches the process from Codex process-group cleanup. After completion, poll and read the `/tmp` output file and stderr.
+
+setsid /home/orin/.local/bin/local-llm \
+  -f <file> \
+  -p "<review prompt>" \
+  -s "<system prompt>" \
+  -m <token budget> \
+  -o /tmp/report.md > /tmp/review.stderr 2>&1 < /dev/null &
