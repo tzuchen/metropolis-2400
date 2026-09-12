@@ -10,6 +10,7 @@ import { drawMiniRadar } from './radar';
 import { drawBigMapModal } from './bigMapModal';
 import { getFont, getTitleFont, CJK_FONT_STACK } from './uiFont';
 import type { FXManager } from './fx';
+import { BeamRenderer } from './beamRenderer';
 
 export type Position = { x: number; y: number };
 export type Language = 'zh' | 'en';
@@ -67,10 +68,12 @@ export class GameRenderer {
   activeWaypoint: { x: number; y: number; name: string } | null = null;
   storyArchiveSelectedIndex: number = 0;
   pushableBlocks: PushableBlock[] = [];
+  private beamRenderer: BeamRenderer;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
+    this.beamRenderer = new BeamRenderer();
   }
 
   render(
@@ -786,389 +789,63 @@ export class GameRenderer {
   }
 
   drawLaserBeam(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0, progress: number = 1): void {
-    ctx.save?.();
-    const p = Math.min(1, Math.max(0, progress));
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const dist = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(dist, p * 1.65 * dist);
-    const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 48));
-    const hx = x1 + (dx / dist) * headDist;
-    const hy = y1 + (dy / dist) * headDist;
-    const tx = x1 + (dx / dist) * tailDist;
-    const ty = y1 + (dy / dist) * tailDist;
-
-    // 發光外層光束
-    ctx.strokeStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 8;
-    ctx.lineWidth = 2.5;
-    ctx.beginPath?.();
-    ctx.moveTo?.(tx, ty);
-    ctx.lineTo?.(hx, hy);
-    ctx.stroke?.();
-
-    // 高能白色核心細線
-    ctx.strokeStyle = '#ffffff';
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 4;
-    ctx.lineWidth = 1;
-    ctx.beginPath?.();
-    ctx.moveTo?.(tx, ty);
-    ctx.lineTo?.(hx, hy);
-    ctx.stroke?.();
-
-    // 前端彈頭光點
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 6;
-    ctx.beginPath?.();
-    ctx.arc?.(hx, hy, 3, 0, Math.PI * 2);
-    ctx.fill?.();
-
-    // 當彈頭抵達目標時 (p >= 0.6)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (p >= 0.6) {
-      const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
-      ctx.strokeStyle = color;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 12;
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = impactPulse * 0.8;
-      ctx.beginPath?.();
-      ctx.arc?.(x2, y2, 8 + impactPulse * 4, 0, Math.PI * 2);
-      ctx.stroke?.();
-
-      // 火花
-      for (let s = 0; s < 4; s++) {
-        const angle = (s / 4) * Math.PI * 2 + now * 0.01;
-        const sparkDist = 6 + Math.random() * 6;
-        const sx = x2 + Math.cos(angle) * sparkDist;
-        const sy = y2 + Math.sin(angle) * sparkDist;
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowBlur = 4;
-        ctx.beginPath?.();
-        ctx.arc?.(sx, sy, 1.5, 0, Math.PI * 2);
-        ctx.fill?.();
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.shadowBlur = 0;
-    ctx.restore?.();
+    const beam: LaserBeam = {
+      from: { x: x1, y: y1 },
+      to: { x: x2, y: y2 },
+      color,
+      beamType: 'LASER',
+      createdAt: now,
+      duration: 200
+    };
+    this.beamRenderer.drawLaserBeam(ctx, beam, now, progress);
   }
 
   drawElectricArc(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0, progress: number = 1): void {
-    ctx.save?.();
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const len = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(len, progress * 1.65 * len);
-    const tailDist = Math.max(0, headDist - Math.min(len * 0.45, 52));
-    const hx = x1 + (dx / len) * headDist;
-    const hy = y1 + (dy / len) * headDist;
-    const tx = x1 + (dx / len) * tailDist;
-    const ty = y1 + (dy / len) * tailDist;
-    const segments = 8;
-    const perpX = -dy / len;
-    const perpY = dx / len;
-
-    // 尾端與起點間保留微弱半透明電離殘影
-    if (tailDist > 0) {
-      ctx.strokeStyle = color;
-      ctx.globalAlpha = 0.3;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 4;
-      ctx.lineWidth = 1;
-      ctx.beginPath?.();
-      ctx.moveTo?.(x1, y1);
-      ctx.lineTo?.(tx, ty);
-      ctx.stroke?.();
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.strokeStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 10;
-    ctx.lineWidth = 2;
-    ctx.beginPath?.();
-    ctx.moveTo?.(tx, ty);
-
-    for (let i = 1; i < segments; i++) {
-      const t = i / segments;
-      const jitter = (Math.sin(now * 0.05 + i * 7.3) * 0.5 + Math.sin(now * 0.03 + i * 3.1) * 0.5) * (len * 0.15);
-      const px = tx + (hx - tx) * t + perpX * jitter;
-      const py = ty + (hy - ty) * t + perpY * jitter;
-      ctx.lineTo?.(px, py);
-    }
-    ctx.lineTo?.(hx, hy);
-    ctx.stroke?.();
-
-    const sparkCount = 3;
-    for (let s = 0; s < sparkCount; s++) {
-      const t = 0.2 + (s / sparkCount) * 0.6;
-      const jitter = Math.sin(now * 0.04 + s * 5.7) * (len * 0.1);
-      const sx = tx + (hx - tx) * t + perpX * jitter;
-      const sy = ty + (hy - ty) * t + perpY * jitter;
-      const sparkSize = 2 + Math.random() * 2;
-      ctx.fillStyle = '#ffffff';
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 6;
-      ctx.beginPath?.();
-      ctx.arc?.(sx, sy, sparkSize, 0, Math.PI * 2);
-      ctx.fill?.();
-    }
-
-    // 前端彈頭光點
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 6;
-    ctx.beginPath?.();
-    ctx.arc?.(hx, hy, 3, 0, Math.PI * 2);
-    ctx.fill?.();
-
-    // 當彈頭抵達目標時 (progress >= 0.6)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (progress >= 0.6) {
-      const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
-      ctx.strokeStyle = color;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 12;
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = impactPulse * 0.8;
-      ctx.beginPath?.();
-      ctx.arc?.(x2, y2, 8 + impactPulse * 4, 0, Math.PI * 2);
-      ctx.stroke?.();
-
-      for (let s = 0; s < 4; s++) {
-        const angle = (s / 4) * Math.PI * 2 + now * 0.01;
-        const sparkDist = 6 + Math.random() * 6;
-        const sx = x2 + Math.cos(angle) * sparkDist;
-        const sy = y2 + Math.sin(angle) * sparkDist;
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowBlur = 4;
-        ctx.beginPath?.();
-        ctx.arc?.(sx, sy, 1.5, 0, Math.PI * 2);
-        ctx.fill?.();
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.shadowBlur = 0;
-    ctx.restore?.();
+    const beam: LaserBeam = {
+      from: { x: x1, y: y1 },
+      to: { x: x2, y: y2 },
+      color,
+      beamType: 'ELEC',
+      createdAt: now,
+      duration: 200
+    };
+    this.beamRenderer.drawElectricArc(ctx, beam, now, progress);
   }
 
   drawPlasmaBeam(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0, progress: number = 1): void {
-    ctx.save?.();
-    const p = Math.min(1, Math.max(0, progress));
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const dist = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(dist, p * 1.65 * dist);
-    const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 48));
-    const hx = x1 + (dx / dist) * headDist;
-    const hy = y1 + (dy / dist) * headDist;
-    const tx = x1 + (dx / dist) * tailDist;
-    const ty = y1 + (dy / dist) * tailDist;
-    const pulse = 0.8 + 0.2 * Math.sin(now * 0.01);
-
-    ctx.strokeStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 16;
-    ctx.lineWidth = 6 * pulse;
-    ctx.globalAlpha = 0.4;
-    ctx.beginPath?.();
-    ctx.moveTo?.(tx, ty);
-    ctx.lineTo?.(hx, hy);
-    ctx.stroke?.();
-
-    ctx.strokeStyle = '#ffffff';
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 8;
-    ctx.lineWidth = 2.5;
-    ctx.globalAlpha = 0.9;
-    ctx.beginPath?.();
-    ctx.moveTo?.(tx, ty);
-    ctx.lineTo?.(hx, hy);
-    ctx.stroke?.();
-
-    const orbRadius = 6 + 3 * Math.sin(now * 0.012);
-    ctx.fillStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 12;
-    ctx.globalAlpha = 0.8;
-    ctx.beginPath?.();
-    ctx.arc?.(hx, hy, orbRadius, 0, Math.PI * 2);
-    ctx.fill?.();
-
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowBlur = 4;
-    ctx.globalAlpha = 0.9;
-    ctx.beginPath?.();
-    ctx.arc?.(hx, hy, orbRadius * 0.4, 0, Math.PI * 2);
-    ctx.fill?.();
-
-    // 當彈頭抵達目標時 (p >= 0.6)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (p >= 0.6) {
-      const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
-      ctx.strokeStyle = color;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 12;
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = impactPulse * 0.8;
-      ctx.beginPath?.();
-      ctx.arc?.(x2, y2, 8 + impactPulse * 4, 0, Math.PI * 2);
-      ctx.stroke?.();
-
-      for (let s = 0; s < 4; s++) {
-        const angle = (s / 4) * Math.PI * 2 + now * 0.01;
-        const sparkDist = 6 + Math.random() * 6;
-        const sx = x2 + Math.cos(angle) * sparkDist;
-        const sy = y2 + Math.sin(angle) * sparkDist;
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowBlur = 4;
-        ctx.beginPath?.();
-        ctx.arc?.(sx, sy, 1.5, 0, Math.PI * 2);
-        ctx.fill?.();
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-    ctx.restore?.();
+    const beam: LaserBeam = {
+      from: { x: x1, y: y1 },
+      to: { x: x2, y: y2 },
+      color,
+      beamType: 'PLASMA',
+      createdAt: now,
+      duration: 200
+    };
+    this.beamRenderer.drawPlasmaBeam(ctx, beam, now, progress);
   }
 
   drawNeedleTracer(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0, progress: number = 1): void {
-    ctx.save?.();
-    const p = Math.min(1, Math.max(0, progress));
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const dist = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(dist, p * 1.65 * dist);
-    const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 48));
-    const hx = x1 + (dx / dist) * headDist;
-    const hy = y1 + (dy / dist) * headDist;
-    const tx = x1 + (dx / dist) * tailDist;
-    const ty = y1 + (dy / dist) * tailDist;
-
-    ctx.strokeStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 4;
-    ctx.lineWidth = 1;
-    ctx.beginPath?.();
-    ctx.moveTo?.(tx, ty);
-    ctx.lineTo?.(hx, hy);
-    ctx.stroke?.();
-
-    ctx.fillStyle = color;
-    ctx.shadowBlur = 6;
-    ctx.beginPath?.();
-    ctx.arc?.(hx, hy, 2, 0, Math.PI * 2);
-    ctx.fill?.();
-
-    // 當彈頭抵達目標時 (p >= 0.6)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (p >= 0.6) {
-      const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
-      ctx.strokeStyle = color;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 8;
-      ctx.lineWidth = 1.5;
-      ctx.globalAlpha = impactPulse * 0.8;
-      ctx.beginPath?.();
-      ctx.arc?.(x2, y2, 6 + impactPulse * 3, 0, Math.PI * 2);
-      ctx.stroke?.();
-
-      for (let s = 0; s < 3; s++) {
-        const angle = (s / 3) * Math.PI * 2 + now * 0.01;
-        const sparkDist = 4 + Math.random() * 4;
-        const sx = x2 + Math.cos(angle) * sparkDist;
-        const sy = y2 + Math.sin(angle) * sparkDist;
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowBlur = 3;
-        ctx.beginPath?.();
-        ctx.arc?.(sx, sy, 1, 0, Math.PI * 2);
-        ctx.fill?.();
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.shadowBlur = 0;
-    ctx.restore?.();
+    const beam: LaserBeam = {
+      from: { x: x1, y: y1 },
+      to: { x: x2, y: y2 },
+      color,
+      beamType: 'NEEDLE',
+      createdAt: now,
+      duration: 200
+    };
+    this.beamRenderer.drawNeedleTracer(ctx, beam, now, progress);
   }
 
   drawQuantumBeam(x1: number, y1: number, x2: number, y2: number, color: string, ctx: any, now: number = 0, progress: number = 1): void {
-    ctx.save?.();
-    const p = Math.min(1, Math.max(0, progress));
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const dist = Math.hypot(dx, dy) || 1;
-    const headDist = Math.min(dist, p * 1.65 * dist);
-    const tailDist = Math.max(0, headDist - Math.min(dist * 0.45, 48));
-    const hx = x1 + (dx / dist) * headDist;
-    const hy = y1 + (dy / dist) * headDist;
-    const tx = x1 + (dx / dist) * tailDist;
-    const ty = y1 + (dy / dist) * tailDist;
-    const pulse = 0.8 + 0.2 * Math.sin(now * 0.015);
-
-    // 外層紫色高能反物質光束
-    ctx.strokeStyle = '#b388ff';
-    ctx.shadowColor = '#b388ff';
-    ctx.shadowBlur = 14;
-    ctx.lineWidth = 6 * pulse;
-    ctx.globalAlpha = 0.6;
-    ctx.beginPath?.();
-    ctx.moveTo?.(tx, ty);
-    ctx.lineTo?.(hx, hy);
-    ctx.stroke?.();
-
-    // 內層白青色凝聚核心
-    ctx.strokeStyle = '#00ffff';
-    ctx.shadowColor = '#00ffff';
-    ctx.shadowBlur = 8;
-    ctx.lineWidth = 2.5;
-    ctx.globalAlpha = 0.9;
-    ctx.beginPath?.();
-    ctx.moveTo?.(tx, ty);
-    ctx.lineTo?.(hx, hy);
-    ctx.stroke?.();
-
-    // 核心白點
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = '#ffffff';
-    ctx.shadowBlur = 4;
-    ctx.globalAlpha = 1;
-    ctx.beginPath?.();
-    ctx.arc?.(hx, hy, 3, 0, Math.PI * 2);
-    ctx.fill?.();
-
-    // 當彈頭抵達目標時 (p >= 0.6)，在 (x2, y2) 身上繪製瞬間衝擊光環與火花
-    if (p >= 0.6) {
-      const impactPulse = 0.5 + 0.5 * Math.sin(now * 0.02);
-      ctx.strokeStyle = '#b388ff';
-      ctx.shadowColor = '#b388ff';
-      ctx.shadowBlur = 12;
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = impactPulse * 0.8;
-      ctx.beginPath?.();
-      ctx.arc?.(x2, y2, 8 + impactPulse * 4, 0, Math.PI * 2);
-      ctx.stroke?.();
-
-      for (let s = 0; s < 4; s++) {
-        const angle = (s / 4) * Math.PI * 2 + now * 0.01;
-        const sparkDist = 6 + Math.random() * 6;
-        const sx = x2 + Math.cos(angle) * sparkDist;
-        const sy = y2 + Math.sin(angle) * sparkDist;
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowBlur = 4;
-        ctx.beginPath?.();
-        ctx.arc?.(sx, sy, 1.5, 0, Math.PI * 2);
-        ctx.fill?.();
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-    ctx.restore?.();
+    const beam: LaserBeam = {
+      from: { x: x1, y: y1 },
+      to: { x: x2, y: y2 },
+      color,
+      beamType: 'QUANTUM',
+      createdAt: now,
+      duration: 200
+    };
+    this.beamRenderer.drawQuantumBeam(ctx, beam, now, progress);
   }
 
   drawScreenAtmosphere(width: number, height: number, ctx: any): void {
