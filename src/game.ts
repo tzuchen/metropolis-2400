@@ -29,6 +29,7 @@ import {
   createSectorHazards,
   createSectorPushableBlocks,
 } from './worldBuilder';
+import { handleTerminalInput as _handleTerminalInput } from './terminalRunner';
 
 
 export interface ResolutionPreset {
@@ -2744,7 +2745,7 @@ export class GameEngine {
     }
   }
 
-  private updateNPCDialogues(): void {
+  updateNPCDialogues(): void {
     _updateNPCDialogues(this);
   }
 
@@ -2853,146 +2854,7 @@ export class GameEngine {
   }
 
   private handleTerminalInput(key: string): void {
-    if (!this.activeTerminal) {
-      return;
-    }
-
-    if (key === 'Escape' || key === 'Esc') {
-      this.activeTerminal = null;
-      this.terminalInputBuffer = '';
-      soundFX.terminal();
-      this.render();
-      return;
-    }
-
-    if (key === 'Backspace') {
-      this.terminalInputBuffer = this.terminalInputBuffer.slice(0, -1);
-      if (this.activeTerminal) this.activeTerminal.input = this.terminalInputBuffer;
-      this.render();
-      return;
-    }
-
-    if (key === 'Enter') {
-      const cmd = this.terminalInputBuffer || this.activeTerminal?.input || '';
-      this.terminalInputBuffer = '';
-      if (this.activeTerminal) this.activeTerminal.input = '';
-
-      const upperCmd = cmd.toUpperCase();
-      if (upperCmd === 'BREACH' || upperCmd === 'HACK') {
-        this.activeBreachSession = createBreachSession(this.activeTerminal?.terminal?.id || 'CORE');
-        this.render();
-        return;
-      }
-
-      if (upperCmd === 'CHECKIN') {
-        this.performCheckIn();
-        this.render();
-        return;
-      }
-
-      const inventory = this.player.inventory;
-      const items: string[] = [];
-      if (Array.isArray(inventory)) {
-        for (const it of inventory) {
-          if (it?.id) items.push(it.id);
-          if (it?.name) items.push(it.name);
-        }
-      }
-      const consumables = this.player.consumables;
-      if (consumables?.batteries) items.push(`batteries:${consumables.batteries}`);
-      if (consumables?.empGrenades) items.push(`empGrenades:${consumables.empGrenades}`);
-      if (this.player.equippedWeapon?.name) items.push(`equippedWeapon:${this.player.equippedWeapon.name}`);
-
-      const context = {
-        hasDefeatedBoss: this.player.hasDefeatedBoss === true,
-        items,
-        level: this.player.level ?? 1,
-        decryptedSlates: this.storyLogs.filter((l) => l.read).map((l) => l.id),
-      };
-      const result: any = this.activeTerminal.executeCommand(cmd, context);
-
-      if (result?.disabledForcefield) {
-        const ffName: string = result.disabledForcefield || 'CORE_FF';
-        try {
-          disableForcefield(this.map, ffName);
-        } catch (err) {
-          void err;
-        }
-        // Also try to disable the other forcefield if it exists
-        const otherFF: string = ffName === 'CHECKPOINT_FF' ? 'CORE_FF' : 'CHECKPOINT_FF';
-        try {
-          disableForcefield(this.map, otherFF);
-        } catch (err) {
-          void err;
-        }
-        const forcefieldObj = this.missionObjectives.find((o) => o.id === 'obj-forcefield');
-        if (forcefieldObj && !forcefieldObj.completed) {
-          forcefieldObj.completed = true;
-          this.pushMessage(this.language === 'zh' ? '【任務更新】01 號檢查哨能量屏障已解除！' : 'MISSION UPDATE: Checkpoint 01 forcefield deactivated!', 'success');
-          this.gainExp(50, 'MISSION_COMPLETE');
-        }
-        this.pushMessage(`${ffName}: Plasma barrier capacitors short-circuited. Barrier offline.`, 'success');
-        soundFX.victory();
-        this.gainExp(60, 'HACK_SUCCESS');
-        this.forcefieldDisabled = true;
-        this.updateNPCDialogues();
-      }
-
-      if (result?.disarmCollar) {
-        this.disarmCollar();
-      }
-
-      if (result?.endgameChoice) {
-        this.endgameChoice = result.endgameChoice;
-        this.player.endgameChoice = result.endgameChoice;
-        this.victory = true;
-        this.isCitadelHordeActive = false;
-        for (const r of this.robots) {
-          r.isAlive = false;
-        }
-        soundFX.victory();
-        this.pushMessage('OPERATION PROMETHEUS: [' + result.endgameChoice + '] protocol executed.', 'success');
-        this.pushFloatingText(this.player.x, this.player.y, 'ENDGAME: ' + result.endgameChoice, '#00ff88');
-      }
-
-      if (result?.victory) {
-        this.victory = true;
-      }
-
-      if (result?.clearedAlert) {
-        if (this.checkInAlertActive) {
-          this.pushMessage(
-            this.language === 'zh'
-              ? '❌ 無法解除警報：神經項圈逾期未簽到！請執行 CHECKIN 指令。'
-              : '❌ Cannot clear alert: Neural collar check-in overdue! Execute CHECKIN command.',
-            'danger'
-          );
-        } else {
-          this.securityLevel = 'CLEAR' as SecurityLevel;
-          this.pushMessage('Security alert cleared. All units returning to patrol.', 'info');
-        }
-      }
-
-      if (result?.energyGain) {
-        this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + result.energyGain);
-        this.pushFloatingText(this.player.x, this.player.y, `+${result.energyGain} EN`, '#00f0ff');
-        this.pushMessage(`Energy siphoned: +${result.energyGain} EN.`, 'success');
-        this.gainExp(25, 'ENERGY_SIPHON');
-      }
-
-      if (result?.shouldExit) {
-        this.activeTerminal = null;
-      }
-
-      this.render();
-      return;
-    }
-
-    if (key.length === 1 && key >= ' ' && key <= '~') {
-      this.terminalInputBuffer += key;
-      if (this.activeTerminal) this.activeTerminal.input = this.terminalInputBuffer;
-      this.render();
-    }
+    _handleTerminalInput(this, key);
   }
 
   private getConveyorDirection(x: number, y: number): { dx: number; dy: number } {
