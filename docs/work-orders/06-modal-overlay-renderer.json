@@ -1,0 +1,44 @@
+{
+  "root": "/home/orin/metropolis-2400",
+  "objective": "Modularize src/renderer.ts by extracting UI modal screens and overlays (inventory, mission log, story archive, augment shop, game over, victory, defeat overlay) into src/modalRenderer.ts with 100% backward compatibility.",
+  "allowed_files": [
+    "src/renderer.ts",
+    "src/modalRenderer.ts"
+  ],
+  "tasks": [
+    {
+      "file": "src/modalRenderer.ts",
+      "objective": "Create src/modalRenderer.ts containing drawInventoryModal, drawMissionLogModal, drawStoryLogModal, drawStoryArchiveModal, drawAugmentShopModal, drawGameOverOverlay, drawVictoryOverlay, and drawDefeatCutscene extracted from src/renderer.ts. Export ModalRenderer class or standalone functions.",
+      "constraints": [
+        "Pure Canvas 2D UI dialog and overlay renderer.",
+        "Preserve exact modal layout, typography, keyboard hint labels, and color palettes.",
+        "Zero new external dependencies."
+      ],
+      "context_files": [
+        "src/types.ts",
+        "scripts/verify-inventory-modal.ts",
+        "scripts/verify-mission-progress.ts"
+      ],
+      "verification_command": "npx tsx scripts/verify-inventory-modal.ts",
+      "max_retries": 2
+    },
+    {
+      "file": "src/renderer.ts",
+      "objective": "Refactor src/renderer.ts to delegate modal and overlay drawing methods to src/modalRenderer.ts while preserving all existing public method signatures on GameRenderer.",
+      "constraints": [
+        "Preserve GameRenderer public API intact.",
+        "Ensure verify-inventory-modal.ts and verify-mission-progress.ts pass."
+      ],
+      "context_files": [
+        "src/modalRenderer.ts",
+        "scripts/verify-inventory-modal.ts"
+      ],
+      "verification_command": "npx tsx scripts/verify-inventory-modal.ts",
+      "max_retries": 2
+    }
+  ],
+  "final_verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-inventory-modal.ts"
+  ]
+}
