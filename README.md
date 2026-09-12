@@ -251,10 +251,17 @@ metropolis-2400/
 │   ├── npcAI.ts          # NPC autonomous wandering, directional facing & dynamic barks logic
 │   ├── sprites.ts        # Pixel-art canvas renderers (Player, Robots, NPCs, Items, Wreckage)
 │   ├── npcSprites.ts     # NPC-specific persona action VFX & particle effects
-│   ├── renderer.ts       # CRT display engine, Mini-Radar, tactical HUD & modal dialogs
-│   ├── terminal.ts       # Security terminal shell, parser, and subroutines
+│   ├── renderer.ts       # CRT display compositor, Mini-Radar & tactical HUD
+│   ├── beamRenderer.ts   # Weapon beam and attack-effect Canvas renderer
+│   ├── atmosphereRenderer.ts # Acid rain, fog, toxic mist & conveyor-spark effects
+│   ├── modalRenderer.ts  # Inventory, mission, story, augment & endgame overlays
+│   ├── terminal.ts       # Security terminal session, parser, and subroutines
+│   ├── terminalRunner.ts # Terminal keystrokes and command-result integration
 │   ├── audio.ts          # Procedural Web Audio API sound synthesizer
 │   ├── game.ts           # Game loop dispatcher, input handler, acoustics & mission logic
+│   ├── defeatCutscene.ts # Defeat cinematic and detention-cell transition logic
+│   ├── citadelHorde.ts   # Citadel endless-reinforcement controller
+│   ├── hazardSystem.ts   # Conveyor transport and plasma-canister hazard rules
 │   ├── inputHandler.ts   # Modal, title-screen, map and utility key handling
 │   ├── titleScreen.ts    # Title screen, menu and telemetry ticker renderer
 │   ├── manualModal.ts    # Tactical manual renderer
@@ -290,6 +297,8 @@ metropolis-2400/
 ├── live-gh-pages-preview.png # GitHub Pages live preview screenshot
 ├── npc-actions-preview.png   # NPC dynamic actions & VFX screenshot
 └── preview.png           # Live gameplay screenshot
+
+The renderer and game loop are intentionally composed from focused modules, while `GameRenderer` and `GameEngine` retain their existing public APIs for compatibility.
 ```
 
 > `scripts` currently contains 41 verification scripts. `npm test` runs TypeScript typechecking plus 37 selected verification scripts covering engine turns, AI, story, augments, weapons, maps, saves, bosses/endgame, UI, and quests.
