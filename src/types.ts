@@ -1,3 +1,12 @@
+export interface ConfiscatedGear {
+  weapons?: Item[];
+  equippedWeapon?: Item | null;
+  inventory?: Item[];
+  consumables?: { medkits: number; batteries: number; empGrenades: number };
+  augments?: Record<string, boolean>;
+  equippedShield?: Item | null;
+}
+
 export const SecurityLevel = {
   CLEAR: 'CLEAR',
   SUSPICIOUS: 'SUSPICIOUS',

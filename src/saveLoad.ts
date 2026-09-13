@@ -1,4 +1,4 @@
-import type { Hazard, Item, Language, MissionObjective, NPC, Robot, SecurityLevel, StoryLog } from './types';
+import type { ConfiscatedGear, GroundItem, Hazard, Item, Language, MissionObjective, NPC, PushableBlock, Robot, SecurityLevel, StoryLog } from './types';
 
 export interface SaveData {
   version: number;
@@ -12,7 +12,7 @@ export interface SaveData {
   graffitiMuralComplete?: boolean;
   poetryQuestComplete?: boolean;
   isGearConfiscated?: boolean;
-  confiscatedGear?: any;
+  confiscatedGear?: ConfiscatedGear | null;
   isCitadelHordeActive?: boolean;
   player: {
     x: number;
@@ -70,11 +70,191 @@ export interface SaveData {
   storyLogs: Array<{ id: string; read: boolean }>;
   missionObjectives: Array<{ id: string; completed: boolean; discovered?: boolean }>;
   exploredTiles: string[];
-  groundItems: any[];
-  pushableBlocks?: any[];
+  groundItems: GroundItem[];
+  pushableBlocks?: PushableBlock[];
 }
 
 let memoryBackup: SaveData | null = null;
+
+/**
+ * Private, safe core-save shape guard.
+ *
+ * Verifies the minimal core structure required before a save is migrated and
+ * applied to a live game. It intentionally only inspects core fields and never
+ * throws: any null, primitive, empty object, missing/invalid core value, or
+ * malformed core array causes it to return false.
+ */
+function isCoreSaveShape(data: unknown): boolean {
+  if (typeof data !== 'object' || data === null) return false;
+  const d = data as Record<string, unknown>;
+
+  const player = d.player;
+  if (typeof player !== 'object' || player === null) return false;
+  const p = player as Record<string, unknown>;
+
+  // Core numeric player fields
+  if (typeof p.x !== 'number' || typeof p.y !== 'number') return false;
+  if (typeof p.hp !== 'number' || typeof p.maxHp !== 'number') return false;
+  if (typeof p.energy !== 'number' || typeof p.maxEnergy !== 'number') return false;
+  if (typeof p.credits !== 'number') return false;
+
+  // Core string / boolean player fields
+  if (typeof p.clearanceLevel !== 'string') return false;
+  if (typeof p.isDisguised !== 'boolean' || typeof p.isWeaponDrawn !== 'boolean') return false;
+
+  // Core collection fields
+  if (!Array.isArray(p.inventory)) return false;
+  if (p.equippedWeapon !== null && (typeof p.equippedWeapon !== 'object' || p.equippedWeapon === null)) return false;
+
+  // Core top-level arrays
+  if (!Array.isArray(d.robots)) return false;
+  if (!Array.isArray(d.hazards)) return false;
+  if (!Array.isArray(d.npcs)) return false;
+  if (!Array.isArray(d.storyLogs)) return false;
+  if (!Array.isArray(d.missionObjectives)) return false;
+  if (!Array.isArray(d.exploredTiles)) return false;
+  if (!Array.isArray(d.groundItems)) return false;
+  if (d.pushableBlocks !== undefined && !Array.isArray(d.pushableBlocks)) return false;
+
+  return true;
+}
+
+export function validateSaveData(data: unknown): data is SaveData {
+  if (typeof data !== 'object' || data === null) return false;
+  const d = data as Record<string, unknown>;
+  if (typeof d.version !== 'number') return false;
+  if (typeof d.timestamp !== 'number') return false;
+  if (typeof d.language !== 'string') return false;
+  if (typeof d.sectorId !== 'string') return false;
+  if (typeof d.player !== 'object' || d.player === null) return false;
+  const p = d.player as Record<string, unknown>;
+  if (typeof p.x !== 'number' || typeof p.y !== 'number') return false;
+  if (typeof p.hp !== 'number' || typeof p.maxHp !== 'number') return false;
+  if (typeof p.energy !== 'number' || typeof p.maxEnergy !== 'number') return false;
+  if (typeof p.credits !== 'number') return false;
+  if (typeof p.clearanceLevel !== 'string') return false;
+  if (typeof p.isDisguised !== 'boolean' || typeof p.isWeaponDrawn !== 'boolean') return false;
+  if (!Array.isArray(p.inventory)) return false;
+  if (p.equippedWeapon !== null && (typeof p.equippedWeapon !== 'object' || p.equippedWeapon === null)) return false;
+  if (!Array.isArray(d.robots)) return false;
+  if (!Array.isArray(d.hazards)) return false;
+  if (!Array.isArray(d.npcs)) return false;
+  if (!Array.isArray(d.storyLogs)) return false;
+  if (!Array.isArray(d.missionObjectives)) return false;
+  if (!Array.isArray(d.exploredTiles)) return false;
+  if (!Array.isArray(d.groundItems)) return false;
+  if (d.pushableBlocks !== undefined && !Array.isArray(d.pushableBlocks)) return false;
+  return true;
+}
+
+export function migrateSaveData(raw: unknown): SaveData {
+  const defaults: SaveData = {
+    version: 1,
+    timestamp: Date.now(),
+    language: 'zh',
+    sectorId: 'sector-1',
+    checkInAlertActive: false,
+    securityLevel: 'CLEAR',
+    ramenQuestComplete: false,
+    synthwaveTapeActive: false,
+    graffitiMuralComplete: false,
+    poetryQuestComplete: false,
+    isGearConfiscated: false,
+    confiscatedGear: null,
+    isCitadelHordeActive: false,
+    player: {
+      x: 0,
+      y: 0,
+      hp: 100,
+      maxHp: 100,
+      energy: 100,
+      maxEnergy: 100,
+      credits: 0,
+      clearanceLevel: 'CLEAR',
+      isDisguised: false,
+      isWeaponDrawn: false,
+      consumables: { medkits: 0, batteries: 0, empGrenades: 0 },
+      augments: {},
+      weapons: [],
+      equippedWeapon: null,
+      inventory: [],
+      level: 1,
+      exp: 0,
+      expToNext: 100,
+      skillPoints: 0,
+      checkInTimer: 100,
+      checkInMaxTimer: 100,
+      critChance: 0,
+      isCollarDisarmed: false,
+    },
+    robots: [],
+    hazards: [],
+    npcs: [],
+    storyLogs: [],
+    missionObjectives: [],
+    exploredTiles: [],
+    groundItems: [],
+    pushableBlocks: [],
+  };
+
+  if (typeof raw !== 'object' || raw === null) return defaults;
+  const r = raw as Record<string, unknown>;
+
+  const migrated: SaveData = {
+    version: typeof r.version === 'number' ? r.version : 1,
+    timestamp: typeof r.timestamp === 'number' ? r.timestamp : Date.now(),
+    language: (r.language === 'en' || r.language === 'zh') ? r.language : 'zh',
+    sectorId: typeof r.sectorId === 'string' ? r.sectorId : 'sector-1',
+    checkInAlertActive: typeof r.checkInAlertActive === 'boolean' ? r.checkInAlertActive : false,
+    securityLevel: typeof r.securityLevel === 'string' ? r.securityLevel : 'CLEAR',
+    ramenQuestComplete: typeof r.ramenQuestComplete === 'boolean' ? r.ramenQuestComplete : false,
+    synthwaveTapeActive: typeof r.synthwaveTapeActive === 'boolean' ? r.synthwaveTapeActive : false,
+    graffitiMuralComplete: typeof r.graffitiMuralComplete === 'boolean' ? r.graffitiMuralComplete : false,
+    poetryQuestComplete: typeof r.poetryQuestComplete === 'boolean' ? r.poetryQuestComplete : false,
+    isGearConfiscated: typeof r.isGearConfiscated === 'boolean' ? r.isGearConfiscated : false,
+    confiscatedGear: (r.confiscatedGear && typeof r.confiscatedGear === 'object') ? r.confiscatedGear as ConfiscatedGear : null,
+    isCitadelHordeActive: typeof r.isCitadelHordeActive === 'boolean' ? r.isCitadelHordeActive : false,
+    player: { ...defaults.player },
+    robots: Array.isArray(r.robots) ? r.robots as SaveData['robots'] : [],
+    hazards: Array.isArray(r.hazards) ? r.hazards as Hazard[] : [],
+    npcs: Array.isArray(r.npcs) ? r.npcs as SaveData['npcs'] : [],
+    storyLogs: Array.isArray(r.storyLogs) ? r.storyLogs as SaveData['storyLogs'] : [],
+    missionObjectives: Array.isArray(r.missionObjectives) ? r.missionObjectives as SaveData['missionObjectives'] : [],
+    exploredTiles: Array.isArray(r.exploredTiles) ? r.exploredTiles as string[] : [],
+    groundItems: Array.isArray(r.groundItems) ? r.groundItems as GroundItem[] : [],
+    pushableBlocks: Array.isArray(r.pushableBlocks) ? r.pushableBlocks as PushableBlock[] : [],
+  };
+
+  if (typeof r.player === 'object' && r.player !== null) {
+    const p = r.player as Record<string, unknown>;
+    const mp = migrated.player;
+    if (typeof p.x === 'number') mp.x = p.x;
+    if (typeof p.y === 'number') mp.y = p.y;
+    if (typeof p.hp === 'number') mp.hp = p.hp;
+    if (typeof p.maxHp === 'number') mp.maxHp = p.maxHp;
+    if (typeof p.energy === 'number') mp.energy = p.energy;
+    if (typeof p.maxEnergy === 'number') mp.maxEnergy = p.maxEnergy;
+    if (typeof p.credits === 'number') mp.credits = p.credits;
+    if (typeof p.clearanceLevel === 'string') mp.clearanceLevel = p.clearanceLevel as SecurityLevel;
+    if (typeof p.isDisguised === 'boolean') mp.isDisguised = p.isDisguised;
+    if (typeof p.isWeaponDrawn === 'boolean') mp.isWeaponDrawn = p.isWeaponDrawn;
+    if (p.consumables && typeof p.consumables === 'object') mp.consumables = p.consumables as SaveData['player']['consumables'];
+    if (p.augments && typeof p.augments === 'object') mp.augments = p.augments as Record<string, boolean>;
+    if (Array.isArray(p.weapons)) mp.weapons = p.weapons as Item[];
+    if (p.equippedWeapon === null || (typeof p.equippedWeapon === 'object' && p.equippedWeapon !== null)) mp.equippedWeapon = p.equippedWeapon as Item | null;
+    if (Array.isArray(p.inventory)) mp.inventory = p.inventory as Item[];
+    if (typeof p.level === 'number') mp.level = p.level;
+    if (typeof p.exp === 'number') mp.exp = p.exp;
+    if (typeof p.expToNext === 'number') mp.expToNext = p.expToNext;
+    if (typeof p.skillPoints === 'number') mp.skillPoints = p.skillPoints;
+    if (typeof p.checkInTimer === 'number') mp.checkInTimer = p.checkInTimer;
+    if (typeof p.checkInMaxTimer === 'number') mp.checkInMaxTimer = p.checkInMaxTimer;
+    if (typeof p.critChance === 'number') mp.critChance = p.critChance;
+    if (typeof p.isCollarDisarmed === 'boolean') mp.isCollarDisarmed = p.isCollarDisarmed;
+  }
+
+  return migrated;
+}
 
 export function hasSavedGame(): boolean {
   try {
@@ -157,7 +337,7 @@ export function saveGameState(game: any): boolean {
       })),
       exploredTiles: Array.from(game.exploredTiles || []),
       groundItems: game.groundItems || [],
-      pushableBlocks: (game.pushableBlocks || []).map((b: any) => ({
+      pushableBlocks: (game.pushableBlocks || []).map((b: PushableBlock) => ({
         ...b,
         secretDoor: b.secretDoor ? { ...b.secretDoor } : undefined,
       })),
@@ -185,15 +365,22 @@ export function saveGameState(game: any): boolean {
 
 export function loadGameState(game: any): boolean {
   try {
-    let data: SaveData | null = null;
+    let raw: unknown = null;
     try {
       if (typeof localStorage !== 'undefined') {
         const str = localStorage.getItem('metropolis_2400_save');
-        if (str) data = JSON.parse(str);
+        if (str) raw = JSON.parse(str);
       }
     } catch {}
-    if (!data) data = memoryBackup;
-    if (!data) return false;
+    if (!raw) raw = memoryBackup;
+    if (!raw) return false;
+
+    // Reject malformed core saves before migration so no game state is mutated.
+    if (!isCoreSaveShape(raw)) return false;
+
+    const migrated = migrateSaveData(raw);
+    if (!validateSaveData(migrated)) return false;
+    const data: SaveData = migrated;
 
     // Restore only known maps; malformed legacy saves must not desynchronize map and player state.
     const validSectorIds = new Set(['sector-1', 'sector-2', 'sub-sector-0', 'sector-citadel']);
