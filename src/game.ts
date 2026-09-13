@@ -10,6 +10,7 @@ import { getSector1NPCs, getSector2NPCs, getSectorStoryLogs } from './dialogues'
 import { createBossExterminator, isBossRobot, applyBossDamage } from './boss';
 import { createBreachSession, moveBreachCursor, selectBreachCell, type BreachSession } from './breachProtocol';
 import { handleSpecialInput } from './inputHandler';
+import { InputRouter } from './inputRouter';
 import { bgm } from './music';
 import { executeDetentionRelocation, startDefeatCutscene, updateDefeatCutscene } from './defeatCutscene';
 import { triggerCitadelHorde as _triggerCitadelHorde, updateCitadelHorde as _updateCitadelHorde } from './citadelHorde';
@@ -107,6 +108,7 @@ export class GameEngine {
   private lastBroadcastTurn: number = 0;
   private lastBroadcastIndex: number = 0;
   private broadcastQueue: string[] = [];
+  private inputRouter: InputRouter;
   checkInAlertActive: boolean = false;
   private lastSectorId: string = '';
   private lastLandmarkKey: string = '';
@@ -159,6 +161,7 @@ export class GameEngine {
     this.startAnimationLoop();
     this.setupPointerEvents();
     this.player.checkInTimer = 100;
+    this.inputRouter = new InputRouter(this);
   }
 
   private setupPointerEvents(): void {
@@ -1027,1017 +1030,7 @@ export class GameEngine {
   }
 
   handleKeyDown(key: string): void {
-    if (this.defeatCutscene) {
-      if (key === 'Escape' || key === 'Esc' || key === ' ' || key === 'Space' || key === 'Enter') {
-        this.executeDetentionRelocation(true);
-        this.defeatCutscene = null;
-        this.render();
-        return;
-      }
-      return;
-    }
-    if (this.activeBreachSession) {
-      if (key === 'Escape' || key === 'Esc') {
-        this.activeBreachSession = null;
-        soundFX.terminal();
-        this.render();
-      }
-      return;
-    }
-    if (this.activeTerminal) {
-      this.handleTerminalInput(key);
-      return;
-    }
-    if (this.isBigMapOpen && key === '0' && !this.activeTerminal) {
-      this.activeWaypoint = null;
-      soundFX.terminal();
-      this.render();
-      return;
-    }
-    if ((key === '0' || key === 'F10') && !this.activeTerminal) {
-      this.cycleResolution();
-      return;
-    }
-    if (this.isTitleScreen) {
-      if (key === 'ArrowUp' || key === 'w' || key === 'W') {
-        this.titleMenuIndex = (this.titleMenuIndex - 1 + 6) % 6;
-        this.render();
-        soundFX.terminal();
-        return;
-      }
-      if (key === 'ArrowDown' || key === 's' || key === 'S') {
-        this.titleMenuIndex = (this.titleMenuIndex + 1) % 6;
-        this.render();
-        soundFX.terminal();
-        return;
-      }
-      if (key === 'Enter' || key === ' ' || key === 'Space') {
-        this.executeTitleMenuItem(this.titleMenuIndex);
-        return;
-      }
-      if (key === 'n' || key === 'N') {
-        this.isTitleScreen = false;
-        soundFX.pickup();
-        const msg = this.language === 'zh' ? '任務啟動！' : 'MISSION START!';
-        this.pushFloatingText(this.player.x, this.player.y, msg, '#00ffcc');
-        this.render();
-        return;
-      }
-      if (key === 'l' || key === 'L') {
-        if (this.loadGame()) {
-          this.isTitleScreen = false;
-        }
-        return;
-      }
-      if (key === 'z' || key === 'Z') {
-        this.toggleLanguage();
-        return;
-      }
-      if (key === 'h' || key === 'H') {
-        this.isManualOpen = !this.isManualOpen;
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-      if (key === 'b' || key === 'B') {
-        const on = bgm.toggle();
-        const msg = on
-          ? (this.language === 'zh' ? '合成器音樂：已開啟' : 'SYNTH BGM: ONLINE')
-          : (this.language === 'zh' ? '合成器音樂：已靜音' : 'SYNTH BGM: MUTED');
-        this.pushFloatingText(this.player.x, this.player.y, msg, on ? '#00ffaa' : '#888888');
-        this.pushMessage(msg, 'info');
-        this.render();
-        return;
-      }
-      if (key === '0' || key === 'F10') {
-        this.cycleResolution();
-        return;
-      }
-      return;
-    }
-
-    if (handleSpecialInput(this, key)) return;
-    if (this.isBigMapOpen) {
-      if (key === 'Escape' || key === 'Esc' || key === 'Tab' || key === 'tab' || key === ' ' || key === 'Space' || key === 'Enter' || key === 'k' || key === 'K') {
-        this.isBigMapOpen = false;
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-      if (key === 'x' || key === 'X') {
-        this.toggleFullMap();
-        return;
-      }
-      if (key === 'v' || key === 'V') {
-        this.toggleOmniVision();
-        return;
-      }
-      if (key === 's' || key === 'S') {
-        const sectors = ['current', 'sector-1', 'sector-2', 'sub-sector-0', 'sector-citadel', 'all'];
-        const idx = sectors.indexOf(this.bigMapSelectedSector);
-        this.bigMapSelectedSector = sectors[(idx + 1) % sectors.length];
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-      if (key === 'g' || key === 'G') {
-        this.bigMapSelectedSector = this.bigMapSelectedSector === 'all' ? 'current' : 'all';
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-      if (key >= '1' && key <= '5') {
-        const waypoints: Record<string, { x: number; y: number; name: string; color: string }> = {
-          '1': { x: 4, y: 24, name: 'Rebel Safehouse', color: '#00ff88' },
-          '2': { x: 20, y: 12, name: 'Cyber Park', color: '#00f0ff' },
-          '3': { x: 12, y: 22, name: 'Neon Market', color: '#ff7700' },
-          '4': { x: 28, y: 14, name: 'Checkpoint', color: '#ff2a4b' },
-          '5': { x: 36, y: 26, name: 'Elevator', color: '#ffea00' },
-        };
-        this.activeWaypoint = waypoints[key];
-        soundFX.pickup();
-        this.render();
-        return;
-      }
-      if (key === '0') {
-        this.activeWaypoint = null;
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-      return;
-    }
-
-    // 遊戲結束或勝利時按 R 重新開始
-    if (key === 'r' || key === 'R') {
-      if (!this.player.isAlive || this.victory) {
-        this.restartGame();
-        return;
-      }
-    }
-
-    if (!this.player.isAlive) {
-      return;
-    }
-
-    // 故事數據檔案閱讀器模式 (Story Log Reader Mode)
-    if (this.activeStoryLog) {
-      if (key === 'Escape' || key === 'Esc' || key === 'Enter' || key === ' ' || key === 'Space') {
-        this.activeStoryLog = null;
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-      if (key === 'z' || key === 'Z') {
-        this.toggleLanguage();
-        return;
-      }
-      return;
-    }
-
-    // 反抗軍資料庫檔案模式 (Story Archive Modal Mode)
-    if (this.isStoryArchiveOpen) {
-      if (key === 'Escape' || key === 'Esc' || key === 'l' || key === 'L') {
-        this.isStoryArchiveOpen = false;
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-      if (key === 'z' || key === 'Z') {
-        this.toggleLanguage();
-        return;
-      }
-      let cleanKey = key.replace(/^(Digit|Numpad)/, '');
-      const num = parseInt(cleanKey, 10);
-      if (!isNaN(num) && num >= 1 && num <= this.storyLogs.length) {
-        this.storyArchiveSelectedIndex = num - 1;
-        this.openStoryLog(this.storyLogs[num - 1]);
-        return;
-      }
-      if (['ArrowUp', 'w', 'W'].includes(key)) {
-        this.storyArchiveSelectedIndex = (this.storyArchiveSelectedIndex - 1 + this.storyLogs.length) % this.storyLogs.length;
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-      if (['ArrowDown', 's', 'S'].includes(key)) {
-        this.storyArchiveSelectedIndex = (this.storyArchiveSelectedIndex + 1) % this.storyLogs.length;
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-      if (['Enter', ' ', 'Space'].includes(key)) {
-        const log = this.storyLogs[this.storyArchiveSelectedIndex];
-        if (log) {
-          this.openStoryLog(log);
-          return;
-        }
-      }
-      return;
-    }
-
-    // 義體商店模式 (Augment Shop Modal Mode)
-    if (this.isAugmentShopOpen) {
-      if (key === 'Escape' || key === 'Esc' || key === 'u' || key === 'U') {
-        this.isAugmentShopOpen = false;
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-      if (key === '1') { this.buyAugment('DERMAL_ARMOR'); return; }
-      if (key === '2') { this.buyAugment('OPTIC_HUD'); return; }
-      if (key === '3') { this.buyAugment('REFLEX_BOOSTER'); return; }
-      if (key === '4') { this.buyAugment('POWER_CORE'); return; }
-      if (key === '5') { this.buyConsumableItem('MEDKIT', 40); return; }
-      if (key === '6') { this.buyConsumableItem('BATTERY', 35); return; }
-      if (key === '7') { this.buyConsumableItem('EMP_GRENADE', 70); return; }
-      if (key === '8') { this.buyWeaponOverclock(150); return; }
-      if (key === '9') { this.bribeSecurityNetwork(100); return; }
-      return;
-    }
-
-    // 背包與裝備視窗模式 (Inventory Modal Mode)
-    if (this.isInventoryOpen) {
-      if (key === 'Escape' || key === 'Esc' || key === 'i' || key === 'I') {
-        this.isInventoryOpen = false;
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-      if (key === '1') {
-        this.useMedkit();
-        return;
-      }
-      if (key === '2') {
-        this.useBattery();
-        return;
-      }
-      if (key === '3') {
-        this.useEMPGrenade();
-        return;
-      }
-      if (key === 'q' || key === 'Q') {
-        const weapon = cycleWeapon(this.player);
-        soundFX.terminal();
-        const isSup = weapon.isSuppressed;
-        const isZh = this.language === 'zh';
-        const wName = isZh ? (weapon.nameZh || weapon.name) : weapon.name;
-        this.pushFloatingText(this.player.x, this.player.y, wName, isSup ? '#00ff88' : '#00f0ff');
-        this.pushMessage(
-          isZh
-            ? '【武器切換】已裝備 [' + wName + ']（威力: ' + weapon.power + ' DMG，耗能: ' + weapon.energyCost + ' EN' + (isSup ? ' | 靜音消音' : '') + '）。'
-            : 'ARMAMENT SWITCH: Equipped [' + weapon.name + '] (' + weapon.power + ' DMG, ' + weapon.energyCost + ' EN' + (isSup ? ' | SUPPRESSED' : '') + ').'
-        , 'info');
-        this.render();
-        return;
-      }
-      if (key === 'f' || key === 'F') {
-        const drawn = toggleWeaponDraw(this.player);
-        soundFX.laser();
-        this.pushMessage(
-          drawn ? 'Blaster drawn! Security will treat operative as hostile.' : 'Blaster holstered.',
-          drawn ? 'warning' : 'info'
-        );
-        this.render();
-        return;
-      }
-      return;
-    }
-
-    // 任務日誌情報視窗模式 (Mission Log Modal Mode)
-    if (this.isMissionLogOpen) {
-      if (key === 'Escape' || key === 'Esc' || key === 'm' || key === 'M') {
-        this.isMissionLogOpen = false;
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-      return;
-    }
-
-    // 居民對話模式 (Dialogue Session)
-    if (this.activeDialogue) {
-      if (key === 'Escape' || key === 'Esc') {
-        this.activeDialogue = null;
-        soundFX.terminal();
-        this.render();
-        return;
-      }
-
-      if (key === ' ' || key === 'Enter' || key === 'Space') {
-        const npc = this.activeDialogue.npc;
-        this.checkSideQuestDiscovery(npc.id);
-        const isZh = this.language === 'zh';
-        const zhDialogue = npc.dialogueZh;
-        const list = isZh && Array.isArray(zhDialogue) && zhDialogue.length > 0 ? zhDialogue : (npc.dialogue || []);
-        const nextIndex = this.activeDialogue.textIndex + 1;
-
-        // 檢查是否有尚未領取的任務獎勵
-        if (npc.questReward && !npc.rewardClaimed && nextIndex >= list.length - 1) {
-          npc.rewardClaimed = true;
-          const r = npc.questReward;
-          if (r.type === 'HEAL') {
-            this.player.hp = Math.min(this.player.maxHp, this.player.hp + r.amount);
-            this.pushFloatingText(npc.x, npc.y, '+' + r.amount + ' HP', '#00ff88');
-          } else if (r.type === 'ENERGY') {
-            this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + r.amount);
-            this.pushFloatingText(npc.x, npc.y, '+' + r.amount + ' EN', '#00f0ff');
-          } else if (r.type === 'CREDITS') {
-            this.player.credits += r.amount;
-            this.pushFloatingText(npc.x, npc.y, '+' + r.amount + ' CR', '#ffea00');
-          } else if (r.type === 'ITEM') {
-            let inventory = this.player.inventory;
-            if (!Array.isArray(inventory)) {
-              inventory = [];
-              this.player.inventory = inventory;
-            }
-            if (!inventory.some((it: any) => it?.id === r.item.id)) {
-              inventory.push(r.item);
-            }
-            this.pushFloatingText(npc.x, npc.y, r.item.name, '#00f0ff');
-          }
-          soundFX.pickup();
-          this.pushMessage(r.message, 'success');
-
-          const safehouseObj = this.missionObjectives.find((o) => o.id === 'obj-safehouse');
-          if (safehouseObj && !safehouseObj.completed) {
-            safehouseObj.completed = true;
-            this.pushMessage(this.language === 'zh' ? '【任務更新】安全屋偵察整裝任務完成！' : 'MISSION UPDATE: Safehouse Recon objective complete!', 'success');
-          }
-        }
-
-        if (npc.id === 'npc-hiro' && nextIndex >= list.length - 1) {
-          const inventory = this.player.inventory;
-          if (Array.isArray(inventory)) {
-            const recipeIndex = inventory.findIndex((it: any) => it?.id === 'item-ramen-recipe');
-            if (recipeIndex !== -1) {
-              inventory.splice(recipeIndex, 1);
-              this.player.maxHp += 50;
-              this.player.hp = this.player.maxHp;
-              soundFX.pickup();
-              this.pushFloatingText(this.player.x, this.player.y, 'MAX HP +50!', '#00ff88');
-              this.pushMessage(
-                isZh
-                  ? 'Hiro: 多謝你幫我找回拉麵食譜！我的最大生命值提升了！'
-                  : 'Hiro: Thanks for recovering my ramen recipe! My max HP increased!',
-                'success'
-              );
-              this.ramenQuestComplete = true;
-              this.completeSideQuest('side-hiro');
-              this.updateNPCDialogues();
-            }
-          }
-        }
-
-        if (npc.id === 'npc-elena' && nextIndex >= list.length - 1) {
-          const inventory = this.player.inventory;
-          if (Array.isArray(inventory)) {
-            const tapeIndex = inventory.findIndex((it: any) => it?.id === 'item-synth-tape');
-            if (tapeIndex !== -1) {
-              inventory.splice(tapeIndex, 1);
-              this.player.maxEnergy += 20;
-              this.player.energy = this.player.maxEnergy;
-              soundFX.pickup();
-              this.pushFloatingText(this.player.x, this.player.y, 'MAX EN +20!', '#00f0ff');
-              this.pushMessage(
-                isZh
-                  ? 'Elena: 謝謝你，特工！這捲母帶的類比頻率喚醒了神經共鳴，最大能量提升了！'
-                  : 'Elena: Thank you, operative! The analog frequency of this master tape awakened neural resonance. Max energy increased!',
-                'success'
-              );
-              bgm.setSynthwaveTapeMode(true);
-              this.synthwaveTapeActive = true;
-              this.completeSideQuest('side-elena');
-              this.updateNPCDialogues();
-            }
-          }
-        }
-
-        if (npc.id === 'npc-zero-one') {
-          const inventory = this.player.inventory;
-          if (Array.isArray(inventory)) {
-            const hasCore = inventory.some((it: any) => it?.id === 'item-quantum-core');
-            const hasChip = inventory.some((it: any) => it?.id === 'item-matrix-chip');
-            const hasWeapon = inventory.some((it: any) => it?.id === 'quantum-annihilator');
-            
-            if (hasCore && hasChip && !hasWeapon) {
-              this.player.inventory = inventory.filter((it: any) => it?.id !== 'item-quantum-core' && it?.id !== 'item-matrix-chip');
-
-              const superWeapon = createQuantumAnnihilator();
-              this.player.inventory.push(superWeapon);
-              
-              let weapons = this.player.weapons;
-              if (!Array.isArray(weapons)) {
-                weapons = [];
-                this.player.weapons = weapons;
-              }
-              weapons.push(superWeapon);
-              this.player.equippedWeapon = superWeapon;
-
-              this.player.credits += 100;
-              this.gainExp(150);
-
-              const superObj = this.missionObjectives.find((o) => o.id === 'obj-superweapon');
-              if (superObj && !superObj.completed) {
-                superObj.completed = true;
-                this.pushMessage(this.language === 'zh' ? '【任務更新】奇點計畫：量子殲滅砲鍛造完成！' : 'MISSION UPDATE: Project Singularity objective complete!', 'success');
-              }
-
-              soundFX.victory();
-              this.pushFloatingText(this.player.x, this.player.y, 'QUANTUM ANNIHILATOR FORGED!', '#b388ff');
-              this.pushMessage(
-                isZh
-                  ? 'Zero-One: 量子殲滅重砲組裝完成！這將改變戰局。'
-                  : 'Zero-One: Quantum Annihilator forged! This will change the game.',
-                'success'
-              );
-              this.zeroOneWeaponForged = true;
-              this.updateNPCDialogues();
-            }
-          }
-        }
-
-        if (npc.id === 'npc-vesper') {
-          const inventory = this.player.inventory;
-          if (Array.isArray(inventory)) {
-            const aerosolIndex = inventory.findIndex((it: any) => it?.id === 'item-chromatic-aerosol');
-            if (aerosolIndex !== -1 && !this.graffitiMuralComplete) {
-              inventory.splice(aerosolIndex, 1);
-              this.graffitiMuralComplete = true;
-              const p = this.player;
-              if (!p.augments) p.augments = {};
-              p.augments['GRAFFITI_POWER_BOOST'] = true;
-              if (!p.graffitiBuffApplied) {
-                if (this.player.equippedWeapon) {
-                  this.player.equippedWeapon.power = (this.player.equippedWeapon.power || 0) + 5;
-                }
-                p.critChance = (p.critChance || 0) + 0.15;
-                p.graffitiBuffApplied = true;
-              }
-              soundFX.pickup();
-              this.pushFloatingText(this.player.x, this.player.y, 'MURAL COMPLETE!', '#ff00ff');
-              this.pushMessage(
-                isZh
-                  ? 'Vesper: 感謝你，雷文。這面牆現在有了靈魂。你的攻擊力與暴擊率提升了！'
-                  : 'Vesper: Thank you, Raven. This wall now has a soul. Your attack power and crit chance increased!',
-                'success'
-              );
-              this.completeSideQuest('side-vesper');
-              this.updateNPCDialogues();
-            }
-          }
-        }
-
-        if (npc.id === 'npc-archie') {
-          const inventory = this.player.inventory;
-          if (Array.isArray(inventory)) {
-            const folioIndex = inventory.findIndex((it: any) => it?.id === 'item-unburnt-folio');
-            if (folioIndex !== -1 && !this.poetryQuestComplete) {
-              inventory.splice(folioIndex, 1);
-              this.poetryQuestComplete = true;
-              const p = this.player;
-              p.checkInMaxTimer = (p.checkInMaxTimer || 100) + 25;
-              p.checkInTimer = p.checkInMaxTimer;
-              soundFX.pickup();
-              this.pushFloatingText(this.player.x, this.player.y, 'POETRY RESTORED!', '#ffea00');
-              this.pushMessage(
-                isZh
-                  ? 'Archie: 多謝你幫我找回詩集！我的簽到時間上限提升了 25 步，計時器已重置。'
-                  : 'Archie: Thanks for recovering my poetry folio! My check-in timer limit increased by 25 steps and the timer has been reset.',
-                'success'
-              );
-              this.completeSideQuest('side-archie');
-              this.updateNPCDialogues();
-            }
-          }
-        }
-
-        if (nextIndex < list.length) {
-          this.activeDialogue.textIndex = nextIndex;
-          soundFX.terminal();
-        } else {
-          this.activeDialogue = null;
-          soundFX.pickup();
-        }
-
-        this.render();
-        return;
-      }
-
-      return;
-    }
-
-    let dx = 0;
-    let dy = 0;
-
-    if (key === 'ArrowUp' || key === 'w' || key === 'W') {
-      dy = -1;
-      this.player.facing = 'up';
-    } else if (key === 'ArrowDown' || key === 's' || key === 'S') {
-      dy = 1;
-      this.player.facing = 'down';
-    } else if (key === 'ArrowLeft' || key === 'a' || key === 'A') {
-      dx = -1;
-      this.player.facing = 'left';
-    } else if (key === 'ArrowRight' || key === 'd' || key === 'D') {
-      dx = 1;
-      this.player.facing = 'right';
-    } else if (key === 'f' || key === 'F') {
-      const drawn = toggleWeaponDraw(this.player);
-      soundFX.laser();
-      if (drawn) {
-        this.pushMessage(
-          this.language === 'zh' 
-            ? '已拔槍！按 [空白鍵] 或 [方向鍵] 開火，[Q] 切換武器。' 
-            : 'Blaster drawn! Press [SPACE] or [ARROWS] to fire, [Q] to switch weapon.',
-          'warning'
-        );
-      } else {
-        this.pushMessage(
-          this.language === 'zh' ? '已收槍。' : 'Blaster holstered.',
-          'info'
-        );
-      }
-      this.tick();
-      return;
-    } else if (key === 'q' || key === 'Q') {
-      const weapon = cycleWeapon(this.player);
-      soundFX.terminal();
-      const isSup = weapon.isSuppressed;
-      const isZh = this.language === 'zh';
-      const wName = isZh ? (weapon.nameZh || weapon.name) : weapon.name;
-      this.pushFloatingText(this.player.x, this.player.y, wName, isSup ? '#00ff88' : '#00f0ff');
-      this.pushMessage(
-        isZh
-          ? '【武器切換】已裝備 [' + wName + ']（威力: ' + weapon.power + ' DMG，耗能: ' + weapon.energyCost + ' EN' + (isSup ? ' | 靜音消音' : '') + '）。'
-          : 'ARMAMENT SWITCH: Equipped [' + weapon.name + '] (' + weapon.power + ' DMG, ' + weapon.energyCost + ' EN' + (isSup ? ' | SUPPRESSED' : '') + ').'
-      , 'info');
-      this.render();
-      return;
-    } else if (key === 'c' || key === 'C') {
-      const active = toggleDisguise(this.player);
-      if (active) {
-        soundFX.pickup();
-        this.pushMessage('Holo-disguise activated.', 'info');
-      } else {
-        soundFX.powerDown();
-        this.pushMessage('Holo-disguise deactivated.', 'info');
-      }
-      this.tick();
-      return;
-    } else if (key === 'e' || key === 'E') {
-      // Check for pushable blocks with secret doors nearby
-      const dirs: [number, number][] = [[0, 1], [0, -1], [1, 0], [-1, 0]];
-      let foundBlock: PushableBlock | null = null;
-      for (const [ox, oy] of dirs) {
-        const tx = this.player.x + ox;
-        const ty = this.player.y + oy;
-        const block = this.pushableBlocks.find((b) => b.x === tx && b.y === ty && !b.revealed && b.secretDoor);
-        if (block) {
-          foundBlock = block;
-          break;
-        }
-      }
-
-      if (foundBlock) {
-        const moveDirs: [number, number][] = [[1, 0], [0, 1], [-1, 0], [0, -1]];
-        let moved = false;
-        for (const [mx, my] of moveDirs) {
-          const nx = foundBlock.x + mx;
-          const ny = foundBlock.y + my;
-          const mapWidth = Number(this.map.width) || 0;
-          const mapHeight = Number(this.map.height) || 0;
-          if (nx < 0 || nx >= mapWidth || ny < 0 || ny >= mapHeight) continue;
-          const targetTile = getTile(this.map, { x: nx, y: ny });
-          if (targetTile === undefined || !isWalkable(targetTile)) continue;
-          if (this.robots.some((r) => r.isAlive && r.x === nx && r.y === ny)) continue;
-          if (this.npcs.some((n) => n.isAlive && n.x === nx && n.y === ny)) continue;
-          if (this.pushableBlocks.some((b) => b !== foundBlock && b.x === nx && b.y === ny)) continue;
-
-          foundBlock.x = nx;
-          foundBlock.y = ny;
-          foundBlock.revealed = true;
-
-          if (foundBlock.secretDoor && foundBlock.secretDoor.revealedTile !== undefined) {
-            const mapData = this.map.tiles || this.map.grid;
-            if (Array.isArray(mapData)) {
-              const row = mapData[foundBlock.secretDoor.y];
-              if (Array.isArray(row)) {
-                row[foundBlock.secretDoor.x] = foundBlock.secretDoor.revealedTile;
-              }
-            }
-          }
-
-          soundFX.victory();
-          this.pushFloatingText(foundBlock.secretDoor?.x ?? foundBlock.x, foundBlock.secretDoor?.y ?? foundBlock.y, 'VENT OPEN!', '#00ff88');
-          this.pushMessage(
-            this.language === 'zh'
-              ? `【拆開柵板】你拆開了【${foundBlock.nameZh || foundBlock.name}】，顯現出通風暗門！`
-              : `[PRY OPEN] You pried open the [${foundBlock.name}], revealing the ventilation secret door!`,
-            'success'
-          );
-          this.gainExp(50, 'SECRET_DISCOVERY');
-          moved = true;
-          break;
-        }
-
-        if (moved) {
-          this.tick();
-          this.render();
-          return;
-        }
-      }
-
-      for (const [ox, oy] of dirs) {
-        const tx = this.player.x + ox;
-        const ty = this.player.y + oy;
-        if (toggleDoor(this.map, { x: tx, y: ty })) {
-          soundFX.door();
-          this.pushMessage('Airlock blast door cycled.', 'info');
-          this.tick();
-          return;
-        }
-      }
-      this.pushMessage('No blast door within reach.', 'warning');
-      this.render();
-      return;
-    } else if (key === 't' || key === 'T') {
-      // 優先檢查是否與相鄰居民交談
-      const dirs: [number, number][] = [[0, 0], [0, 1], [0, -1], [1, 0], [-1, 0]];
-      for (const [ox, oy] of dirs) {
-        const tx = this.player.x + ox;
-        const ty = this.player.y + oy;
-        const npc = this.npcs.find((n) => n.isAlive && n.x === tx && n.y === ty);
-        if (npc) {
-          soundFX.terminal();
-          this.updateNPCDialogues();
-          const dx = this.player.x - npc.x;
-          const dy = this.player.y - npc.y;
-          if (Math.abs(dx) > Math.abs(dy)) {
-            npc.facing = dx > 0 ? 'right' : 'left';
-          } else {
-            npc.facing = dy > 0 ? 'down' : 'up';
-          }
-          this.activeDialogue = { npc, textIndex: 0 };
-          this.checkSideQuestDiscovery(npc.id);
-          this.render();
-          return;
-        }
-      }
-
-      // 若無居民，檢查是否有終端機
-      for (const [ox, oy] of dirs) {
-        const tx = this.player.x + ox;
-        const ty = this.player.y + oy;
-        const terminal = this.findTerminalAt(tx, ty);
-        if (terminal) {
-          soundFX.terminal();
-          this.performCheckIn();
-          this.activeTerminal = new TerminalSession(terminal);
-          this.terminalInputBuffer = '';
-          this.activeTerminal.input = '';
-          this.pushMessage('Terminal interface accessed. Type HELP for commands.', 'info');
-          this.render();
-          return;
-        }
-      }
-
-      this.pushMessage('Nothing to interact with nearby.', 'warning');
-      this.render();
-      return;
-    } else if (key === 'i' || key === 'I') {
-      this.isInventoryOpen = true;
-      soundFX.terminal();
-      this.render();
-      return;
-    } else if (key === 'Tab' || key === 'tab' || key === 'k' || key === 'K') {
-      this.isBigMapOpen = true;
-      soundFX.terminal();
-      this.render();
-      return;
-    } else if (key === 'm' || key === 'M') {
-      this.isMissionLogOpen = true;
-      soundFX.terminal();
-      this.render();
-      return;
-    } else if (key === 'l' || key === 'L') {
-      this.isStoryArchiveOpen = true;
-      soundFX.terminal();
-      this.render();
-      return;
-    } else if (key === 'u' || key === 'U') {
-      this.isAugmentShopOpen = true;
-      soundFX.terminal();
-      this.render();
-      return;
-    } else if (key === 'z' || key === 'Z') {
-      this.toggleLanguage();
-      return;
-    } else if (key === '8' || key === 'F5') {
-      this.saveGame();
-      return;
-    } else if (key === '9' || key === 'F9') {
-      this.loadGame();
-      return;
-    } else if (key === '1') {
-      this.useMedkit();
-      return;
-    } else if (key === '2') {
-      this.useBattery();
-      return;
-    } else if (key === '3') {
-      this.useEMPGrenade();
-      return;
-    } else if (key === 'g' || key === 'G') {
-      this.checkItemPickup();
-      this.render();
-      return;
-    } else if (key === 'j' || key === 'J') {
-      this.performTacticalDash();
-      return;
-    } else if (key === ' ' || key === 'Enter' || key === '.') {
-      if (this.player.isWeaponDrawn) {
-        this.fireEquippedWeapon();
-        return;
-      }
-      this.tick();
-      return;
-    }
-
-    if (dx !== 0 || dy !== 0) {
-      const nx = this.player.x + dx;
-      const ny = this.player.y + dy;
-
-      // 檢查是否走向居民進行交談 (當收槍時直接觸發交談)
-      const targetNPC = this.npcs.find((n) => n.isAlive && n.x === nx && n.y === ny);
-      if (targetNPC) {
-        if (!this.player.isWeaponDrawn) {
-          soundFX.terminal();
-          this.updateNPCDialogues();
-          const dx = this.player.x - targetNPC.x;
-          const dy = this.player.y - targetNPC.y;
-          if (Math.abs(dx) > Math.abs(dy)) {
-            targetNPC.facing = dx > 0 ? 'right' : 'left';
-          } else {
-            targetNPC.facing = dy > 0 ? 'down' : 'up';
-          }
-          this.activeDialogue = { npc: targetNPC, textIndex: 0 };
-          this.checkSideQuestDiscovery(targetNPC.id);
-          this.render();
-          return;
-        } else {
-          this.pushMessage('Holster weapon [F] to speak with ' + targetNPC.name + '.', 'warning');
-          this.render();
-          return;
-        }
-      }
-
-      // 檢查是否拔槍射擊 (遠程或近戰雷射射擊)
-      if (this.player.isWeaponDrawn) {
-        // Check if there is a target in the direction
-        let hitRobot: Robot | null = null;
-        let hitCanister: Hazard | null = null;
-        let hitBlock: PushableBlock | null = null;
-        const maxRange = this.player.equippedWeapon?.range ?? 5;
-        for (let range = 1; range <= maxRange; range++) {
-          const tx = this.player.x + dx * range;
-          const ty = this.player.y + dy * range;
-          const tTile = getTile(this.map, { x: tx, y: ty });
-          const tName = String(tTile).toUpperCase();
-          if (tName === 'WALL' || tTile === 2) break;
-
-          const foundBlock = this.pushableBlocks.find((b) => b.x === tx && b.y === ty);
-          if (foundBlock) {
-            hitBlock = foundBlock;
-            break;
-          }
-
-          const found = this.robots.find((r) => r.isAlive && r.x === tx && r.y === ty);
-          if (found) {
-            hitRobot = found;
-            break;
-          }
-
-          const foundCanister = this.hazards.find((h) => !h.exploded && h.x === tx && h.y === ty);
-          if (foundCanister) {
-            hitCanister = foundCanister;
-            break;
-          }
-        }
-
-        if (hitRobot || hitCanister || hitBlock) {
-          this.fireEquippedWeapon({ dx, dy });
-          return;
-        }
-        
-        // No target in range, check if wall is blocking movement
-        const tile = getTile(this.map, { x: nx, y: ny });
-        if (tile && !isWalkable(tile)) {
-           // Fire at the wall
-           this.fireEquippedWeapon({ dx, dy });
-           return;
-        }
-      }
-
-      // 檢查是否走向可推動物體
-      const pushableBlock = this.pushableBlocks.find((b) => b.x === nx && b.y === ny);
-      if (pushableBlock) {
-        const bx = nx + dx;
-        const by = ny + dy;
-        const mapWidth = Number(this.map.width) || 0;
-        const mapHeight = Number(this.map.height) || 0;
-        const inBounds = bx >= 0 && bx < mapWidth && by >= 0 && by < mapHeight;
-        const targetTile = inBounds ? getTile(this.map, { x: bx, y: by }) : undefined;
-        const targetWalkable = targetTile !== undefined && isWalkable(targetTile);
-        const blockingRobot = this.robots.find((r) => r.isAlive && r.x === bx && r.y === by);
-        const blockingNPC = this.npcs.find((n) => n.isAlive && n.x === bx && n.y === by);
-        const blockingHazard = this.hazards.find((h) => !h.exploded && h.x === bx && h.y === by);
-        const blockingBlock = this.pushableBlocks.find((b) => b !== pushableBlock && b.x === bx && b.y === by);
-
-        // Special case: Detention Grate pushed Up from below — allow sliding right instead
-        let finalBx = bx;
-        let finalBy = by;
-        let allowPush = inBounds && targetWalkable && !blockingRobot && !blockingNPC && !blockingHazard && !blockingBlock;
-
-        if (pushableBlock.id === 'crate-detention-grate' && dx === 0 && dy === -1 && !allowPush) {
-          const altX = pushableBlock.x + 1;
-          const altY = pushableBlock.y;
-          const altInBounds = altX >= 0 && altX < mapWidth && altY >= 0 && altY < mapHeight;
-          const altTile = altInBounds ? getTile(this.map, { x: altX, y: altY }) : undefined;
-          const altWalkable = altTile !== undefined && isWalkable(altTile);
-          const altBlockingRobot = this.robots.find((r) => r.isAlive && r.x === altX && r.y === altY);
-          const altBlockingNPC = this.npcs.find((n) => n.isAlive && n.x === altX && n.y === altY);
-          const altBlockingBlock = this.pushableBlocks.find((b) => b !== pushableBlock && b.x === altX && b.y === altY);
-
-          if (altInBounds && altWalkable && !altBlockingRobot && !altBlockingNPC && !altBlockingBlock) {
-            finalBx = altX;
-            finalBy = altY;
-            allowPush = true;
-          }
-        }
-
-        if (allowPush) {
-          const oldX = pushableBlock.x;
-          const oldY = pushableBlock.y;
-          pushableBlock.x = finalBx;
-          pushableBlock.y = finalBy;
-          this.player.x = nx;
-          this.player.y = ny;
-          soundFX.door();
-          this.pushFloatingText(this.player.x, this.player.y, 'HEAVY PUSH', '#ffea00');
-          const isZh = this.language === 'zh';
-          let pushMsg = '';
-          if (pushableBlock.blockType === 'server_rack') {
-            pushMsg = isZh ? '伺服器機櫃發出電流聲，緩緩滑開。' : 'The server rack hums with static as it slides open.';
-          } else if (pushableBlock.blockType === 'crate') {
-            pushMsg = isZh ? '沉重的貨櫃發出金屬摩擦聲，被推開了一格。' : 'The heavy crate grinds against the floor as you push it.';
-          } else {
-            pushMsg = isZh ? '機械轟鳴聲中，厚重的牆體緩緩滑動。' : 'With a mechanical rumble, the heavy wall panel slides open.';
-          }
-          this.pushMessage(pushMsg, 'info');
-
-          if (pushableBlock.secretDoor && !pushableBlock.revealed && (pushableBlock.x !== oldX || pushableBlock.y !== oldY)) {
-            pushableBlock.revealed = true;
-            const sd = pushableBlock.secretDoor;
-            const mapData = this.map.tiles || this.map.grid;
-            if (Array.isArray(mapData)) {
-              const row = mapData[sd.y];
-              if (Array.isArray(row)) {
-                row[sd.x] = sd.revealedTile ?? 4;
-              }
-            }
-            soundFX.victory();
-            const tileSize = this.renderer.tileSize;
-            this.fx.spawnSparks(sd.x * tileSize + tileSize / 2, sd.y * tileSize + tileSize / 2, '#00ff88', 20);
-            this.fx.triggerShake(6);
-            this.pushFloatingText(sd.x, sd.y, 'SECRET REVEALED!', '#00ff88');
-            this.pushMessage(
-              isZh
-                ? '【發現暗門】移開' + (pushableBlock.nameZh || pushableBlock.name) + '後，顯現出一道隱密暗門！'
-                : '[SECRET REVEALED] Pushed ' + pushableBlock.name + ' to reveal a hidden door!',
-              'success'
-            );
-            this.gainExp(50, 'SECRET_DISCOVERY');
-          }
-
-          if (pushableBlock.secretSurprise && !pushableBlock.secretSurprise.claimed) {
-            pushableBlock.secretSurprise.claimed = true;
-            const surprise = pushableBlock.secretSurprise;
-            if (surprise.type === 'credits') {
-              const amt = surprise.amount || 0;
-              this.player.credits += amt;
-              this.pushFloatingText(this.player.x, this.player.y, `+${amt} CR`, '#ffea00');
-              soundFX.pickup();
-              this.pushMessage((isZh ? surprise.messageZh : surprise.messageEn) || (isZh ? '發現隱密物資！' : 'Discovered secret supplies!'), 'success');
-              this.gainExp(35, 'SECRET_CACHE');
-            } else if (surprise.type === 'energy') {
-              const amt = surprise.amount || 0;
-              this.player.energy = Math.min(this.player.maxEnergy, this.player.energy + amt);
-              this.pushFloatingText(this.player.x, this.player.y, `+${amt} EN`, '#00f0ff');
-              soundFX.pickup();
-              this.pushMessage((isZh ? surprise.messageZh : surprise.messageEn) || (isZh ? '發現隱密物資！' : 'Discovered secret supplies!'), 'success');
-              this.gainExp(35, 'SECRET_CACHE');
-            } else if (surprise.type === 'item' && surprise.item) {
-              this.groundItems.push({ ...surprise.item, x: oldX, y: oldY } as GroundItem);
-              this.pushFloatingText(oldX, oldY, surprise.item.name, '#00f0ff');
-              soundFX.pickup();
-              this.pushMessage(isZh ? '【發現物資】移開障礙物後，發現了隱藏物資！' : '[SUPPLY FOUND] Uncovered hidden supplies behind the block!', 'success');
-              this.gainExp(45, 'SECRET_CACHE');
-            }
-          }
-
-          this.handlePlayerStep();
-          this.checkItemPickup();
-          this.tick();
-          this.render();
-          return;
-        } else {
-          soundFX.hit();
-          this.pushMessage(this.language === 'zh' ? '此處牆體略有晃動，但後方受阻無法推動！' : 'This wall panel seems movable, but is blocked behind!', 'warning');
-          this.render();
-          return;
-        }
-      }
-
-      // 一般行走移動
-      const adjacentRobot = this.robots.find((r) => r.isAlive && r.x === nx && r.y === ny);
-      if (adjacentRobot) {
-        soundFX.hit();
-        this.pushMessage('Path blocked by security robot! Press F to draw weapon.', 'warning');
-        this.render();
-        return;
-      }
-
-      const tile = getTile(this.map, { x: nx, y: ny });
-      if (tile && isWalkable(tile)) {
-        this.player.x = nx;
-        this.player.y = ny;
-        soundFX.step();
-        this.handlePlayerStep();
-
-        // 自動拾取地面物資 (Auto-loot ground items)
-        this.checkItemPickup();
-
-        const standingTile = getTile(this.map, { x: nx, y: ny });
-        if (Number(standingTile) === 9 || String(standingTile).toUpperCase() === 'ELEVATOR') {
-          const nextSec = getNextSectorId(this.map.id ?? '', nx, ny);
-          this.switchSector(nextSec);
-          this.render();
-          return;
-        }
-
-        // 偽裝能量消耗
-        if (this.player.isDisguised) {
-          if (this.player.energy > 0) {
-            this.player.energy = Math.max(0, this.player.energy - 1);
-          } else {
-            this.player.isDisguised = false;
-            soundFX.powerDown();
-            this.pushMessage('Energy depleted! Holo-disguise collapsed!', 'danger');
-          }
-        }
-
-        this.tick();
-      } else if (tile === 3 || String(tile).toUpperCase() === 'DOOR_CLOSED') {
-        // Auto-open closed door when walking into it
-        if (toggleDoor(this.map, { x: nx, y: ny })) {
-          soundFX.door();
-          this.pushMessage('Airlock blast door cycled open.', 'info');
-          this.tick();
-        } else {
-          this.pushMessage('Blast door is locked. Use terminal to unlock.', 'warning');
-          this.render();
-        }
-        return;
-      } else if (tile === 5 || String(tile).toUpperCase() === 'FORCEFIELD') {
-        const isZh = this.language === 'zh';
-        const sectorId = this.map?.id || '';
-        let msg = '';
-        let floatText = '';
-        if (sectorId === 'sector-2') {
-          msg = isZh 
-            ? '⚡ 電漿力場阻擋！請前往北側機房終端機 [15, 05] 輸入 OVERRIDE 關閉力場。' 
-            : '⚡ PLASMA FORCEFIELD BLOCKING! Go to North Server Room Terminal [15, 05] and type OVERRIDE to disable.';
-          floatText = isZh ? '⚡ 力場阻擋 ⚡' : '⚡ FORCEFIELD ⚡';
-        } else if (sectorId === 'sector-1') {
-          msg = isZh 
-            ? '⚡ 電漿力場阻擋！請前往檢查哨終端機 [26, 05] 輸入 OVERRIDE 關閉力場。' 
-            : '⚡ PLASMA FORCEFIELD BLOCKING! Go to Checkpoint Terminal [26, 05] and type OVERRIDE to disable.';
-          floatText = isZh ? '⚡ 力場阻擋 ⚡' : '⚡ FORCEFIELD ⚡';
-        } else {
-          msg = isZh ? '⚡ 電漿力場阻擋！' : '⚡ PLASMA FORCEFIELD BLOCKING!';
-          floatText = isZh ? '⚡ 力場 ⚡' : '⚡ FORCEFIELD ⚡';
-        }
-        this.pushMessage(msg, 'warning');
-        this.pushFloatingText(nx, ny, floatText, '#ff2a4b');
-        this.render();
-        return;
-      } else {
-        this.pushMessage('Path blocked.', 'warning');
-        this.render();
-        return;
-      }
-    }
+    this.inputRouter.handleKeyDown(key);
   }
 
   tick(): void {
@@ -2200,7 +1193,7 @@ export class GameEngine {
     this.laserBeams = this.laserBeams.filter((b) => !b.createdAt || now - b.createdAt < (b.duration || 350));
   }
 
-  private useMedkit(): void {
+  private useMedkitInternal(): void {
     if ((this.player.consumables?.medkits ?? 0) > 0) {
       if (this.player.hp >= this.player.maxHp) {
         this.pushMessage('HP is already at maximum capacity.', 'warning');
@@ -2226,7 +1219,11 @@ export class GameEngine {
     }
   }
 
-  private useBattery(): void {
+  useMedkit(): void {
+    this.useMedkitInternal();
+  }
+
+  private useBatteryInternal(): void {
     if ((this.player.consumables?.batteries ?? 0) > 0) {
       if (this.player.energy >= this.player.maxEnergy) {
         this.pushMessage('Energy capacitors are already fully charged.', 'warning');
@@ -2252,7 +1249,11 @@ export class GameEngine {
     }
   }
 
-  private useEMPGrenade(): void {
+  useBattery(): void {
+    this.useBatteryInternal();
+  }
+
+  private useEMPGrenadeInternal(): void {
     if ((this.player.consumables?.empGrenades ?? 0) > 0) {
       this.player.consumables!.empGrenades -= 1;
       soundFX.emp();
@@ -2300,7 +1301,11 @@ export class GameEngine {
     }
   }
 
-  private buyAugment(augmentId: string): void {
+  useEMPGrenade(): void {
+    this.useEMPGrenadeInternal();
+  }
+
+  private buyAugmentInternal(augmentId: string): void {
     const success = installAugment(this.player, augmentId);
     if (success) {
       soundFX.upgrade();
@@ -2315,6 +1320,10 @@ export class GameEngine {
       }
     }
     this.render();
+  }
+
+  buyAugment(augmentId: string): void {
+    this.buyAugmentInternal(augmentId);
   }
 
   buyConsumableItem(type: 'MEDKIT' | 'BATTERY' | 'EMP_GRENADE', cost: number): boolean {
@@ -2417,7 +1426,7 @@ export class GameEngine {
 
   handlePlayerDefeat(instant: boolean = (typeof window === 'undefined')): void {
     if (instant) {
-      this.executeDetentionRelocation(true);
+      this.executeDetentionRelocationInternal(true);
       return;
     }
     if (this.defeatCutscene) {
@@ -2426,8 +1435,12 @@ export class GameEngine {
     this.startDefeatCutscene();
   }
 
-  private executeDetentionRelocation(showMessages: boolean = true): void {
+  private executeDetentionRelocationInternal(showMessages: boolean = true): void {
     executeDetentionRelocation(this, showMessages);
+  }
+
+  executeDetentionRelocation(showMessages?: boolean): void {
+    this.executeDetentionRelocationInternal(showMessages ?? true);
   }
 
   startDefeatCutscene(): void {
@@ -2516,7 +1529,7 @@ export class GameEngine {
     }
   }
 
-  private checkItemPickup(): void {
+  private checkItemPickupInternal(): void {
     const itemIndex = this.groundItems.findIndex((it) => it.x === this.player.x && it.y === this.player.y);
     if (itemIndex !== -1) {
       const item = this.groundItems.splice(itemIndex, 1)[0];
@@ -2667,6 +1680,10 @@ export class GameEngine {
     }
   }
 
+  checkItemPickup(): void {
+    this.checkItemPickupInternal();
+  }
+
   openStoryLog(selected: StoryLog): void {
     if (selected && selected.read) {
       this.activeStoryLog = selected;
@@ -2757,7 +1774,7 @@ export class GameEngine {
     }
   }
 
-  private completeSideQuest(questId: string): void {
+  private completeSideQuestInternal(questId: string): void {
     const quest = this.missionObjectives.find((o) => o.id === questId);
     if (quest && !quest.completed) {
       quest.completed = true;
@@ -2778,6 +1795,10 @@ export class GameEngine {
       );
       this.render();
     }
+  }
+
+  completeSideQuest(questId: string): void {
+    this.completeSideQuestInternal(questId);
   }
 
   disarmCollar(): void {
@@ -2861,7 +1882,7 @@ export class GameEngine {
       isConveyorTile: (x, y) => this.isConveyorTile(x, y),
       getDirection: (x, y) => this.getConveyorDirection(x, y),
       isWalkableAt: (x, y) => { const tile = getTile(this.map, { x, y }); return tile !== undefined && isWalkable(tile); },
-      onPlayerMoved: (direction) => { this.checkItemPickup(); soundFX.step(); const label = direction.dx === 1 ? '»» CONVEYOR »»' : direction.dx === -1 ? '«« CONVEYOR ««' : 'CONVEYOR'; this.pushFloatingText(this.player.x, this.player.y, label, '#00f0ff'); this.pushMessage('Conveyor belt transport: Operative moved to new position.', 'info'); },
+      onPlayerMoved: (direction) => { this.checkItemPickupInternal(); soundFX.step(); const label = direction.dx === 1 ? '»» CONVEYOR »»' : direction.dx === -1 ? '«« CONVEYOR ««' : 'CONVEYOR'; this.pushFloatingText(this.player.x, this.player.y, label, '#00f0ff'); this.pushMessage('Conveyor belt transport: Operative moved to new position.', 'info'); },
     });
   }
 
