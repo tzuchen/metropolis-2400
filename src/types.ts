@@ -150,6 +150,7 @@ export interface Position {
 export interface Entity {
   id: string;
   name: string;
+  nameZh?: string;
   x: number;
   y: number;
   hp: number;

@@ -94,12 +94,29 @@ const hasLineOfSight = (map: SectorMap, from: Position, to: Position): boolean =
   return true;
 };
 
-const findNextStep = (map: SectorMap, from: Position, target: Position): Position | null => {
+const findNextStep = (
+  map: SectorMap,
+  from: Position,
+  target: Position,
+  blockedPositions?: Set<string>,
+  targetIsEntity: boolean = false
+): Position | null => {
+  const isCellPassable = (x: number, y: number): boolean => {
+    if (blockedPositions && blockedPositions.has(`${x},${y}`)) return false;
+    return isWalkableTile(map, x, y);
+  };
+
   if (from.x === target.x && from.y === target.y) return null;
 
-  if (manhattanDistance(from, target) === 1) {
-    if (isWalkableTile(map, target.x, target.y)) {
-      return target;
+  if (targetIsEntity) {
+    if (manhattanDistance(from, target) <= 1) {
+      return null;
+    }
+  } else {
+    if (manhattanDistance(from, target) === 1) {
+      if (isCellPassable(target.x, target.y)) {
+        return target;
+      }
     }
   }
 
@@ -123,9 +140,15 @@ const findNextStep = (map: SectorMap, from: Position, target: Position): Positio
   for (const d of dirs) {
     const nx = from.x + d.x;
     const ny = from.y + d.y;
-    if (isWalkableTile(map, nx, ny)) {
-      if (nx === target.x && ny === target.y) {
-        return { x: nx, y: ny };
+    if (isCellPassable(nx, ny)) {
+      if (targetIsEntity) {
+        if (manhattanDistance({ x: nx, y: ny }, target) <= 1) {
+          return { x: nx, y: ny };
+        }
+      } else {
+        if (nx === target.x && ny === target.y) {
+          return { x: nx, y: ny };
+        }
       }
       visited.add(nx + ',' + ny);
       queue.push({ pos: { x: nx, y: ny }, firstStep: { x: nx, y: ny } });
@@ -142,9 +165,15 @@ const findNextStep = (map: SectorMap, from: Position, target: Position): Positio
       const ny = current.pos.y + d.y;
       const key = nx + ',' + ny;
 
-      if (!visited.has(key) && isWalkableTile(map, nx, ny)) {
-        if (nx === target.x && ny === target.y) {
-          return current.firstStep;
+      if (!visited.has(key) && isCellPassable(nx, ny)) {
+        if (targetIsEntity) {
+          if (manhattanDistance({ x: nx, y: ny }, target) <= 1) {
+            return current.firstStep;
+          }
+        } else {
+          if (nx === target.x && ny === target.y) {
+            return current.firstStep;
+          }
         }
         visited.add(key);
         queue.push({ pos: { x: nx, y: ny }, firstStep: current.firstStep });
@@ -158,8 +187,9 @@ const findNextStep = (map: SectorMap, from: Position, target: Position): Positio
   for (const d of dirs) {
     const nx = from.x + d.x;
     const ny = from.y + d.y;
-    if (isWalkableTile(map, nx, ny)) {
+    if (isCellPassable(nx, ny)) {
       const dist = manhattanDistance({ x: nx, y: ny }, target);
+      if (targetIsEntity && dist === 0) continue;
       if (dist < minDistance) {
         minDistance = dist;
         bestStep = { x: nx, y: ny };
@@ -174,7 +204,9 @@ export function updateRobotAI(
   robot: Robot,
   player: Player,
   map: SectorMap,
-  globalAlert: SecurityLevel
+  globalAlert: SecurityLevel,
+  otherRobots?: Robot[],
+  npcs?: any[]
 ): RobotActionResult {
   if (!robot.isAlive) {
     return { action: 'idle', message: 'Robot is decommissioned.' };
@@ -187,6 +219,25 @@ export function updateRobotAI(
       action: 'idle',
       message: `${robot.name} EMP circuits overloaded! (${robot.stunnedTurns} turns left)`,
     };
+  }
+
+  const blocked = new Set<string>();
+  if (player && player.isAlive !== false) {
+    blocked.add(`${player.x},${player.y}`);
+  }
+  if (otherRobots) {
+    for (const r of otherRobots) {
+      if (r !== robot && r.isAlive !== false) {
+        blocked.add(`${r.x},${r.y}`);
+      }
+    }
+  }
+  if (npcs) {
+    for (const n of npcs) {
+      if (n.isAlive !== false) {
+        blocked.add(`${n.x},${n.y}`);
+      }
+    }
   }
 
   const robotPos: Position = { x: robot.x, y: robot.y };
@@ -255,7 +306,7 @@ export function updateRobotAI(
       };
     }
 
-    const nextStep = findNextStep(map, robotPos, playerPos);
+    const nextStep = findNextStep(map, robotPos, playerPos, blocked, true);
     if (nextStep) {
       robot.x = nextStep.x;
       robot.y = nextStep.y;
@@ -277,7 +328,7 @@ export function updateRobotAI(
   if (!canSeePlayer && (robot as any).pursuitTurns > 0 && robot.targetPos) {
     (robot as any).pursuitTurns -= 1;
     robot.aiState = 'chase';
-    const step = findNextStep(map, robotPos, robot.targetPos);
+    const step = findNextStep(map, robotPos, robot.targetPos, blocked, false);
     if (step) {
       robot.x = step.x;
       robot.y = step.y;
@@ -300,7 +351,7 @@ export function updateRobotAI(
   if (robot.aiState === 'investigate' && robot.targetPos) {
     const distToTarget = manhattanDistance(robotPos, robot.targetPos);
     if (distToTarget > 0) {
-      const step = findNextStep(map, robotPos, robot.targetPos);
+      const step = findNextStep(map, robotPos, robot.targetPos, blocked, false);
       if (step) {
         robot.x = step.x;
         robot.y = step.y;
@@ -330,7 +381,7 @@ export function updateRobotAI(
       targetWaypoint = path[pIndex];
     }
 
-    const step = findNextStep(map, robotPos, targetWaypoint);
+    const step = findNextStep(map, robotPos, targetWaypoint, blocked, false);
     if (step) {
       robot.x = step.x;
       robot.y = step.y;

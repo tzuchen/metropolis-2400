@@ -15,10 +15,37 @@ function prepareRobot(robot: Robot, player: Player): void {
   robot.alertCooldown = 999;
 }
 
+function isPositionOccupied(x: number, y: number, player: Player, robots: Robot[]): boolean {
+  if (player.x === x && player.y === y) return true;
+  for (const r of robots) {
+    if (r.isAlive && r.x === x && r.y === y) return true;
+  }
+  return false;
+}
+
+function getSafeSpawnPos(basePos: Position, player: Player, robots: Robot[]): Position {
+  if (!isPositionOccupied(basePos.x, basePos.y, player, robots)) {
+    return basePos;
+  }
+  const offsets = [
+    { dx: 1, dy: 0 }, { dx: -1, dy: 0 }, { dx: 0, dy: 1 }, { dx: 0, dy: -1 },
+    { dx: 1, dy: 1 }, { dx: -1, dy: 1 }, { dx: 1, dy: -1 }, { dx: -1, dy: -1 },
+  ];
+  for (const { dx, dy } of offsets) {
+    const nx = basePos.x + dx;
+    const ny = basePos.y + dy;
+    if (!isPositionOccupied(nx, ny, player, robots)) {
+      return { x: nx, y: ny };
+    }
+  }
+  return basePos;
+}
+
 export function triggerCitadelHorde(robots: Robot[], player: Player, addMessage: HordeMessage): void {
   const count = 8 + Math.floor(Math.random() * 3);
   for (let i = 0; i < count; i++) {
-    const pos = HORDE_POSITIONS[i % HORDE_POSITIONS.length];
+    const basePos = HORDE_POSITIONS[i % HORDE_POSITIONS.length];
+    const pos = getSafeSpawnPos(basePos, player, robots);
     const robot = createRobot(HORDE_TYPES[i % HORDE_TYPES.length], pos, [pos]);
     prepareRobot(robot, player);
     robots.push(robot);
@@ -35,7 +62,8 @@ export function updateCitadelHorde(robots: Robot[], player: Player, turnCounter:
   const aliveCount = robots.filter((robot) => robot.isAlive).length;
   const shouldSpawn = aliveCount < 8 || (turnCounter % 2 === 0 && aliveCount < 14);
   if (!shouldSpawn) return;
-  const pos = HORDE_POSITIONS[Math.floor(Math.random() * HORDE_POSITIONS.length)];
+  const basePos = HORDE_POSITIONS[Math.floor(Math.random() * HORDE_POSITIONS.length)];
+  const pos = getSafeSpawnPos(basePos, player, robots);
   const robot = createRobot(HORDE_TYPES[Math.floor(Math.random() * HORDE_TYPES.length)], pos, [pos]);
   prepareRobot(robot, player);
   robots.push(robot);

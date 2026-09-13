@@ -756,19 +756,23 @@ export class GameEngine {
     else if (facing === 'up') dy = -1;
     else if (facing === 'down') dy = 1;
 
-    let targetX = this.player.x + dx * 2;
-    let targetY = this.player.y + dy * 2;
-    let canMove = this.isWalkable(targetX, targetY) && !this.findRobotAt(targetX, targetY);
+    const midX = this.player.x + dx;
+    const midY = this.player.y + dy;
+    const midPassable = this.isWalkable(midX, midY) && !this.findRobotAt(midX, midY) && !this.findNPCAt(midX, midY);
 
-    if (!canMove) {
-      targetX = this.player.x + dx;
-      targetY = this.player.y + dy;
-      canMove = this.isWalkable(targetX, targetY) && !this.findRobotAt(targetX, targetY);
-    }
-
-    if (!canMove) {
+    if (!midPassable) {
       this.pushMessage(this.language === 'zh' ? '前方受阻，無法滑鏟！' : 'Path obstructed, cannot dash!', 'warning');
       return false;
+    }
+
+    let targetX = this.player.x + dx * 2;
+    let targetY = this.player.y + dy * 2;
+    let canMove = this.isWalkable(targetX, targetY) && !this.findRobotAt(targetX, targetY) && !this.findNPCAt(targetX, targetY);
+
+    if (!canMove) {
+      targetX = midX;
+      targetY = midY;
+      canMove = true;
     }
 
     this.player.energy -= 10;
@@ -881,6 +885,10 @@ export class GameEngine {
 
   private findRobotAt(x: number, y: number): Robot | null {
     return this.robots.find((r) => r.isAlive && r.x === x && r.y === y) || null;
+  }
+
+  findNPCAt(x: number, y: number): NPC | null {
+    return this.npcs.find((n) => n.isAlive && n.x === x && n.y === y) || null;
   }
 
   findPushableBlockOnLine(from: Position, to: Position): PushableBlock | null {
@@ -1098,7 +1106,7 @@ export class GameEngine {
         continue;
       }
 
-      const result: any = updateRobotAI(robot, this.player, this.map, this.securityLevel);
+      const result: any = updateRobotAI(robot, this.player, this.map, this.securityLevel, this.robots, this.npcs);
 
       if (result?.action === 'alarm') {
         this.securityLevel = 'ALERT' as SecurityLevel;

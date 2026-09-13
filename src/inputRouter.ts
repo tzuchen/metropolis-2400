@@ -562,7 +562,13 @@ export class InputRouter {
         g.render();
         return;
       } else {
-        g.pushMessage('Holster weapon [F] to speak with ' + targetNPC.name + '.', 'warning');
+        const isZh = g.language === 'zh';
+        g.pushMessage(
+          isZh
+            ? `請先按 [F] 收槍再與 ${targetNPC.nameZh || targetNPC.name} 交談。`
+            : 'Holster weapon [F] to speak with ' + targetNPC.name + '.',
+          'warning'
+        );
         g.render();
         return;
       }
@@ -732,10 +738,17 @@ export class InputRouter {
     }
 
     // Normal movement
-    const adjacentRobot = g.robots.find((r) => r.isAlive && r.x === nx && r.y === ny);
+    const adjacentRobot = g.robots.find((r) => r.isAlive && Math.round(Number(r.x)) === nx && Math.round(Number(r.y)) === ny);
     if (adjacentRobot) {
       soundFX.hit();
-      g.pushMessage('Path blocked by security robot! Press F to draw weapon.', 'warning');
+      const isZh = g.language === 'zh';
+      const rName = isZh ? (adjacentRobot.nameZh || adjacentRobot.name) : adjacentRobot.name;
+      g.pushMessage(
+        isZh
+          ? `路徑受阻！前方有巡邏機器人 [${rName}]，請按 [F] 拔槍迎擊。`
+          : `Path blocked by security robot [${adjacentRobot.name}]! Press F to draw weapon.`,
+        'warning'
+      );
       g.render();
       return;
     }

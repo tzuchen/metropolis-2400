@@ -169,10 +169,10 @@ function isPositionOccupied(
   if (player.x === x && player.y === y) return true;
   for (const npc of npcs) {
     if (npc.id === excludeNpcId) continue;
-    if (npc.x === x && npc.y === y) return true;
+    if (npc.isAlive !== false && npc.x === x && npc.y === y) return true;
   }
   for (const robot of robots) {
-    if (robot.x === x && robot.y === y) return true;
+    if (robot.isAlive !== false && robot.x === x && robot.y === y) return true;
   }
   return false;
 }
