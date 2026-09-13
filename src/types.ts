@@ -269,6 +269,28 @@ export interface SectorMap {
 
 export type QuestReward = { type: 'HEAL' | 'ENERGY' | 'CREDITS'; amount: number; message: string; item?: any; } | { type: 'ITEM'; amount?: number; message: string; item: any; };
 
+export interface QuestDefinition {
+  id: string;
+  npcId: string;
+  requiredItemIds: string[];
+  objectiveId: string;
+  repeatable: boolean;
+  reward?: QuestReward;
+}
+
+export interface QuestState {
+  questId: string;
+  discovered: boolean;
+  completed: boolean;
+  progress: number;
+  lastCompletedAt?: number;
+}
+
+export interface QuestProgressContext {
+  npc: NPC;
+  nextIndex: number;
+}
+
 export interface NPC extends Entity {
   role: string;
   roleZh?: string;

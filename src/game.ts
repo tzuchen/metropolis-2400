@@ -33,6 +33,7 @@ import {
 } from './worldBuilder';
 import { handleTerminalInput as _handleTerminalInput } from './terminalRunner';
 import { processConveyors as _processConveyors, detonateCanister as _detonateCanister } from './hazardSystem';
+import { checkQuestDiscovery as _checkQuestDiscovery, completeQuest as _completeQuest } from './questSystem';
 
 
 export interface ResolutionPreset {
@@ -1745,56 +1746,11 @@ export class GameEngine {
   }
 
   checkSideQuestDiscovery(npcId: string): void {
-    const questIdMap: Record<string, string> = {
-      'npc-hiro': 'side-hiro',
-      'npc-elena': 'side-elena',
-      'npc-vesper': 'side-vesper',
-      'npc-archie': 'side-archie',
-    };
-    const questId = questIdMap[npcId];
-    if (!questId) return;
-    const quest = this.missionObjectives.find((o) => o.id === questId);
-    if (quest && !quest.discovered) {
-      quest.discovered = true;
-      const isZh = this.language === 'zh';
-      const questNames: Record<string, { zh: string; en: string }> = {
-        'side-hiro': { zh: '拉麵食譜', en: 'Ramen Recipe' },
-        'side-elena': { zh: '合成母帶', en: 'Synth Master Tape' },
-        'side-vesper': { zh: '色劑塗鴉', en: 'Chromatic Aerosol Mural' },
-        'side-archie': { zh: '詩集回收', en: 'Poetry Folio Recovery' },
-      };
-      const name = questNames[questId];
-      this.pushMessage(
-        isZh
-          ? `【支線任務發現】新任務：${name ? name.zh : questId}`
-          : `[SIDE QUEST DISCOVERED] New quest: ${name ? name.en : questId}`,
-        'info'
-      );
-      this.render();
-    }
+    _checkQuestDiscovery(this, npcId);
   }
 
   private completeSideQuestInternal(questId: string): void {
-    const quest = this.missionObjectives.find((o) => o.id === questId);
-    if (quest && !quest.completed) {
-      quest.completed = true;
-      quest.discovered = true;
-      const isZh = this.language === 'zh';
-      const questNames: Record<string, { zh: string; en: string }> = {
-        'side-hiro': { zh: '拉麵食譜', en: 'Ramen Recipe' },
-        'side-elena': { zh: '合成母帶', en: 'Synth Master Tape' },
-        'side-vesper': { zh: '色劑塗鴉', en: 'Chromatic Aerosol Mural' },
-        'side-archie': { zh: '詩集回收', en: 'Poetry Folio Recovery' },
-      };
-      const name = questNames[questId];
-      this.pushMessage(
-        isZh
-          ? `【支線任務完成】${name ? name.zh : questId}`
-          : `[SIDE QUEST COMPLETE] ${name ? name.en : questId}`,
-        'success'
-      );
-      this.render();
-    }
+    _completeQuest(this, questId);
   }
 
   completeSideQuest(questId: string): void {

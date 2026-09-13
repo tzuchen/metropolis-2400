@@ -20,7 +20,6 @@ import {
   toggleDisguise,
   installAugment,
   cycleWeapon,
-  createQuantumAnnihilator,
 } from './entities';
 import { soundFX } from './audio';
 import { bgm } from './music';
@@ -36,6 +35,7 @@ import {
   createSectorHazards,
   createSectorPushableBlocks,
 } from './worldBuilder';
+import { advanceDialogue } from './dialogueSystem';
 import {
   executeDetentionRelocation,
   startDefeatCutscene,
@@ -398,202 +398,7 @@ export class InputRouter {
       }
 
       if (key === ' ' || key === 'Enter' || key === 'Space') {
-        const npc = g.activeDialogue.npc;
-        g.checkSideQuestDiscovery(npc.id);
-        const isZh = g.language === 'zh';
-        const zhDialogue = npc.dialogueZh;
-        const list = isZh && Array.isArray(zhDialogue) && zhDialogue.length > 0 ? zhDialogue : (npc.dialogue || []);
-        const nextIndex = g.activeDialogue.textIndex + 1;
-
-        // Check for unclaimed quest rewards
-        if (npc.questReward && !npc.rewardClaimed && nextIndex >= list.length - 1) {
-          npc.rewardClaimed = true;
-          const r = npc.questReward;
-          if (r.type === 'HEAL') {
-            g.player.hp = Math.min(g.player.maxHp, g.player.hp + r.amount);
-            g.pushFloatingText(npc.x, npc.y, '+' + r.amount + ' HP', '#00ff88');
-          } else if (r.type === 'ENERGY') {
-            g.player.energy = Math.min(g.player.maxEnergy, g.player.energy + r.amount);
-            g.pushFloatingText(npc.x, npc.y, '+' + r.amount + ' EN', '#00f0ff');
-          } else if (r.type === 'CREDITS') {
-            g.player.credits += r.amount;
-            g.pushFloatingText(npc.x, npc.y, '+' + r.amount + ' CR', '#ffea00');
-          } else if (r.type === 'ITEM') {
-            let inventory = g.player.inventory;
-            if (!Array.isArray(inventory)) {
-              inventory = [];
-              g.player.inventory = inventory;
-            }
-            if (!inventory.some((it: Item) => it?.id === r.item.id)) {
-              inventory.push(r.item);
-            }
-            g.pushFloatingText(npc.x, npc.y, r.item.name, '#00f0ff');
-          }
-          soundFX.pickup();
-          g.pushMessage(r.message, 'success');
-
-          const safehouseObj = g.missionObjectives.find((o) => o.id === 'obj-safehouse');
-          if (safehouseObj && !safehouseObj.completed) {
-            safehouseObj.completed = true;
-            g.pushMessage(g.language === 'zh' ? '【任務更新】安全屋偵察整裝任務完成！' : 'MISSION UPDATE: Safehouse Recon objective complete!', 'success');
-          }
-        }
-
-        if (npc.id === 'npc-hiro' && nextIndex >= list.length - 1) {
-          const inventory = g.player.inventory;
-          if (Array.isArray(inventory)) {
-            const recipeIndex = inventory.findIndex((it: Item) => it?.id === 'item-ramen-recipe');
-            if (recipeIndex !== -1) {
-              inventory.splice(recipeIndex, 1);
-              g.player.maxHp += 50;
-              g.player.hp = g.player.maxHp;
-              soundFX.pickup();
-              g.pushFloatingText(g.player.x, g.player.y, 'MAX HP +50!', '#00ff88');
-              g.pushMessage(
-                isZh
-                  ? 'Hiro: 多謝你幫我找回拉麵食譜！我的最大生命值提升了！'
-                  : 'Hiro: Thanks for recovering my ramen recipe! My max HP increased!',
-                'success'
-              );
-              g.ramenQuestComplete = true;
-              g.completeSideQuest('side-hiro');
-              g.updateNPCDialogues();
-            }
-          }
-        }
-
-        if (npc.id === 'npc-elena' && nextIndex >= list.length - 1) {
-          const inventory = g.player.inventory;
-          if (Array.isArray(inventory)) {
-            const tapeIndex = inventory.findIndex((it: Item) => it?.id === 'item-synth-tape');
-            if (tapeIndex !== -1) {
-              inventory.splice(tapeIndex, 1);
-              g.player.maxEnergy += 20;
-              g.player.energy = g.player.maxEnergy;
-              soundFX.pickup();
-              g.pushFloatingText(g.player.x, g.player.y, 'MAX EN +20!', '#00f0ff');
-              g.pushMessage(
-                isZh
-                  ? 'Elena: 謝謝你，特工！這捲母帶的類比頻率喚醒了神經共鳴，最大能量提升了！'
-                  : 'Elena: Thank you, operative! The analog frequency of this master tape awakened neural resonance. Max energy increased!',
-                'success'
-              );
-              bgm.setSynthwaveTapeMode(true);
-              g.synthwaveTapeActive = true;
-              g.completeSideQuest('side-elena');
-              g.updateNPCDialogues();
-            }
-          }
-        }
-
-        if (npc.id === 'npc-zero-one') {
-          const inventory = g.player.inventory;
-          if (Array.isArray(inventory)) {
-            const hasCore = inventory.some((it: Item) => it?.id === 'item-quantum-core');
-            const hasChip = inventory.some((it: Item) => it?.id === 'item-matrix-chip');
-            const hasWeapon = inventory.some((it: Item) => it?.id === 'quantum-annihilator');
-
-            if (hasCore && hasChip && !hasWeapon) {
-              g.player.inventory = inventory.filter((it: Item) => it?.id !== 'item-quantum-core' && it?.id !== 'item-matrix-chip');
-
-              const superWeapon = createQuantumAnnihilator();
-              g.player.inventory.push(superWeapon);
-
-              let weapons = g.player.weapons;
-              if (!Array.isArray(weapons)) {
-                weapons = [];
-                g.player.weapons = weapons;
-              }
-              weapons.push(superWeapon);
-              g.player.equippedWeapon = superWeapon;
-
-              g.player.credits += 100;
-              g.gainExp(150);
-
-              const superObj = g.missionObjectives.find((o) => o.id === 'obj-superweapon');
-              if (superObj && !superObj.completed) {
-                superObj.completed = true;
-                g.pushMessage(g.language === 'zh' ? '【任務更新】奇點計畫：量子殲滅砲鍛造完成！' : 'MISSION UPDATE: Project Singularity objective complete!', 'success');
-              }
-
-              soundFX.victory();
-              g.pushFloatingText(g.player.x, g.player.y, 'QUANTUM ANNIHILATOR FORGED!', '#b388ff');
-              g.pushMessage(
-                isZh
-                  ? 'Zero-One: 量子殲滅重砲組裝完成！這將改變戰局。'
-                  : 'Zero-One: Quantum Annihilator forged! This will change the game.',
-                'success'
-              );
-              g.zeroOneWeaponForged = true;
-              g.updateNPCDialogues();
-            }
-          }
-        }
-
-        if (npc.id === 'npc-vesper') {
-          const inventory = g.player.inventory;
-          if (Array.isArray(inventory)) {
-            const aerosolIndex = inventory.findIndex((it: Item) => it?.id === 'item-chromatic-aerosol');
-            if (aerosolIndex !== -1 && !g.graffitiMuralComplete) {
-              inventory.splice(aerosolIndex, 1);
-              g.graffitiMuralComplete = true;
-              const p = g.player;
-              if (!p.augments) p.augments = {};
-              p.augments['GRAFFITI_POWER_BOOST'] = true;
-              if (!p.graffitiBuffApplied) {
-                if (g.player.equippedWeapon) {
-                  g.player.equippedWeapon.power = (g.player.equippedWeapon.power || 0) + 5;
-                }
-                p.critChance = (p.critChance || 0) + 0.15;
-                p.graffitiBuffApplied = true;
-              }
-              soundFX.pickup();
-              g.pushFloatingText(g.player.x, g.player.y, 'MURAL COMPLETE!', '#ff00ff');
-              g.pushMessage(
-                isZh
-                  ? 'Vesper: 感謝你，雷文。這面牆現在有了靈魂。你的攻擊力與暴擊率提升了！'
-                  : 'Vesper: Thank you, Raven. This wall now has a soul. Your attack power and crit chance increased!',
-                'success'
-              );
-              g.completeSideQuest('side-vesper');
-              g.updateNPCDialogues();
-            }
-          }
-        }
-
-        if (npc.id === 'npc-archie') {
-          const inventory = g.player.inventory;
-          if (Array.isArray(inventory)) {
-            const folioIndex = inventory.findIndex((it: Item) => it?.id === 'item-unburnt-folio');
-            if (folioIndex !== -1 && !g.poetryQuestComplete) {
-              inventory.splice(folioIndex, 1);
-              g.poetryQuestComplete = true;
-              const p = g.player;
-              p.checkInMaxTimer = (p.checkInMaxTimer || 100) + 25;
-              p.checkInTimer = p.checkInMaxTimer;
-              soundFX.pickup();
-              g.pushFloatingText(g.player.x, g.player.y, 'POETRY RESTORED!', '#ffea00');
-              g.pushMessage(
-                isZh
-                  ? 'Archie: 多謝你幫我找回詩集！我的簽到時間上限提升了 25 步，計時器已重置。'
-                  : 'Archie: Thanks for recovering my poetry folio! My check-in timer limit increased by 25 steps and the timer has been reset.',
-                'success'
-              );
-              g.completeSideQuest('side-archie');
-              g.updateNPCDialogues();
-            }
-          }
-        }
-
-        if (nextIndex < list.length) {
-          g.activeDialogue.textIndex = nextIndex;
-          soundFX.terminal();
-        } else {
-          g.activeDialogue = null;
-          soundFX.pickup();
-        }
-
-        g.render();
+        advanceDialogue(g);
         return;
       }
 
