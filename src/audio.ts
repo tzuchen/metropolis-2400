@@ -23,6 +23,14 @@ export class SoundFX {
     }
   }
 
+  unlock(): void {
+    this.ensureContext();
+  }
+
+  resume(): void {
+    this.ensureContext();
+  }
+
   toggleMute(): boolean {
     this.setMuted(!this._isMuted);
     return this._isMuted;
@@ -34,14 +42,6 @@ export class SoundFX {
     if (this.ctx && this.masterGain && !this._isMuted) {
       this.masterGain.gain.value = clamped;
     }
-  }
-
-  unlock(): void {
-    this.ensureContext();
-  }
-
-  resume(): void {
-    this.ensureContext();
   }
 
   private bindAutoResume(): void {

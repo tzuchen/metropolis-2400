@@ -17,6 +17,7 @@ export class MusicSynthesizer {
   private isPlaying: boolean = false;
   private isMuted: boolean = false;
   private intensity: MusicIntensity = 'title';
+  private _volume: number = 0.5;
   private arpTimer: any = null;
   private arpStep: number = 0;
   private _isTapeActive: boolean = false;
@@ -49,6 +50,14 @@ export class MusicSynthesizer {
     return this._isTapeActive;
   }
 
+  get volume(): number {
+    return this._volume;
+  }
+
+  get muted(): boolean {
+    return this.isMuted;
+  }
+
   private ensureContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
     const Ctor = window.AudioContext || (window as any).webkitAudioContext;
@@ -57,7 +66,7 @@ export class MusicSynthesizer {
     if (!this.ctx) {
       this.ctx = new Ctor();
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = 0.28;
+      this.masterGain.gain.value = this._volume;
 
       this.filterNode = this.ctx.createBiquadFilter();
       this.filterNode.type = 'lowpass';
@@ -93,6 +102,9 @@ export class MusicSynthesizer {
 
     this.isPlaying = true;
     const now = ctx.currentTime;
+
+    // Ensure master gain reflects current volume
+    this.masterGain.gain.setValueAtTime(this._volume, now);
 
     // 1. 低音底噪無人機 (Sub-Bass Drone)
     const initialRoot = this.intensity === 'title' ? this.titleRoots[0] : 55;
@@ -174,6 +186,32 @@ export class MusicSynthesizer {
     }
   }
 
+  setMuted(muted: boolean): void {
+    if (this.isMuted === muted) return;
+    this.isMuted = muted;
+    if (muted) {
+      this.stop();
+    } else {
+      this.start();
+    }
+  }
+
+  setVolume(volume: number): void {
+    const clamped = Math.min(1, Math.max(0, Number.isFinite(volume) ? volume : 0));
+    this._volume = clamped;
+    if (this.ctx && this.masterGain && !this.isMuted) {
+      this.masterGain.gain.setValueAtTime(clamped, this.ctx.currentTime);
+    }
+  }
+
+  unlock(): void {
+    this.ensureContext();
+  }
+
+  resume(): void {
+    this.ensureContext();
+  }
+
   setIntensity(level: MusicIntensity): void {
     if (this.isMuted) return;
 
@@ -206,16 +244,16 @@ export class MusicSynthesizer {
     if (level === 'title') {
       this.filterNode.frequency.setTargetAtTime(1150, now, 0.3);
       this.filterNode.Q.setTargetAtTime(3.5, now, 0.3);
-      this.masterGain.gain.setTargetAtTime(0.32, now, 0.3);
+      this.masterGain.gain.setTargetAtTime(this._volume * 0.32, now, 0.3);
     } else if (level === 'exploration') {
       this.filterNode.frequency.setTargetAtTime(750, now, 0.4);
-      this.masterGain.gain.setTargetAtTime(0.28, now, 0.3);
+      this.masterGain.gain.setTargetAtTime(this._volume * 0.28, now, 0.3);
     } else if (level === 'combat') {
       this.filterNode.frequency.setTargetAtTime(1500, now, 0.2);
-      this.masterGain.gain.setTargetAtTime(0.35, now, 0.2);
+      this.masterGain.gain.setTargetAtTime(this._volume * 0.35, now, 0.2);
     } else if (level === 'boss') {
       this.filterNode.frequency.setTargetAtTime(2400, now, 0.1);
-      this.masterGain.gain.setTargetAtTime(0.40, now, 0.2);
+      this.masterGain.gain.setTargetAtTime(this._volume * 0.40, now, 0.2);
     }
   }
 
@@ -227,11 +265,11 @@ export class MusicSynthesizer {
     if (active) {
       this.filterNode.frequency.setTargetAtTime(1200, now, 0.3);
       this.filterNode.Q.setTargetAtTime(3.8, now, 0.3);
-      this.masterGain.gain.setTargetAtTime(0.32, now, 0.3);
+      this.masterGain.gain.setTargetAtTime(this._volume * 0.32, now, 0.3);
     } else {
       if (this.intensity === 'exploration') {
         this.filterNode.frequency.setTargetAtTime(550, now, 0.4);
-        this.masterGain.gain.setTargetAtTime(0.22, now, 0.3);
+        this.masterGain.gain.setTargetAtTime(this._volume * 0.22, now, 0.3);
       }
       this.filterNode.Q.setTargetAtTime(2.5, now, 0.3);
     }

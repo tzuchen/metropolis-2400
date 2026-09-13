@@ -471,3 +471,46 @@ export interface EffectPreset {
   shockwaveLife?: number;
   flashAlpha?: number;
 }
+
+export type AudioVolume = number;
+
+export interface AudioLifecycleState {
+  muted: boolean;
+  masterVolume: AudioVolume;
+  musicVolume: AudioVolume;
+  sfxVolume: AudioVolume;
+}
+
+export interface AudioController {
+  readonly muted: boolean;
+  readonly volume: AudioVolume;
+  setMuted(muted: boolean): void;
+  setVolume(volume: AudioVolume): void;
+  unlock(): void;
+  resume(): void;
+}
+
+export interface SfxAudioController extends AudioController {
+  toggleMute(): boolean;
+}
+
+export interface MusicAudioController {
+  readonly enabled: boolean;
+  readonly currentIntensity: 'title' | 'exploration' | 'combat' | 'boss';
+  start(): void;
+  stop(): void;
+  toggle(): boolean;
+  setIntensity(level: 'title' | 'exploration' | 'combat' | 'boss'): void;
+  setMuted(muted: boolean): void;
+  setVolume(volume: AudioVolume): void;
+}
+
+export interface AudioLifecycleController {
+  readonly sfx: SfxAudioController;
+  readonly music: MusicAudioController;
+  readonly state: AudioLifecycleState;
+  setMuted(muted: boolean): void;
+  setMasterVolume(volume: AudioVolume): void;
+  setMusicVolume(volume: AudioVolume): void;
+  setSfxVolume(volume: AudioVolume): void;
+}
