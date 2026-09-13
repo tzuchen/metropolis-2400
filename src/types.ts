@@ -58,6 +58,59 @@ export const TileType = {
 
 export type TileType = (typeof TileType)[keyof typeof TileType];
 
+export interface TileProperties {
+  walkable: boolean;
+  transparent: boolean;
+  name: string;
+}
+
+export const TileProperties: Record<TileType, TileProperties> = {
+  [TileType.EMPTY]: { walkable: false, transparent: false, name: 'EMPTY' },
+  [TileType.FLOOR]: { walkable: true, transparent: true, name: 'FLOOR' },
+  [TileType.WALL]: { walkable: false, transparent: false, name: 'WALL' },
+  [TileType.DOOR_CLOSED]: { walkable: false, transparent: false, name: 'DOOR_CLOSED' },
+  [TileType.DOOR_OPEN]: { walkable: true, transparent: true, name: 'DOOR_OPEN' },
+  [TileType.FORCEFIELD]: { walkable: false, transparent: true, name: 'FORCEFIELD' },
+  [TileType.TERMINAL]: { walkable: false, transparent: false, name: 'TERMINAL' },
+  [TileType.REBEL_CACHE]: { walkable: true, transparent: true, name: 'REBEL_CACHE' },
+  [TileType.EXIT]: { walkable: false, transparent: true, name: 'EXIT' },
+  [TileType.ELEVATOR]: { walkable: true, transparent: true, name: 'ELEVATOR' },
+  [TileType.CONVEYOR]: { walkable: true, transparent: true, name: 'CONVEYOR' },
+  [TileType.TURRET]: { walkable: false, transparent: true, name: 'TURRET' },
+  [TileType.BIO_TREE]: { walkable: false, transparent: false, name: 'BIO_TREE' },
+  [TileType.PARK_WATER]: { walkable: false, transparent: true, name: 'PARK_WATER' },
+  [TileType.VENDOR_STALL]: { walkable: false, transparent: false, name: 'VENDOR_STALL' },
+  [TileType.SERVER_RACK]: { walkable: false, transparent: false, name: 'SERVER_RACK' },
+  [TileType.STEAM_VENT]: { walkable: true, transparent: true, name: 'STEAM_VENT' },
+  [TileType.REBEL_BARRICADE]: { walkable: false, transparent: true, name: 'REBEL_BARRICADE' },
+  [TileType.LETTER_A]: { walkable: false, transparent: true, name: 'LETTER_A' },
+  [TileType.LETTER_B]: { walkable: false, transparent: true, name: 'LETTER_B' },
+  [TileType.LETTER_C]: { walkable: false, transparent: true, name: 'LETTER_C' },
+  [TileType.LETTER_D]: { walkable: false, transparent: true, name: 'LETTER_D' },
+  [TileType.LETTER_E]: { walkable: false, transparent: true, name: 'LETTER_E' },
+  [TileType.LETTER_F]: { walkable: false, transparent: true, name: 'LETTER_F' },
+  [TileType.LETTER_G]: { walkable: false, transparent: true, name: 'LETTER_G' },
+  [TileType.LETTER_H]: { walkable: false, transparent: true, name: 'LETTER_H' },
+  [TileType.LETTER_I]: { walkable: false, transparent: true, name: 'LETTER_I' },
+  [TileType.LETTER_J]: { walkable: false, transparent: true, name: 'LETTER_J' },
+  [TileType.LETTER_K]: { walkable: false, transparent: true, name: 'LETTER_K' },
+  [TileType.LETTER_L]: { walkable: false, transparent: true, name: 'LETTER_L' },
+  [TileType.LETTER_M]: { walkable: false, transparent: true, name: 'LETTER_M' },
+  [TileType.LETTER_N]: { walkable: false, transparent: true, name: 'LETTER_N' },
+  [TileType.LETTER_O]: { walkable: false, transparent: true, name: 'LETTER_O' },
+  [TileType.LETTER_P]: { walkable: false, transparent: true, name: 'LETTER_P' },
+  [TileType.LETTER_Q]: { walkable: false, transparent: true, name: 'LETTER_Q' },
+  [TileType.LETTER_R]: { walkable: false, transparent: true, name: 'LETTER_R' },
+  [TileType.LETTER_S]: { walkable: false, transparent: true, name: 'LETTER_S' },
+  [TileType.LETTER_T]: { walkable: false, transparent: true, name: 'LETTER_T' },
+  [TileType.LETTER_U]: { walkable: false, transparent: true, name: 'LETTER_U' },
+  [TileType.LETTER_V]: { walkable: false, transparent: true, name: 'LETTER_V' },
+  [TileType.LETTER_W]: { walkable: false, transparent: true, name: 'LETTER_W' },
+  [TileType.LETTER_X]: { walkable: false, transparent: true, name: 'LETTER_X' },
+  [TileType.LETTER_Y]: { walkable: false, transparent: true, name: 'LETTER_Y' },
+  [TileType.LETTER_Z]: { walkable: false, transparent: true, name: 'LETTER_Z' },
+};
+
 export const RobotType = {
   SCOUT_DRONE: 'SCOUT_DRONE',
   SHOCK_ENFORCER: 'SHOCK_ENFORCER',

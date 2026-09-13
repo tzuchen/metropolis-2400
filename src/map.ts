@@ -1,11 +1,11 @@
-import { TileType } from './types';
+import { TileType, TileProperties } from './types';
 import type { Position, SectorMap, TerminalData, SecurityLevel } from './types';
 
-const FLOOR: TileType = 'FLOOR' as unknown as TileType;
-const WALL: TileType = 'WALL' as unknown as TileType;
-const DOOR_OPEN: TileType = 'DOOR_OPEN' as unknown as TileType;
-const DOOR_CLOSED: TileType = 'DOOR_CLOSED' as unknown as TileType;
-const FORCEFIELD: TileType = 'FORCEFIELD' as unknown as TileType;
+const FLOOR: TileType = TileType.FLOOR;
+const WALL: TileType = TileType.WALL;
+const DOOR_OPEN: TileType = TileType.DOOR_OPEN;
+const DOOR_CLOSED: TileType = TileType.DOOR_CLOSED;
+const FORCEFIELD: TileType = TileType.FORCEFIELD;
 
 function getMapWidth(map: SectorMap): number {
   return (map as { width?: number }).width ?? 0;
@@ -32,23 +32,29 @@ export function parseKey(keyStr: string): Position | null {
   return { x, y };
 }
 
+export function getTileProperties(tile: TileType): TileProperties {
+  const props = (TileProperties as Record<TileType, TileProperties>)[tile];
+  if (props) return props;
+  // Fallback for letter tiles (101-126) which are all transparent and non-walkable
+  if (typeof tile === 'number' && tile >= 101 && tile <= 126) {
+    return { walkable: false, transparent: true, name: `LETTER_${String.fromCharCode(tile - 100)}` };
+  }
+  return { walkable: false, transparent: false, name: 'UNKNOWN' };
+}
+
 export function isWalkable(tile: TileType): boolean {
-  const t = tile as any;
-  return t === FLOOR || t === DOOR_OPEN || t === 1 || t === 4 || t === 7 || t === 9 || t === 10 || t === 16 || t === 'ELEVATOR' || t === 'CONVEYOR' || t === 'STEAM_VENT' || t === 'REBEL_CACHE';
+  return getTileProperties(tile).walkable;
 }
 
 export function isTransparent(tile: TileType): boolean {
-  const t = tile as any;
-  if (typeof t === 'number' && t >= 101 && t <= 126) return true;
-  if (typeof t === 'string' && t.startsWith('LETTER_')) return true;
-  return t === FLOOR || t === DOOR_OPEN || t === FORCEFIELD || t === 1 || t === 4 || t === 5 || t === 9 || t === 10 || t === 11 || t === 13 || t === 16 || t === 17 || t === 'ELEVATOR' || t === 'CONVEYOR' || t === 'TURRET' || t === 'PARK_WATER' || t === 'STEAM_VENT' || t === 'REBEL_BARRICADE';
+  return getTileProperties(tile).transparent;
 }
 
 export function getLetterTile(char: string): TileType {
   const upper = char.toUpperCase();
   const code = upper.charCodeAt(0);
   if (code >= 65 && code <= 90) {
-    return (100 + (code - 64)) as unknown as TileType;
+    return (100 + (code - 64)) as TileType;
   }
   return FLOOR;
 }
@@ -86,6 +92,32 @@ export function setTile(map: SectorMap, position: Position, tile: TileType): boo
   const row = tiles[position.y];
   if (!row) return false;
   row[position.x] = tile;
+  return true;
+}
+
+export function validateSectorMap(map: SectorMap): boolean {
+  if (!map) return false;
+  const width = map.width;
+  const height = map.height;
+  if (typeof width !== 'number' || typeof height !== 'number' || width <= 0 || height <= 0) return false;
+  const tiles = map.tiles;
+  if (!Array.isArray(tiles)) return false;
+  if (tiles.length !== height) return false;
+  for (let y = 0; y < height; y += 1) {
+    const row = tiles[y];
+    if (!Array.isArray(row)) return false;
+    if (row.length !== width) return false;
+    for (let x = 0; x < width; x += 1) {
+      const tile = row[x];
+      if (typeof tile !== 'number' || !Number.isFinite(tile)) return false;
+      // Valid tile values: 0-17 and 101-126
+      if (tile < 0 || tile > 126) return false;
+      if (tile > 17 && tile < 101) return false;
+    }
+  }
+  const start = map.playerStart;
+  if (!start || typeof start.x !== 'number' || typeof start.y !== 'number') return false;
+  if (start.x < 0 || start.x >= width || start.y < 0 || start.y >= height) return false;
   return true;
 }
 
@@ -147,8 +179,8 @@ export function hasLineOfSight(map: SectorMap, from: Position, to: Position): bo
     if (!first) {
       if (x === x1 && y === y1) break;
       if (!isTransparent(getTile(map, { x, y }))) return false;
-      const pushableBlocks = (map as any).pushableBlocks;
-      if (Array.isArray(pushableBlocks) && pushableBlocks.some((b: any) => b.x === x && b.y === y)) return false;
+      const pushableBlocks = map.pushableBlocks;
+      if (Array.isArray(pushableBlocks) && pushableBlocks.some((b) => b.x === x && b.y === y)) return false;
     }
     first = false;
     const e2 = 2 * err;
@@ -352,46 +384,46 @@ export function buildSector1Map(): SectorMap {
 
   // === ELEVATOR ACCESS ===
   tiles[22][4] = TileType.ELEVATOR; // Sewer ladder to Sub-Sector Zero
-  tiles[25][38] = 9 as any; // ELEVATOR to Sector 2
+  tiles[25][38] = TileType.ELEVATOR; // ELEVATOR to Sector 2
 
   // === DECORATIVE TILES ===
   // 西北反抗軍基地掩體 (Rebel barricades in safehouse)
-  tiles[7][2] = 17 as any;
+  tiles[7][2] = TileType.REBEL_BARRICADE;
 
   // Sign decorations
   placeSign(tiles, 14, 3, 'RAMEN');
   placeSign(tiles, 4, 1, 'SPARK');
   placeSign(tiles, 25, 2, 'GATE');
-  tiles[7][3] = 17 as any;
-  tiles[3][4] = 17 as any;
-  tiles[3][6] = 17 as any;
+  tiles[7][3] = TileType.REBEL_BARRICADE;
+  tiles[3][4] = TileType.REBEL_BARRICADE;
+  tiles[3][6] = TileType.REBEL_BARRICADE;
 
   // 中央霓虹商店街攤位 (Vendor stalls along main street)
-  tiles[4][14] = 14 as any;
-  tiles[4][18] = 14 as any;
-  tiles[4][22] = 14 as any;
-  tiles[10][15] = 14 as any;
-  tiles[10][19] = 14 as any;
-  tiles[10][23] = 14 as any;
+  tiles[4][14] = TileType.VENDOR_STALL;
+  tiles[4][18] = TileType.VENDOR_STALL;
+  tiles[4][22] = TileType.VENDOR_STALL;
+  tiles[10][15] = TileType.VENDOR_STALL;
+  tiles[10][19] = TileType.VENDOR_STALL;
+  tiles[10][23] = TileType.VENDOR_STALL;
 
   // 南側生化仿生生態公園 (Bio-eco park with water and trees)
   for (let y = 21; y <= 23; y++) {
     for (let x = 10; x <= 13; x++) {
-      tiles[y][x] = 13 as any; // PARK_WATER
+      tiles[y][x] = TileType.PARK_WATER;
     }
   }
-  tiles[19][9] = 12 as any; // BIO_TREE
-  tiles[19][14] = 12 as any; // BIO_TREE
-  tiles[25][9] = 12 as any; // BIO_TREE
-  tiles[25][14] = 12 as any; // BIO_TREE
-  tiles[22][11] = 12 as any; // BIO_TREE in park
-  tiles[22][15] = 12 as any; // BIO_TREE in park
-  tiles[24][10] = 12 as any; // BIO_TREE
-  tiles[24][16] = 12 as any; // BIO_TREE
+  tiles[19][9] = TileType.BIO_TREE;
+  tiles[19][14] = TileType.BIO_TREE;
+  tiles[25][9] = TileType.BIO_TREE;
+  tiles[25][14] = TileType.BIO_TREE;
+  tiles[22][11] = TileType.BIO_TREE;
+  tiles[22][15] = TileType.BIO_TREE;
+  tiles[24][10] = TileType.BIO_TREE;
+  tiles[24][16] = TileType.BIO_TREE;
 
   // Additional park water features
-  tiles[21][14] = 13 as any;
-  tiles[23][10] = 13 as any;
+  tiles[21][14] = TileType.PARK_WATER;
+  tiles[23][10] = TileType.PARK_WATER;
 
   const checkpointForcefieldPositions: Position[] = [];
   for (let y = 4; y <= 10; y += 1) {
@@ -473,7 +505,7 @@ export function buildSector2Map(): SectorMap {
     setWall(tiles, 6, y);
   }
   setDoor(tiles, 6, 5, true); // Main entrance from staging bay
-  tiles[5][2] = 9 as any; // ELEVATOR back to Sector 1
+  tiles[5][2] = TileType.ELEVATOR; // ELEVATOR back to Sector 1
 
   // Staging bay interior partitions
   for (let x = 3; x <= 5; x++) setWall(tiles, x, 3);
@@ -484,8 +516,8 @@ export function buildSector2Map(): SectorMap {
   // === CENTRAL ASSEMBLY HALL ===
   // Dual conveyor lines (y=8 eastbound, y=14 westbound)
   for (let x = 8; x <= 26; x++) {
-    tiles[8][x] = 10 as any;  // Industrial conveyor line 1 (east)
-    tiles[14][x] = 10 as any; // Industrial conveyor line 2 (west)
+    tiles[8][x] = TileType.CONVEYOR;  // Industrial conveyor line 1 (east)
+    tiles[14][x] = TileType.CONVEYOR; // Industrial conveyor line 2 (west)
   }
 
   // Workstation partition walls between conveyors
@@ -554,8 +586,8 @@ export function buildSector2Map(): SectorMap {
     setWall(tiles, 26, y);
   }
   // Turret positions in corridor
-  tiles[20][26] = 11 as any; // TURRET 1
-  tiles[24][26] = 11 as any; // TURRET 2
+  tiles[20][26] = TileType.TURRET; // TURRET 1
+  tiles[24][26] = TileType.TURRET; // TURRET 2
 
   // === SECRET R&D CHAMBER ===
   for (let x = 27; x <= 31; x++) {
@@ -591,37 +623,37 @@ export function buildSector2Map(): SectorMap {
   setDoor(tiles, 34, 20, true); // Vault inner door
 
   // ELEVATOR to Tzorg Citadel
-  tiles[22][35] = 9 as any; // ELEVATOR to Citadel
+  tiles[22][35] = TileType.ELEVATOR; // ELEVATOR to Citadel
 
   // === DECORATIVE TILES ===
   // 西側黑市暗巷蒸氣孔與掩體 (Steam vents and barricades in west alley)
-  tiles[16][3] = 16 as any; // STEAM_VENT
-  tiles[20][4] = 16 as any; // STEAM_VENT
-  tiles[24][3] = 16 as any; // STEAM_VENT
-  tiles[18][5] = 17 as any; // REBEL_BARRICADE
-  tiles[12][9] = 16 as any; // STEAM_VENT in alley
-  tiles[18][9] = 16 as any; // STEAM_VENT in alley
-  tiles[22][9] = 16 as any; // STEAM_VENT in alley
-  tiles[20][10] = 17 as any; // REBEL_BARRICADE in alley
+  tiles[16][3] = TileType.STEAM_VENT;
+  tiles[20][4] = TileType.STEAM_VENT;
+  tiles[24][3] = TileType.STEAM_VENT;
+  tiles[18][5] = TileType.REBEL_BARRICADE;
+  tiles[12][9] = TileType.STEAM_VENT;
+  tiles[18][9] = TileType.STEAM_VENT;
+  tiles[22][9] = TileType.STEAM_VENT;
+  tiles[20][10] = TileType.REBEL_BARRICADE;
 
   // 中央機房高密度伺服器機櫃 (Server racks in central area)
-  tiles[6][10] = 15 as any; // SERVER_RACK
-  tiles[6][12] = 15 as any; // SERVER_RACK
-  tiles[6][14] = 15 as any; // SERVER_RACK
-  tiles[16][10] = 15 as any; // SERVER_RACK
-  tiles[16][12] = 15 as any; // SERVER_RACK
-  tiles[16][14] = 15 as any; // SERVER_RACK
-  tiles[18][10] = 15 as any; // SERVER_RACK
-  tiles[18][12] = 15 as any; // SERVER_RACK
-  tiles[18][14] = 15 as any; // SERVER_RACK
+  tiles[6][10] = TileType.SERVER_RACK;
+  tiles[6][12] = TileType.SERVER_RACK;
+  tiles[6][14] = TileType.SERVER_RACK;
+  tiles[16][10] = TileType.SERVER_RACK;
+  tiles[16][12] = TileType.SERVER_RACK;
+  tiles[16][14] = TileType.SERVER_RACK;
+  tiles[18][10] = TileType.SERVER_RACK;
+  tiles[18][12] = TileType.SERVER_RACK;
+  tiles[18][14] = TileType.SERVER_RACK;
 
   // Additional server racks in maintenance corridor
-  tiles[18][11] = 15 as any; // SERVER_RACK
-  tiles[18][13] = 15 as any; // SERVER_RACK
-  tiles[18][15] = 15 as any; // SERVER_RACK
+  tiles[18][11] = TileType.SERVER_RACK;
+  tiles[18][13] = TileType.SERVER_RACK;
+  tiles[18][15] = TileType.SERVER_RACK;
 
   // Sewer ladder to Sub-Sector Zero
-  tiles[25][2] = 9 as any; // ELEVATOR / Sewer ladder to Sub-Sector Zero
+  tiles[25][2] = TileType.ELEVATOR;
 
   const coreForcefieldPositions: Position[] = [
     { x: 28, y: 22 },

@@ -38,18 +38,22 @@ export function createSectorStoryLogs(): StoryLog[] {
     extraLogs.push({
       id: 'slate-tzorg',
       title: 'Tzorg Security Directive',
+      author: 'Tzorg Syndicate',
+      timestamp: '2400-03-15T08:00:00Z',
       read: false,
-      content: 'CLASSIFIED: Subject Raven has breached perimeter. All units engage on sight. Deploy Hunter-Killers to Central Data Core. The Five Million must remain dormant. Failure to comply will result in neural termination.',
-    } as unknown as StoryLog);
+      content: ['CLASSIFIED: Subject Raven has breached perimeter. All units engage on sight. Deploy Hunter-Killers to Central Data Core. The Five Million must remain dormant. Failure to comply will result in neural termination.'],
+    });
   }
 
   if (!existingIds.has('slate-ghost')) {
     extraLogs.push({
       id: 'slate-ghost',
       title: 'Awakening the Five Million',
+      author: 'Ghost',
+      timestamp: '2400-03-14T22:30:00Z',
       read: false,
-      content: 'Intercepted quantum transmission: The neural collars can be reversed. If the Central Overmind core is breached, the signal can be broadcast to all five million subjects. Freedom is not a privilege. It is a right. — Ghost',
-    } as unknown as StoryLog);
+      content: ['Intercepted quantum transmission: The neural collars can be reversed. If the Central Overmind core is breached, the signal can be broadcast to all five million subjects. Freedom is not a privilege. It is a right. — Ghost'],
+    });
   }
 
   return [...baseLogs, ...extraLogs];
@@ -340,7 +344,7 @@ export function createSectorHazards(): Hazard[] {
 }
 
 export function createSectorPushableBlocks(sectorId?: string): PushableBlock[] {
-  const id = sectorId || undefined || 'sector-1';
+  const id = sectorId || 'sector-1';
   if (id === 'sector-1') {
     return [
       {
