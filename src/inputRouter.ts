@@ -241,7 +241,16 @@ export class InputRouter {
       return;
     }
 
-    // 8. Game Over / Victory Restart
+    // 8. Victory State
+    if (g.victory) {
+      if (key === 'Enter') {
+        g.returnToTitleScreen();
+        return;
+      }
+      return;
+    }
+
+    // 9. Game Over / Victory Restart
     if (key === 'r' || key === 'R') {
       if (!g.player.isAlive || g.victory) {
         g.restartGame();

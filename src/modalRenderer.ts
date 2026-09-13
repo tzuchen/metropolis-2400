@@ -743,7 +743,7 @@ export class ModalRenderer {
     ctx.fillText?.(isZh ? `終局評級：RANK ${finalRank} - ${finalRankText}` : `FINAL RANK: ${finalRank} - ${finalRankText}`, rightX, rightY);
 
     // 4. 底部提示
-    const promptText = isZh ? '按 [ R ] 重新開始模擬  |  按 [ 9 ] 讀取快速存檔' : 'PRESS [ R ] TO RESTART  |  [ 9 ] QUICK LOAD';
+    const promptText = isZh ? '按 [ ENTER ] 返回標題畫面' : 'PRESS [ ENTER ] TO RETURN TO TITLE SCREEN';
     ctx.fillStyle = '#ffffff';
     ctx.shadowBlur = 0;
     ctx.font = '12px monospace';

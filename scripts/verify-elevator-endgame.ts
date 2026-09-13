@@ -1,5 +1,6 @@
 import { GameEngine } from '../src/game';
 import { TerminalSession } from '../src/terminal';
+import { bgm } from '../src/music';
 import type { TerminalData, SecurityLevel } from '../src/types';
 
 const mockCanvas = {
@@ -119,6 +120,46 @@ if (!game.victory) {
 }
 if ((game.player as any).endgameChoice !== 'SUBVERSION') {
   throw new Error('Expected endgameChoice to be SUBVERSION');
+}
+
+// Verify R and 9 do not leave victory or enter the title screen
+const victoryBeforeR = game.victory;
+const titleBeforeR = game.isTitleScreen;
+game.handleKeyDown('r');
+if (!game.victory) {
+  throw new Error('Pressing R during victory should not clear victory state');
+}
+if (game.isTitleScreen !== titleBeforeR) {
+  throw new Error('Pressing R during victory should not enter title screen');
+}
+
+const victoryBefore9 = game.victory;
+const titleBefore9 = game.isTitleScreen;
+game.handleKeyDown('9');
+if (!game.victory) {
+  throw new Error('Pressing 9 during victory should not clear victory state');
+}
+if (game.isTitleScreen !== titleBefore9) {
+  throw new Error('Pressing 9 during victory should not enter title screen');
+}
+
+// Verify Enter returns to the title screen, clears victory, and does not immediately start a title menu action
+const victoryBeforeEnter = game.victory;
+const titleBeforeEnter = game.isTitleScreen;
+game.handleKeyDown('Enter');
+if (game.victory) {
+  throw new Error('Pressing Enter during victory should clear victory state');
+}
+if (!game.isTitleScreen) {
+  throw new Error('Pressing Enter during victory should return to title screen');
+}
+// Verify no title menu action was immediately triggered (e.g., mission start)
+if (!game.isTitleScreen) {
+  throw new Error('Title screen should remain active after Enter from victory');
+}
+// Verify BGM intensity is set to 'title' after returning to title screen
+if (bgm.currentIntensity !== 'title') {
+  throw new Error(`Expected BGM intensity to be 'title' after returning to title screen, got '${bgm.currentIntensity}'`);
 }
 
 console.log('All elevator, endgame, and floating text verification tests passed successfully!');

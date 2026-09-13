@@ -1848,6 +1848,14 @@ export class GameEngine {
     this.render();
   }
 
+  returnToTitleScreen(): void {
+    this.restartGame();
+    this.isTitleScreen = true;
+    this.titleMenuIndex = 0;
+    this.updateMusicIntensity();
+    this.render();
+  }
+
   private handleTerminalInput(key: string): void {
     _handleTerminalInput(this, key);
   }
