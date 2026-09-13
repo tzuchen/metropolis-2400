@@ -864,7 +864,7 @@ export class InputRouter {
 
   private buildInteractionHost(): InteractionSystemHost {
     const g = this.game;
-    return {
+    const host: InteractionSystemHost = {
       map: g.map,
       player: g.player,
       robots: g.robots,
@@ -893,6 +893,22 @@ export class InputRouter {
       missionObjectives: g.missionObjectives,
       createTerminalSession: (terminal: TerminalData) => new TerminalSession(terminal),
     };
+
+    Object.defineProperty(host, 'activeTerminal', {
+      get: () => g.activeTerminal,
+      set: (val: TerminalSession | null) => { g.activeTerminal = val; },
+      enumerable: true,
+      configurable: true,
+    });
+
+    Object.defineProperty(host, 'terminalInputBuffer', {
+      get: () => g.terminalInputBuffer,
+      set: (val: string) => { g.terminalInputBuffer = val; },
+      enumerable: true,
+      configurable: true,
+    });
+
+    return host;
   }
 }
 

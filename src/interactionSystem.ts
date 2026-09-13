@@ -182,9 +182,10 @@ export function handleNPCOrTerminalInteraction(host: InteractionSystemHost): voi
     if (terminal) {
       soundFX.terminal();
       host.performCheckIn();
-      host.activeTerminal = host.createTerminalSession(terminal);
+      const session = host.createTerminalSession(terminal);
+      host.activeTerminal = session;
       host.terminalInputBuffer = '';
-      host.activeTerminal.input = '';
+      session.input = '';
       host.pushMessage('Terminal interface accessed. Type HELP for commands.', 'info');
       host.render();
       return;
