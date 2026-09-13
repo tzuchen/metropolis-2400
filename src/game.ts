@@ -201,12 +201,14 @@ export class GameEngine {
         soundFX.pickup();
         const msg = this.language === 'zh' ? '任務啟動！' : 'MISSION START!';
         this.pushFloatingText(this.player.x, this.player.y, msg, '#00ffcc');
+        this.updateMusicIntensity();
         this.render();
         break;
       case 1:
         if (this.hasSaveGame()) {
           if (this.loadGame()) {
             this.isTitleScreen = false;
+            this.updateMusicIntensity();
           }
         } else {
           soundFX.hit();
@@ -452,7 +454,6 @@ export class GameEngine {
     const prevMapId = this.map?.id;
     this.securityLevel = this.checkInAlertActive ? 'ALERT' as SecurityLevel : 'CLEAR' as SecurityLevel;
     this.laserBeams = [];
-    bgm.setIntensity('exploration');
 
     // Save current sector's ground items before switching
     if (prevMapId) {
@@ -467,7 +468,7 @@ export class GameEngine {
       }
       this.pushableBlocks = this.sectorPushableBlocks['sector-citadel'] || this.createSectorPushableBlocks('sector-citadel');
       this.applyRevealedPushableBlocks();
-      bgm.setIntensity('combat');
+      this.updateMusicIntensity();
       return;
     }
     if (targetSectorId === 'sub-sector-0') {
@@ -485,6 +486,7 @@ export class GameEngine {
       }
       this.pushableBlocks = this.sectorPushableBlocks['sub-sector-0'] || this.createSectorPushableBlocks('sub-sector-0');
       this.applyRevealedPushableBlocks();
+      this.updateMusicIntensity();
       return;
     }
     if (targetSectorId === 'sector-2') {
@@ -520,6 +522,7 @@ export class GameEngine {
       soundFX.door();
       this.pushFloatingText(this.player.x, this.player.y, 'SECTOR 2: FAB-PLEX', '#00f0ff');
       this.pushMessage('TRANSIT COMPLETE: Arrived at Sector 2 (Fab-Plex). Central Overmind core located to East!', 'warning');
+      this.updateMusicIntensity();
     } else if (targetSectorId === 'sector-1') {
       this.map = buildSector1Map();
       if (prevMapId === 'sub-sector-0') {
@@ -542,6 +545,7 @@ export class GameEngine {
       soundFX.door();
       this.pushFloatingText(this.player.x, this.player.y, 'SECTOR 1: STREETS', '#00f0ff');
       this.pushMessage('TRANSIT COMPLETE: Returned to Sector 1 Metropolis.', 'info');
+      this.updateMusicIntensity();
     }
   }
 
@@ -936,6 +940,7 @@ export class GameEngine {
       const msg = this.language === 'zh' ? '進度已讀取！' : 'DATA RESTORED!';
       this.pushFloatingText(this.player.x, this.player.y, msg, '#00f0ff');
       this.pushMessage(this.language === 'zh' ? '系統提示：神經連結已從存檔恢復。' : 'SYSTEM: Neural link restored from memory matrix.', 'info');
+      this.updateMusicIntensity();
     } else {
       soundFX.alarm();
       const msg = this.language === 'zh' ? '未發現存檔！' : 'NO SAVE FOUND!';
@@ -960,13 +965,7 @@ export class GameEngine {
     this.render();
   }
 
-  render(): void {
-    try {
-    this.fx.update(16);
-    this.updateDefeatCutscene(Date.now());
-    this.renderer.fx = this.fx;
-    this.renderer.defeatCutscene = this.defeatCutscene;
-    this.renderer.activeWaypoint = this.activeWaypoint;
+  updateMusicIntensity(): void {
     if (this.isTitleScreen) {
       bgm.setIntensity('title');
     } else {
@@ -985,6 +984,13 @@ export class GameEngine {
         bgm.setIntensity('exploration');
       }
     }
+  }
+
+  render(): void {
+    try {
+    this.renderer.fx = this.fx;
+    this.renderer.defeatCutscene = this.defeatCutscene;
+    this.renderer.activeWaypoint = this.activeWaypoint;
     this.renderer.isTitleScreen = this.isTitleScreen;
     this.renderer.language = this.language;
     this.renderer.hasSaveData = this.hasSaveGame();
@@ -1036,10 +1042,13 @@ export class GameEngine {
 
   tick(): void {
     const now = Date.now();
+    this.fx.update(16);
+    this.updateDefeatCutscene(now);
     this.floatingTexts = this.floatingTexts.filter((ft) => !ft.createdAt || now - ft.createdAt < 1500);
     this.laserBeams = this.laserBeams.filter((b) => !b.createdAt || now - b.createdAt < (b.duration || 220));
     if (!this.player.isAlive) {
       this.updateFOV();
+      this.updateMusicIntensity();
       this.render();
       return;
     }
@@ -1189,6 +1198,7 @@ export class GameEngine {
       }
     }
 
+    this.updateMusicIntensity();
     this.updateFOV();
     this.render();
     this.laserBeams = this.laserBeams.filter((b) => !b.createdAt || now - b.createdAt < (b.duration || 350));
@@ -1805,6 +1815,7 @@ export class GameEngine {
     this.endgameChoice = null;
     soundFX.pickup();
     this.updateFOV();
+    this.updateMusicIntensity();
     this.render();
   }
 

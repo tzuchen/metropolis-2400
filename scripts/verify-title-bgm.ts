@@ -93,15 +93,15 @@ const canvas = {
 const game = new GameEngine(canvas);
 game.isTitleScreen = true;
 
-// 3. Verify game in title screen and render sets BGM to 'title'
-game.render();
-assert.strictEqual(bgm.currentIntensity, 'title', 'render() while on title screen must maintain title BGM');
+// 3. Verify game in title screen and updateMusicIntensity sets BGM to 'title'
+game.updateMusicIntensity();
+assert.strictEqual(bgm.currentIntensity, 'title', 'updateMusicIntensity() while on title screen must maintain title BGM');
 console.log('✓ Title screen active: BGM intensity confirmed as title');
 
 // 4. Verify transitioning from title screen into gameplay switches to 'exploration'
 game.handleKeyDown('n'); // Start new game
 assert.strictEqual(game.isTitleScreen, false, 'Title screen should be dismissed');
-game.render();
+game.updateMusicIntensity();
 assert.strictEqual(bgm.currentIntensity, 'exploration', 'BGM should switch to exploration after entering game');
 console.log('✓ Entering gameplay: BGM seamlessly transitions from title to exploration');
 

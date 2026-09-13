@@ -134,7 +134,7 @@ const map = buildSector1Map();
   game.securityLevel = SecurityLevel.CLEAR;
   game.robots.forEach((r) => { r.isAlive = false; }); // clear all robots
 
-  game.render();
+  game.updateMusicIntensity();
   assert.strictEqual(bgm.currentIntensity, 'exploration', 'BGM intensity should be exploration when clear');
 
   // Add a hostile chasing robot
@@ -144,13 +144,13 @@ const map = buildSector1Map();
   chaser.isAlive = true;
   game.robots.push(chaser);
 
-  game.render();
+  game.updateMusicIntensity();
   assert.strictEqual(bgm.currentIntensity, 'combat', 'BGM intensity should be combat when a robot is chasing');
 
   // Pacify robot
   chaser.aiState = 'patrol';
   (chaser as any).pursuitTurns = 0;
-  game.render();
+  game.updateMusicIntensity();
   assert.strictEqual(bgm.currentIntensity, 'exploration', 'BGM intensity should revert to exploration once de-escalated');
 
   console.log('✓ Dynamic BGM intensity switching verified');
@@ -194,7 +194,7 @@ const map = buildSector1Map();
   hostile.isAlive = true;
   game.robots.push(hostile);
 
-  game.render();
+  game.updateMusicIntensity();
   assert.strictEqual(bgm.currentIntensity, 'combat', 'Should be combat mode while hostile is alive');
 
   // Eliminate hostile
@@ -203,7 +203,7 @@ const map = buildSector1Map();
   game.tick();
 
   assert.strictEqual(game.securityLevel, SecurityLevel.CLEAR, 'Security level should de-escalate to CLEAR after eliminating hostile');
-  game.render();
+  game.updateMusicIntensity();
   assert.strictEqual(bgm.currentIntensity, 'exploration', 'Music should return to exploration mode after eliminating hostile');
   console.log('✓ Combat mode and alert de-escalation upon enemy destruction verified');
 }

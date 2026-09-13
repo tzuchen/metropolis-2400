@@ -870,6 +870,7 @@ export class GameRenderer {
   getSectorFromPosition(px: number, py: number): string {
     return this.atmosphereRenderer.getSectorFromPosition(px, py);
   }
+
   drawAcidRainAndFog(width: number, height: number, ctx: any, now: number): void {
     this.atmosphereRenderer.drawAcidRainAndFog(width, height, ctx, now);
   }
