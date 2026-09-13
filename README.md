@@ -240,36 +240,49 @@ Your objective:
 metropolis-2400/
 ├── index.html            # CRT frame container & tactical keybinding HUD strip
 ├── vite.config.ts        # Vite build configuration
+├── AGENTS.md             # Project-level AI agent collaboration protocols & anti-drift rules
+├── .agents/
+│   └── skills/
+│       └── ai-work-order/ # Antigravity work-order generation & review skill
+├── docs/
+│   ├── MAINTAINABILITY_REFACTORING_ROADMAP.md # 7-phase completed maintainability roadmap
+│   └── REFACTORING_WORK_ORDERS.md             # Detailed subsystem extraction records
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml    # GitHub Pages automated deployment workflow
 ├── src/
-│   ├── types.ts          # Core interfaces (Player, Robot, NPC, GroundItem, StoryLog, etc.)
-│   ├── map.ts            # Sector 1 tilemap, door cycling, forcefields & raycast FOV
+│   ├── types.ts          # Core interfaces (Player, Robot, NPC, GroundItem, Contracts, etc.)
+│   ├── map.ts            # Sector maps, door cycling, forcefields, TileType enum & accessors
 │   ├── entities.ts       # Operative & Robot stat definitions and gear factories
 │   ├── ai.ts             # Pathfinding (BFS), line-of-sight pursuit, alarm & EMP stun logic
 │   ├── npcAI.ts          # NPC autonomous wandering, directional facing & dynamic barks logic
 │   ├── sprites.ts        # Pixel-art canvas renderers (Player, Robots, NPCs, Items, Wreckage)
 │   ├── npcSprites.ts     # NPC-specific persona action VFX & particle effects
-│   ├── renderer.ts       # CRT display compositor, Mini-Radar & tactical HUD
-│   ├── beamRenderer.ts   # Weapon beam and attack-effect Canvas renderer
-│   ├── atmosphereRenderer.ts # Acid rain, fog, toxic mist & conveyor-spark effects
-│   ├── modalRenderer.ts  # Inventory, mission, story, augment & endgame overlays
+│   ├── renderer.ts       # CRT display compositor, Mini-Radar & tactical HUD coordinator
+│   ├── beamRenderer.ts   # Weapon beam and attack-effect Canvas renderer (Phase 1)
+│   ├── atmosphereRenderer.ts # Acid rain, fog, toxic mist & conveyor-spark effects (Phase 4)
+│   ├── modalRenderer.ts  # Inventory, mission, story, augment & endgame overlays (Phase 6)
 │   ├── terminal.ts       # Security terminal session, parser, and subroutines
-│   ├── terminalRunner.ts # Terminal keystrokes and command-result integration
+│   ├── terminalRunner.ts # Terminal keystrokes and command-result integration (Phase 3)
 │   ├── audio.ts          # Procedural Web Audio API sound synthesizer
-│   ├── game.ts           # Game loop dispatcher, input handler, acoustics & mission logic
-│   ├── defeatCutscene.ts # Defeat cinematic and detention-cell transition logic
-│   ├── citadelHorde.ts   # Citadel endless-reinforcement controller
-│   ├── hazardSystem.ts   # Conveyor transport and plasma-canister hazard rules
-│   ├── inputHandler.ts   # Modal, title-screen, map and utility key handling
+│   ├── music.ts          # Procedural background synthwave music
+│   ├── audioService.ts   # Unified audio lifecycle, global mute & volume controller (Phase 7)
+│   ├── game.ts           # Pure game simulation loop, acoustics & state dispatcher
+│   ├── defeatCutscene.ts # Defeat cinematic and detention-cell transition logic (Phase 2)
+│   ├── citadelHorde.ts   # Citadel endless-reinforcement controller (Phase 5)
+│   ├── hazardSystem.ts   # Conveyor transport and plasma-canister hazard rules (Phase 7)
+│   ├── inputRouter.ts    # Hierarchical keyboard input routing & state dispatching (Phase 3)
+│   ├── interactionSystem.ts # Capability-based environmental & entity interactions (Phase 3)
+│   ├── questSystem.ts    # Data-driven side quest progression, conditions & rewards (Phase 4)
+│   ├── dialogueSystem.ts # Dynamic NPC conversation flow & ambient barking (Phase 4)
+│   ├── rng.ts            # Seeded, deterministic Mulberry32 pseudo-random generator (Phase 6)
+│   ├── effectRegistry.ts # Centralized visual effects presets dictionary (Phase 6)
+│   ├── fx.ts             # Combat, shockwave & particle VFX physics manager
+│   ├── saveLoad.ts       # Versioned save-state persistence & schema migration pipeline (Phase 2)
 │   ├── titleScreen.ts    # Title screen, menu and telemetry ticker renderer
 │   ├── manualModal.ts    # Tactical manual renderer
 │   ├── bigMapModal.ts    # Sector overview map renderer
-│   ├── saveLoad.ts       # Local save-state persistence
 │   ├── main.ts           # Canvas bootstrap & keyboard listener bindings
-│   ├── music.ts          # Procedural background music
-│   ├── fx.ts             # Combat and interface particle effects
 │   ├── boss.ts           # Boss encounter and endgame state
 │   ├── breachProtocol.ts # Core-terminal breach mini-game
 │   ├── sewerMap.ts       # Sub-Sector Zero map
@@ -297,11 +310,27 @@ metropolis-2400/
 ├── live-gh-pages-preview.png # GitHub Pages live preview screenshot
 ├── npc-actions-preview.png   # NPC dynamic actions & VFX screenshot
 └── preview.png           # Live gameplay screenshot
-
-The renderer and game loop are intentionally composed from focused modules, while `GameRenderer` and `GameEngine` retain their existing public APIs for compatibility.
 ```
 
-> `scripts` currently contains 41 verification scripts. `npm test` runs TypeScript typechecking plus 37 selected verification scripts covering engine turns, AI, story, augments, weapons, maps, saves, bosses/endgame, UI, and quests.
+> 💡 **自動化測試覆蓋**：`scripts` 目前包含 41 套驗證腳本。執行 `npm test` 會同步執行 TypeScript 嚴格靜態型別檢驗與 37 套核心整合測試，涵蓋引擎回合推進、AI 尋路、戰鬥音訊、地圖扇區、存檔水合、Boss 多階段戰與支線任務。
+
+### 🏛️ 架構演進與高可維護性設計 (Architecture & Maintainability)
+
+本專案歷經全面系統重構，將歷史上的兩大「巨石核心」（`renderer.ts` 與 `game.ts` 各逾 3,400 行）徹底解耦，分別**縮減了 43% 以上的代碼量**（雙雙降至 1,900 行左右），並提煉出 14 個職責單一的獨立子系統：
+
+1. **契約優先與享元模式 (Contract-First & Flyweight Pattern)**：
+   - 地圖維持緊湊數字矩陣 (`TileType[][]`)，透過常數查表函式 `getTileProperties(tile)` 存取物理與光學屬性，杜絕成千上萬個 JS 堆積物件引發的 GC 停頓。
+2. **能力介面隔離 (Capability-based Decoupling)**：
+   - 新抽離的交互系統 (`InteractionSystemHost`)、任務系統 (`QuestHost`) 等均使用窄能力介面與主引擎溝通，完全杜絕 TypeScript 雙向循環引用 (`circular dependency`)。
+3. **純渲染管線 (Pure Rendering Pipeline)**：
+   - 繪製管線 `render()` 保持絕對純淨與冪等，所有時間推進 (`fx.update`)、過場動畫計時與音樂強度計算均隔離至 `tick()` 與狀態變更事件中，極致支援無視窗無頭測試 (Headless Safe)。
+4. **資料驅動與可重現 RNG (Data-Driven & Deterministic)**：
+   - 支線任務（Hiro、Elena、Zero-One 等）全面資料驅動 (`QUEST_DEFINITIONS`)。
+   - 粒子特效參數集中收納至 `effectRegistry.ts`，並配備可播種的 Mulberry32 `DeterministicRNG`，確保單元測試與回放完全可重現。
+5. **AI 協同與防飄移規範 (AI Protocols & Anti-Drift)**：
+   - 專案根目錄配置 `AGENTS.md` 與 `.agents/skills/ai-work-order`，規範雲端架構師與本地執行代理（Codex / local-coder）的協作邊界，嚴格透過白名單工單（`allowed_files`）推進重構。
+6. **零退化自動化驗證**：
+   - 每次重構與代碼變更均受 37 套整合與回歸測試嚴密保護，確保 100% 綠燈與向下相容。
 
 ---
 
