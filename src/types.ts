@@ -439,3 +439,35 @@ export interface PushableBlock {
     messageEn?: string;
   };
 }
+
+export interface RandomSource {
+  seed: number;
+  next(): number;
+  random?(): number;
+  nextInt(min: number, max: number): number;
+  nextFloat(min: number, max: number): number;
+  pick<T>(items: readonly T[]): T;
+  shuffle<T>(items: readonly T[]): T[];
+  chance(probability: number): boolean;
+}
+
+export interface EffectPreset {
+  id: string;
+  name: string;
+  shakeIntensity?: number;
+  particleCount?: number;
+  particleColors?: string[];
+  particleMinLife?: number;
+  particleMaxLife?: number;
+  particleMinSize?: number;
+  particleMaxSize?: number;
+  particleMinSpeed?: number;
+  particleMaxSpeed?: number;
+  shockwaveMaxRadius?: number;
+  shockwaveSpeed?: number;
+  shockwaveColor?: string;
+  shockwaveSecondaryColor?: string;
+  shockwaveLineWidth?: number;
+  shockwaveLife?: number;
+  flashAlpha?: number;
+}
