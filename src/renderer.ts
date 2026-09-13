@@ -119,6 +119,8 @@ export class GameRenderer {
       ctx.restore?.();
       return;
     }
+    // 徹底清除上一幀畫布像素緩衝區，杜絕次像素抗鋸齒產生的殘像與鬼影
+    ctx.clearRect?.(0, 0, width, height);
     // 深黑色賽博街道基底背景
     ctx.fillStyle = '#050a0f';
     ctx.fillRect?.(0, 0, width, height);
@@ -141,6 +143,7 @@ export class GameRenderer {
     const camX = px * this.tileSize - width / 2;
     const camY = py * this.tileSize - height / 2;
 
+    ctx.save?.();
     if (this.fx?.applyScreenShake) this.fx.applyScreenShake(ctx);
 
     const visible = visibleTiles ?? new Set<string>();
@@ -375,6 +378,9 @@ export class GameRenderer {
 
     // 10.5 各分區環境大氣特效 (Sector Environmental Atmosphere Effects)
     this.drawSectorAtmosphere(px, py, width, height, camX, camY, ctx, now);
+
+    // 恢復世界座標變換，確保靜態 UI 層（雷達、HUD、終端機、對話框、彈窗面板）不會跟著鏡頭劇烈跳動
+    ctx.restore?.();
 
     // 11. 戰術小雷達 (Sector Mini Radar，包含道具黃點、居民綠點、機器人)
     this.drawMiniRadar(width, map, player, robots, npcs, groundItems, visible, ctx, now, this.isFullMapActive, this.language);

@@ -406,12 +406,27 @@ export class GameEngine {
 
   private startAnimationLoop(): void {
     if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      let lastTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
       const anim = () => {
+        const currentTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const dt = Math.min(100, Math.max(8, currentTime - lastTime));
+        lastTime = currentTime;
+        this.updateVisualEffects(dt);
         this.render();
         window.requestAnimationFrame(anim);
       };
       window.requestAnimationFrame(anim);
     }
+  }
+
+  updateVisualEffects(dt: number = 16): void {
+    this.fx.update(dt);
+    if (this.defeatCutscene) {
+      this.updateDefeatCutscene(Date.now());
+    }
+    const now = Date.now();
+    this.floatingTexts = this.floatingTexts.filter((ft) => !ft.createdAt || now - ft.createdAt < 1500);
+    this.laserBeams = this.laserBeams.filter((b) => !b.createdAt || now - b.createdAt < (b.duration || 220));
   }
 
   private createSectorRobots(): Robot[] {
@@ -1042,10 +1057,7 @@ export class GameEngine {
 
   tick(): void {
     const now = Date.now();
-    this.fx.update(16);
-    this.updateDefeatCutscene(now);
-    this.floatingTexts = this.floatingTexts.filter((ft) => !ft.createdAt || now - ft.createdAt < 1500);
-    this.laserBeams = this.laserBeams.filter((b) => !b.createdAt || now - b.createdAt < (b.duration || 220));
+    this.updateVisualEffects(16);
     if (!this.player.isAlive) {
       this.updateFOV();
       this.updateMusicIntensity();
