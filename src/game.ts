@@ -1,4 +1,4 @@
-import type { SectorMap, Player, Item, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard, Language, LaserBeam, PushableBlock } from './types';
+import type { SectorMap, Player, Item, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard, Language, LaserBeam, PushableBlock, CitadelAirdrop } from './types';
 import { buildSector1Map, buildSector2Map, calculateFOV, disableForcefield, getTile, isWalkable, toggleDoor } from './map';
 import { hasSavedGame, saveGameState, loadGameState } from './saveLoad';
 import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise, installAugment, cycleWeapon, createQuantumAnnihilator } from './entities';
@@ -97,6 +97,7 @@ export class GameEngine {
   isGearConfiscated: boolean = false;
   confiscatedGear: any = null;
   isCitadelHordeActive: boolean = false;
+  citadelAirdrops: CitadelAirdrop[] = [];
   defeatCutscene: {
     stage: 'swarm' | 'blur_out' | 'wake_up';
     startTime: number;
@@ -469,6 +470,11 @@ export class GameEngine {
     const prevMapId = this.map?.id;
     this.securityLevel = this.checkInAlertActive ? 'ALERT' as SecurityLevel : 'CLEAR' as SecurityLevel;
     this.laserBeams = [];
+
+    if (prevMapId === 'sector-citadel' && targetSectorId !== 'sector-citadel') {
+      this.citadelAirdrops.length = 0;
+      this.isCitadelHordeActive = false;
+    }
 
     // Save current sector's ground items before switching
     if (prevMapId) {
@@ -1027,6 +1033,7 @@ export class GameEngine {
     this.renderer.storyArchiveSelectedIndex = this.storyArchiveSelectedIndex;
     this.renderer.pushableBlocks = this.pushableBlocks;
     this.renderer.graffitiMuralComplete = this.graffitiMuralComplete;
+    (this.renderer as any).citadelAirdrops = this.citadelAirdrops;
     this.player.victory = this.victory;
     this.player.hasDefeatedBoss = this.robots.some((r) => !r.isAlive && isBossRobot(r));
     this.player.storyLogs = this.storyLogs;
@@ -1833,6 +1840,8 @@ export class GameEngine {
     this.terminalInputBuffer = '';
     this.victory = false;
     this.endgameChoice = null;
+    this.citadelAirdrops.length = 0;
+    this.isCitadelHordeActive = false;
     soundFX.pickup();
     this.updateFOV();
     this.updateMusicIntensity();
@@ -1913,14 +1922,14 @@ export class GameEngine {
   }
 
   triggerCitadelHorde(): void {
-    _triggerCitadelHorde(this.robots, this.player, (message, type) => this.pushMessage(message, type));
+    _triggerCitadelHorde(this.robots, this.player, (message, type) => this.pushMessage(message, type), this.citadelAirdrops);
     this.isCitadelHordeActive = true;
     this.render();
   }
 
   private updateCitadelHorde(): void {
     if (!this.isCitadelHordeActive || this.victory || this.map?.id !== 'sector-citadel') return;
-    _updateCitadelHorde(this.robots, this.player, this.turnCounter);
+    _updateCitadelHorde(this.robots, this.player, this.turnCounter, this.citadelAirdrops, Date.now());
   }
 }
 

@@ -409,6 +409,14 @@ export interface LaserBeam {
   targetRobot?: Robot;
 }
 
+export interface CitadelAirdrop {
+  readonly x: number;
+  readonly y: number;
+  readonly robotType: RobotType;
+  readonly startTimestamp: number;
+  readonly duration: number;
+}
+
 export interface PushableBlock {
   id: string;
   x: number;

@@ -1,6 +1,7 @@
 import { GameEngine } from '../src/game';
 import { TerminalSession } from '../src/terminal';
 import { applyBossDamage, handleBossDeath } from '../src/boss';
+import { updateCitadelHorde } from '../src/citadelHorde';
 import { TileType } from '../src/types';
 
 console.log('=== 開始驗證強化版佐格堡壘戰鬥與無盡蜂擁圍攻系統 ===\n');
@@ -105,6 +106,7 @@ console.log(`✅ 後半段戰鬥大廳開闊度合格 (空曠地板比例: ${(fl
 
 // 4. 擊敗 Boss 並觸發蜂擁大軍 (Horde Event)
 console.log('\n4. 模擬擊敗滅絕者原型機，驗證力場解除與無盡蜂擁警報...');
+const aliveBeforeKill = game.robots.filter((r) => r.isAlive).length;
 applyBossDamage(boss, 500, game);
 if (boss.hp > 0 || boss.isAlive) {
   throw new Error('首領應已被擊殺');
@@ -118,9 +120,39 @@ if (!forcefieldOpen) {
 console.log('✅ 力場已關閉，通往核心終端機通道解鎖');
 
 // 檢查蜂擁圍攻狀態
-if (!(game as any).isCitadelHordeActive) {
+if (!game.isCitadelHordeActive) {
   throw new Error('擊敗首領後必須啟動 isCitadelHordeActive 蜂擁圍攻狀態');
 }
+
+// 驗證 pending airdrops 已排程
+const pendingDrops = game.citadelAirdrops;
+if (!Array.isArray(pendingDrops) || pendingDrops.length < 6) {
+  throw new Error(`擊敗首領後應排程多個 pending airdrops (期望 >= 6，實際為 ${pendingDrops?.length ?? 0})`);
+}
+console.log(`✅ 蜂擁警報啟動！已排程 ${pendingDrops.length} 個空中補給包`);
+
+// 驗證 no pending airdrop landing point is within 6 Euclidean tiles of the player
+for (const drop of pendingDrops) {
+  const dist = Math.hypot(drop.x - game.player.x, drop.y - game.player.y);
+  if (dist < 6) {
+    throw new Error(`Pending airdrop at (${drop.x}, ${drop.y}) is within 6 tiles of player at (${game.player.x}, ${game.player.y})`);
+  }
+}
+console.log('✅ 所有空中補給包落點距離玩家至少 6 格');
+
+// 驗證 robots are not materialized before duration expiry
+const aliveAfterKill = game.robots.filter((r) => r.isAlive).length;
+if (aliveAfterKill > aliveBeforeKill) {
+  throw new Error(`Robots materialized before airdrop expiry: ${aliveAfterKill} > ${aliveBeforeKill}`);
+}
+
+// 推進數個回合，觸發增援刷新 (this will call updateCitadelHorde which processes landed drops)
+const syntheticTime = Date.now() + 2000;
+for (let i = 0; i < 4; i++) {
+  (game as any).turnCounter = ((game as any).turnCounter || 0) + 1;
+  updateCitadelHorde(game.robots, game.player, (game as any).turnCounter, game.citadelAirdrops, syntheticTime);
+}
+
 const hordeRobots = game.robots.filter((r) => r.isAlive);
 if (hordeRobots.length < 6) {
   throw new Error(`擊敗首領後應立即湧現大批圍攻機器人 (期望 >= 6，實際為 ${hordeRobots.length})`);

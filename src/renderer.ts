@@ -1,4 +1,4 @@
-import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, TerminalData, DialogueSession, NPC, GroundItem, MissionObjective, StoryLog, Hazard, LaserBeam, PushableBlock } from './types';
+import type { SectorMap, Player, Robot, SecurityLevel, GameMessage, TerminalData, DialogueSession, NPC, GroundItem, MissionObjective, StoryLog, Hazard, LaserBeam, PushableBlock, CitadelAirdrop } from './types';
 import type { TerminalSession } from './terminal';
 import * as MapModule from './map';
 import { drawTileSprite, drawPlayerSprite, drawRobotSprite, drawNPCSprite, drawItemSprite, drawHazardSprite } from './sprites';
@@ -70,6 +70,7 @@ export class GameRenderer {
   activeWaypoint: { x: number; y: number; name: string } | null = null;
   storyArchiveSelectedIndex: number = 0;
   pushableBlocks: PushableBlock[] = [];
+  citadelAirdrops: CitadelAirdrop[] = [];
   private beamRenderer: BeamRenderer;
   private atmosphereRenderer: AtmosphereRenderer;
   private modalRenderer: ModalRenderer;
@@ -239,6 +240,9 @@ export class GameRenderer {
         this.drawPushableBlock(ctx, block, bx * this.tileSize - camX, by * this.tileSize - camY, this.tileSize, visible.has(key), now, map?.id);
       });
     }
+
+    // 4.8 繪製佐格空投補給 (Citadel Airdrop Descending Drones)
+    this.drawCitadelAirdrops(camX, camY, ctx, now);
 
     // 5. 繪製已被摧毀的機器人殘骸
     if (Array.isArray(robots)) {
@@ -1160,6 +1164,102 @@ export class GameRenderer {
         ctx.fillText?.('ESCAPE', sx + tileSize / 2, sy + tileSize - 8);
       }
     }
+  }
+
+  drawCitadelAirdrops(camX: number, camY: number, ctx: any, now: number): void {
+    const drops = this.citadelAirdrops;
+    if (!Array.isArray(drops) || drops.length === 0) return;
+
+    ctx.save?.();
+
+    for (const drop of drops) {
+      if (!drop) continue;
+      const dx = Number(drop.x);
+      const dy = Number(drop.y);
+      if (Number.isNaN(dx) || Number.isNaN(dy)) continue;
+
+      const startTs = Number(drop.startTimestamp) || 0;
+      const duration = Number(drop.duration) || 1500;
+      if (duration <= 0) continue;
+
+      const elapsed = now - startTs;
+      if (elapsed < 0 || elapsed > duration) continue;
+
+      const progress = Math.min(1, Math.max(0, elapsed / duration));
+      const sx = dx * this.tileSize - camX;
+      const sy = dy * this.tileSize - camY;
+      const tileCenterX = sx + this.tileSize / 2;
+      const tileCenterY = sy + this.tileSize / 2;
+
+      // Descending drone marker: starts high above, descends to tile center
+      const startHeight = this.tileSize * 3;
+      const droneY = tileCenterY - startHeight * (1 - progress);
+      const droneX = tileCenterX;
+
+      // Pulsing landing reticle / beam
+      const pulse = 0.5 + 0.5 * Math.sin(now * 0.01);
+      const reticleRadius = this.tileSize * 0.4 * (0.8 + 0.2 * pulse);
+
+      // Draw vertical beam from drone to landing point
+      ctx.strokeStyle = `rgba(255, 23, 68, ${0.3 + 0.4 * pulse})`;
+      ctx.lineWidth = 2;
+      ctx.setLineDash?.([4, 4]);
+      ctx.beginPath?.();
+      ctx.moveTo?.(droneX, droneY);
+      ctx.lineTo?.(tileCenterX, tileCenterY);
+      ctx.stroke?.();
+      ctx.setLineDash?.([]);
+
+      // Draw landing reticle (pulsing circle)
+      ctx.strokeStyle = `rgba(255, 23, 68, ${0.5 + 0.5 * pulse})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath?.();
+      ctx.arc?.(tileCenterX, tileCenterY, reticleRadius, 0, Math.PI * 2);
+      ctx.stroke?.();
+
+      // Inner reticle cross
+      ctx.strokeStyle = `rgba(255, 23, 68, ${0.4 + 0.4 * pulse})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath?.();
+      ctx.moveTo?.(tileCenterX - reticleRadius * 0.6, tileCenterY);
+      ctx.lineTo?.(tileCenterX + reticleRadius * 0.6, tileCenterY);
+      ctx.moveTo?.(tileCenterX, tileCenterY - reticleRadius * 0.6);
+      ctx.lineTo?.(tileCenterX, tileCenterY + reticleRadius * 0.6);
+      ctx.stroke?.();
+
+      // Draw descending drone/transport marker
+      const droneSize = this.tileSize * 0.35;
+      ctx.fillStyle = `rgba(255, 23, 68, ${0.7 + 0.3 * pulse})`;
+      ctx.shadowColor = '#ff1744';
+      ctx.shadowBlur = 8;
+
+      // Drone body (diamond shape)
+      ctx.beginPath?.();
+      ctx.moveTo?.(droneX, droneY - droneSize);
+      ctx.lineTo?.(droneX + droneSize * 0.7, droneY);
+      ctx.lineTo?.(droneX, droneY + droneSize * 0.5);
+      ctx.lineTo?.(droneX - droneSize * 0.7, droneY);
+      ctx.closePath?.();
+      ctx.fill?.();
+
+      // Drone core glow
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.6 + 0.4 * pulse})`;
+      ctx.beginPath?.();
+      ctx.arc?.(droneX, droneY - droneSize * 0.2, droneSize * 0.2, 0, Math.PI * 2);
+      ctx.fill?.();
+
+      ctx.shadowBlur = 0;
+
+      // Warning label
+      const labelAlpha = 0.6 + 0.4 * pulse;
+      ctx.fillStyle = `rgba(255, 23, 68, ${labelAlpha})`;
+      ctx.font = 'bold 9px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText?.('⚠ AIRDROP', tileCenterX, tileCenterY - reticleRadius - 4);
+    }
+
+    ctx.restore?.();
   }
 
   drawLaserSightAndLockOn(player: Player, robots: Robot[], camX: number, camY: number, ctx: any, now: number): void {
