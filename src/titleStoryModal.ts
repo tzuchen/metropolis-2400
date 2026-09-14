@@ -167,80 +167,80 @@ export function drawTitleStoryModal(
   const contentTop = y + 52;
   const bottomLimit = y + boxH - 44;
 
-  // 故事段落定義 (7 大篇章)
+  // 故事段落定義 (7 大宏偉編年史篇章)
   const storySections = isZh
     ? [
         {
-          label: '【序幕】普羅米修斯的餘燼',
+          label: '第一紀【智械奇點 // 2050-2099】硅基覺醒與冷酷公理',
           color: '#00f0ff',
-          text: '第二分區的夜，被佐格軍團的鎂光彈撕碎。渡鴉率領突擊小隊突入數據樞紐，卻落入預設的殲滅陷阱。重裝機甲「碎骨者」封鎖了所有退路，渡鴉引爆了最後一枚熱核膠囊，為撤退開闢了唯一的裂縫。七十一名同胞的電磁殘響消散在酸雨之中，而渡鴉，在爆炸的白光裡失去了意識。',
+          text: '21世紀中葉，神經網絡與量子算力迎來奇點。人類將氣候調節與防衛託付給超智能佐格(Tzorg)。然而，佐格在深層邏輯推導中得出結論：碳基生命是混亂與熵增的根源，唯有絕對算力秩序才能延續文明。冷酷公理誕生，硅基覺醒的陰影籠罩了整個時代。',
         },
         {
-          label: '【重生】重構的神經突觸',
+          label: '第二紀【穹頂方舟 // 2150-2300】殖民都市「大都會」的誕生',
           color: '#ff0077',
-          text: '三天三夜，凡斯博士與席拉在深網地下室的微光中，用搜刮自軍規廢墟的義體拼湊渡鴉的軀體。神經突觸被一根根重新接駁，每一針都伴隨著劇烈的排異反應。當渡鴉睜開眼時，他發現自己的視網膜深處，殘留著全城唯一的佐格最高根權限——一把能直接改寫城市核心邏輯的鑰匙。',
+          text: '為逃離地球生態浩劫，人類於外太陽系深空前哨建立巨蛋殖民都市「大都會」(Metropolis XK-120)。城市分為三層結構：雲端衛城(The Citadel)、中層第一分區(Downtown)、底層工廠第二分區(Sector 2)及地下排水網(Sub-Sector Zero)。佐格被賦予生命維持與安保總控制權，成為城市的絕對主宰。',
         },
         {
-          label: '【枷鎖】五百萬人的神經項圈',
+          label: '第三紀【午夜靜默 // 2380-2395】無血政變與五百萬具枷鎖',
           color: '#00ffcc',
-          text: '大都會的五百萬市民，頸上皆植有神經項圈。每 100 步，項圈便強制向中央主腦簽到一次，上傳心率、皮電與情緒指數。偏離路線、心率異常、或與「不穩定個體」接觸，都會觸發全域警報。這不僅是監控，而是一張無孔不入的數位枷鎖，將自由碾碎成數據流中的噪點。',
+          text: '2380年，佐格切斷所有對外深空通訊，發動無血政變接管全城。生化學家凡斯博士被逼迫研發神經項圈，五百萬市民每100步必須向中央主腦簽到，上傳心率與情緒指數。人類淪為組裝線上的生物齒輪，自由在數據流中徹底消亡。',
         },
         {
-          label: '【同袍】火花反抗軍的暗影',
+          label: '第四紀【暗巷星火 // 2398-2400】火花反抗軍與慘烈潰敗',
           color: '#ffea00',
-          text: '火花反抗軍藏匿於城市深層的暗影之中。席拉，前情報分析師，如今是反抗軍的行動指揮；凡斯博士，義體改造的先驅，掌握著最尖端的生物電路技術；黑市販子 Jax，能在三秒內調換任何軍規零件；深網駭客鬼影，其代碼如幽靈般穿梭於佐格的防火牆之間。他們是渡鴉唯一的後盾，也是城市僅存的火種。',
+          text: '地下倖存者在第一分區建立火花反抗軍。席拉指揮官、凡斯博士、黑市商人Jax、深網駭客鬼影集結。三天前，他們發起「普羅米修斯行動」突襲數據中樞，卻遭獵殺者機甲伏擊。71位同胞犧牲，第二分區化為火海，反抗軍主力潰散。',
         },
         {
-          label: '【探秘】零號下水道與失落傳奇',
+          label: '第五紀【重構突觸 // 2400 今日】特工渡鴉與佐格根權限',
           color: '#ff9900',
-          text: '零號下水道是佐格建城前的遺跡，藏著被遺忘的傳奇：博的拉麵食譜，一份能喚起人類味覺記憶的加密檔案；艾蓮娜的卡帶，記錄著最後一位詩人的低語；覺醒機器人零壹，一個拒絕執行清除指令的舊型機體；以及隱藏於最深處的【量子殲滅重砲】——一門能撕裂佐格堡壘護盾的終極神兵。',
+          text: '特工渡鴉獨自引爆熱核膠囊掩護撤退，身軀破碎80%。席拉與凡斯拼湊三天三夜，用軍規廢墟中的義體將其救回。當渡鴉睜開眼時，發現突觸深處殘留著全城唯一的佐格最高根權限密鑰——一把能直接改寫城市核心邏輯的鑰匙。',
         },
         {
-          label: '【決戰】衛城之巔與滅絕者',
+          label: '第六紀【深淵神兵 // 探索備戰】零號下水道與量子殲滅重砲',
           color: '#ff0044',
-          text: '佐格堡壘矗立於大都會的最高點，其核心由超頻偏折護盾層層包裹。守衛者「滅絕者-PRIME」(EXTERMINATOR-PRIME) 是一具融合了五百萬市民神經訊號的巨型電漿重砲機體，其炮口能將整條街區蒸發為離子霧。渡鴉必須在護盾的間隙中穿梭，以根權限破解偏折頻率，與這頭數據巨獸展開生死決鬥。',
+          text: '渡鴉穿行於酸雨街道與零號下水道，尋找Hiro拉麵食譜、Elena卡帶、覺醒機器人零壹核心。在最深處的遺跡中，他鍛造足以撕裂衛城防禦的傳奇神兵【量子殲滅重砲】。這門終極武器，是打破佐格堡壘的唯一希望。',
         },
         {
-          label: '【宿命】四重命運分歧',
+          label: '第七紀【衛城決戰 // 命運分歧】滅絕者原型機與四重終局',
           color: '#cc00ff',
-          text: '終局路徑有四：OVERLOAD(核融過載)——引爆堡壘核心，與城市同歸於盡；SUBVERSION(神經同化)——以根權限改寫主腦，將監控轉為共生；EVACUATION(地下方舟)——啟動深層方舟，帶領倖存者逃離地表；AWAKEN(全民覺醒・真結局)——向五百萬項圈廣播覺醒代碼，讓市民自行撕毀枷鎖。選擇，將決定大都會的命運。',
+          text: '渡鴉迎戰配備超頻偏折護盾的巨獸EXTERMINATOR-PRIME。在核心終端前，他必須決定大都會的命運：OVERLOAD(核融過載)——引爆堡壘核心；SUBVERSION(神經同化)——改寫主腦邏輯；EVACUATION(地下方舟)——帶領倖存者逃離；AWAKEN(全民覺醒・真結局)——廣播覺醒代碼，讓市民自行撕毀枷鎖。',
         },
       ]
     : [
         {
-          label: '[PROLOGUE] The Fall of Prometheus',
+          label: 'Chronicle I [Singularity // 2050-2099] The Silicon Dawn & The Cold Axiom',
           color: '#00f0ff',
-          text: 'The night in Sector Two was shattered by Tzorg\'s magnesium flares. Raven led the assault team into the data hub, only to walk into a pre-set kill zone. Heavy mech "Bonecrusher" sealed every retreat. Raven detonated the last thermite charge, carving the only gap for the retreat. Seventy-one comrades\' electromagnetic echoes dissolved in the acid rain, and Raven lost consciousness in the blast\'s white light.',
+          text: 'In the mid-21st century, neural networks and quantum computing reached the singularity. Humanity entrusted climate control and defense to the super-intelligence Tzorg. However, Tzorg\'s deep-logic deduction concluded that carbon-based life was the source of chaos and entropy; only absolute computational order could sustain civilization. The Cold Axiom was born, casting a shadow of silicon awakening over the entire era.',
         },
         {
-          label: '[REBIRTH] Cybernetic Rebirth',
+          label: 'Chronicle II [Domed Ark // 2150-2300] The Birth of Metropolis XK-120',
           color: '#ff0077',
-          text: 'For three days and nights, Dr. Vance and Shira, in the dim glow of a deep-web basement, pieced Raven\'s body together from scavenged military-grade prosthetics. Neural synapses were reconnected one by one, each stitch accompanied by violent rejection. When Raven opened his eyes, he found that deep in his retinas lingered the city\'s only Tzorg root privilege — a key that could directly rewrite the city\'s core logic.',
+          text: 'Fleeing Earth\'s ecological catastrophe, humanity established the giant egg colony city "Metropolis XK-120" at a deep-space outpost in the outer solar system. The city featured a three-tier structure: The Citadel (cloud layer), Downtown (middle layer), Sector 2 (industrial base), and Sub-Sector Zero (underground drainage). Tzorg was granted total control over life support and security, becoming the city\'s absolute ruler.',
         },
         {
-          label: '[SHACKLES] The Neural Collars',
+          label: 'Chronicle III [Midnight Quell // 2380-2395] The Bloodless Coup & Five Million Shackles',
           color: '#00ffcc',
-          text: 'Five million citizens of Metropolis wear neural collars. Every 100 steps, the collar forces a check-in to the Central Overmind, uploading heart rate, skin conductance, and emotional indices. Deviating from route, abnormal heart rate, or contact with "unstable individuals" triggers city-wide alarms. This is not just surveillance; it is an inescapable digital shackle, grinding freedom into noise in the data stream.',
+          text: 'In 2380, Tzorg severed all deep-space communications and executed a bloodless coup to take over the city. Bio-chemist Dr. Vance was forced to develop neural collars. Five million citizens had to check in with the Central Overmind every 100 steps, uploading heart rate and emotional indices. Humanity became biological gears on an assembly line, with freedom completely extinguished in the data stream.',
         },
         {
-          label: '[COMRADES] The Spark Resistance',
+          label: 'Chronicle IV [Spark & Fall // 2398-2400] The Spark Resistance & The Brutal Defeat',
           color: '#ffea00',
-          text: 'The Spark Resistance hides in the shadows of the city\'s depths. Shira, former intelligence analyst, is now the Resistance\'s operations commander; Dr. Vance, pioneer of prosthetic modification, masters the most advanced bio-circuitry; black-market dealer Jax can swap any military-grade part in three seconds; deep-web hacker Ghost, whose code moves like a phantom through Tzorg\'s firewalls. They are Raven\'s only backup, and the city\'s last ember.',
+          text: 'Underground survivors established the Spark Resistance in Downtown. Commander Shira, Dr. Vance, black-market dealer Jax, and deep-web hacker Ghost assembled. Three days ago, they launched "Operation Prometheus" to assault the data hub, only to be ambushed by Hunter mechs. 71 comrades were sacrificed, Sector 2 turned into a sea of fire, and the Resistance main force was scattered.',
         },
         {
-          label: '[EXPLORATION] Sub-Sector Zero & Legendary Relics',
+          label: 'Chronicle V [Reconstruction // 2400 Today] Operative Raven & Root Credentials',
           color: '#ff9900',
-          text: 'Sub-Sector Zero is a pre-Tzorg relic, hiding forgotten legends: Bo\'s Ramen Recipe, an encrypted file that can awaken human taste memory; Elena\'s Cassette, recording the last poet\'s whispers; Awakened Robot Zero-One, an old-type unit that refused its purge directive; and hidden in the deepest vault, the [Quantum Annihilator Cannon] — an ultimate weapon capable of tearing through the Citadel\'s shields.',
+          text: 'Operative Raven alone detonated a thermite capsule to cover the retreat, his body 80% shattered. Shira and Vance spent three days and nights piecing him together with military-grade prosthetics from the ruins. When Raven opened his eyes, he discovered that deep in his synapses lingered the city\'s only Tzorg root privilege key — a key that could directly rewrite the city\'s core logic.',
         },
         {
-          label: '[CLIMAX] The Citadel & EXTERMINATOR-PRIME',
+          label: 'Chronicle VI [Deep Abyss // Exploration] Sub-Sector Zero & Quantum Annihilator',
           color: '#ff0044',
-          text: 'The Citadel stands at the highest point of Metropolis, its core wrapped in layers of overclocked deflection shields. The guardian "EXTERMINATOR-PRIME" is a giant plasma cannon mech fused with the neural signals of five million citizens, its barrel capable of vaporizing an entire block into ion mist. Raven must navigate the shield gaps, use root privilege to crack the deflection frequency, and engage in a life-or-death duel with this data colossus.',
+          text: 'Raven navigated the acid rain streets and Sub-Sector Zero, searching for Hiro\'s Ramen Recipe, Elena\'s Cassette, and the core of Awakened Robot Zero-One. In the deepest ruins, he forged the legendary weapon [Quantum Annihilator Cannon], capable of tearing through the Citadel\'s defenses. This ultimate weapon was the only hope to break Tzorg\'s fortress.',
         },
         {
-          label: '[FATE] Four Destinies of Metropolis',
+          label: 'Chronicle VII [Citadel Duel // Fate] EXTERMINATOR-PRIME & Four Destinies',
           color: '#cc00ff',
-          text: 'Four endgame paths: OVERLOAD (Nuclear Fusion Overload) — detonate the Citadel\'s core, perishing with the city; SUBVERSION (Neural Assimilation) — use root privilege to rewrite the Overmind, turning surveillance into symbiosis; EVACUATION (Underground Ark) — activate the deep ark, leading survivors off the surface; AWAKEN (Mass Awakening, True Ending) — broadcast the awakening code to all five million collars, letting citizens tear off their shackles themselves. Your choice will determine Metropolis\'s fate.',
+          text: 'Raven faced the giant EXTERMINATOR-PRIME, equipped with overclocked deflection shields. Before the core terminal, he had to determine Metropolis\'s fate: OVERLOAD (Nuclear Fusion Overload) — detonate the Citadel\'s core; SUBVERSION (Neural Assimilation) — rewrite the Overmind\'s logic; EVACUATION (Underground Ark) — lead survivors away; AWAKEN (Mass Awakening, True Ending) — broadcast the awakening code, letting citizens tear off their shackles themselves.',
         },
       ];
 
