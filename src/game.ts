@@ -126,6 +126,8 @@ export class GameEngine {
   journalSelectedIndex: number = 0;
   journalMode: 'view' | 'compose' = 'view';
   journalInputBuffer: string = '';
+  isIntroBriefingOpen: boolean = false;
+  introBriefingScrollOffset: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -1050,6 +1052,8 @@ export class GameEngine {
     (this.renderer as any).journalSelectedIndex = this.journalSelectedIndex;
     (this.renderer as any).journalMode = this.journalMode;
     (this.renderer as any).journalInputBuffer = this.journalInputBuffer;
+    (this.renderer as any).isIntroBriefingOpen = this.isIntroBriefingOpen;
+    (this.renderer as any).introBriefingScrollOffset = this.introBriefingScrollOffset;
     this.player.victory = this.victory;
     this.player.hasDefeatedBoss = this.robots.some((r) => !r.isAlive && isBossRobot(r));
     this.player.storyLogs = this.storyLogs;
@@ -1861,6 +1865,8 @@ export class GameEngine {
     this.endgameChoice = null;
     this.citadelAirdrops.length = 0;
     this.isCitadelHordeActive = false;
+    this.isIntroBriefingOpen = false;
+    this.introBriefingScrollOffset = 0;
     soundFX.pickup();
     this.updateFOV();
     this.updateMusicIntensity();
@@ -1873,6 +1879,8 @@ export class GameEngine {
     this.isTitleStoryOpen = false;
     this.titleStoryScrollOffset = 0;
     this.titleMenuIndex = 0;
+    this.isIntroBriefingOpen = false;
+    this.introBriefingScrollOffset = 0;
     this.updateMusicIntensity();
     this.render();
   }

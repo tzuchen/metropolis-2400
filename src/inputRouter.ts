@@ -88,6 +88,52 @@ export class InputRouter {
   handleKeyDown(key: string): void {
     const g = this.game;
 
+    // 0. Intro Briefing
+    if (g.isIntroBriefingOpen && !g.isTitleScreen) {
+      if (key === 'Escape' || key === 'Esc' || key === 'Enter' || key === ' ' || key === 'Space') {
+        g.isIntroBriefingOpen = false;
+        g.introBriefingScrollOffset = 0;
+        soundFX.pickup();
+        const msg = g.language === 'zh' ? '任務啟動！' : 'MISSION START!';
+        g.pushFloatingText(g.player.x, g.player.y, msg, '#00ffcc');
+        g.pushMessage(g.language === 'zh' ? '【任務簡報完畢】特工日記已就緒，隨時按 [P] 開啟。' : '[BRIEFING COMPLETE] Operative journal ready. Press [P] anytime.', 'info');
+        g.render();
+        return;
+      }
+      if (['ArrowDown', 's', 'S', 'j', 'J'].includes(key)) {
+        g.introBriefingScrollOffset = (g.introBriefingScrollOffset || 0) + 36;
+        g.render();
+        return;
+      }
+      if (['ArrowUp', 'w', 'W', 'k', 'K'].includes(key)) {
+        g.introBriefingScrollOffset = Math.max(0, (g.introBriefingScrollOffset || 0) - 36);
+        g.render();
+        return;
+      }
+      if (key === 'PageDown') {
+        g.introBriefingScrollOffset = (g.introBriefingScrollOffset || 0) + 144;
+        g.render();
+        return;
+      }
+      if (key === 'PageUp') {
+        g.introBriefingScrollOffset = Math.max(0, (g.introBriefingScrollOffset || 0) - 144);
+        g.render();
+        return;
+      }
+      if (key === 'Home') {
+        g.introBriefingScrollOffset = 0;
+        g.render();
+        return;
+      }
+      if (key === 'z' || key === 'Z') {
+        g.toggleLanguage();
+        return;
+      }
+      // 若玩家按其他遊戲按鍵（如移動、存檔 [8]、開日記 [P] 等），自動關閉簡報並繼續向下處理該按鍵
+      g.isIntroBriefingOpen = false;
+      g.introBriefingScrollOffset = 0;
+    }
+
     // 1. Defeat Cutscene
     if (g.defeatCutscene) {
       if (key === 'Escape' || key === 'Esc' || key === ' ' || key === 'Space' || key === 'Enter') {
@@ -194,9 +240,9 @@ export class InputRouter {
       }
       if (key === 'n' || key === 'N') {
         g.isTitleScreen = false;
-        soundFX.pickup();
-        const msg = g.language === 'zh' ? '任務啟動！' : 'MISSION START!';
-        g.pushFloatingText(g.player.x, g.player.y, msg, '#00ffcc');
+        g.isIntroBriefingOpen = true;
+        g.introBriefingScrollOffset = 0;
+        soundFX.terminal();
         g.render();
         return;
       }
@@ -982,9 +1028,9 @@ export class InputRouter {
     switch (index) {
       case 0:
         g.isTitleScreen = false;
-        soundFX.pickup();
-        const msg = g.language === 'zh' ? '任務啟動！' : 'MISSION START!';
-        g.pushFloatingText(g.player.x, g.player.y, msg, '#00ffcc');
+        g.isIntroBriefingOpen = true;
+        g.introBriefingScrollOffset = 0;
+        soundFX.terminal();
         g.render();
         break;
       case 1:

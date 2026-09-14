@@ -167,9 +167,14 @@ export function drawTitleStoryModal(
   const contentTop = y + 52;
   const bottomLimit = y + boxH - 44;
 
-  // 故事段落定義 (7 大宏偉編年史篇章)
+  // 故事段落定義 (7 大宏偉編年史篇章 + 特工指引)
   const storySections = isZh
     ? [
+        {
+          label: '【特工指引 // 普羅米修斯行動與特工日記】OPERATIVE JOURNAL PROTOCOL [P]',
+          color: '#00ff88',
+          text: '特工渡鴉，歡迎抵達大都會。反抗軍為你植入了獨立加密的「特工日記」系統：隨時按 [P] 鍵即可開啟日記面板；按 [N] 鍵可隨時撰寫個人戰術筆記與心得；按 [ENTER] 即可保存並自動附加當前真實時間戳與分區座標。重要特性：特工日記儲存於獨立記憶矩陣，即使特工戰敗重來、或是重新開始新遊戲，所有日記條目依然永久保存、跨輪迴絕不丟失！按 [↑/↓] 可瀏覽歷史筆記，按 [DEL] 刪除特定條目。',
+        },
         {
           label: '第一紀【智械奇點 // 2050-2099】硅基覺醒與冷酷公理',
           color: '#00f0ff',
@@ -207,6 +212,11 @@ export function drawTitleStoryModal(
         },
       ]
     : [
+        {
+          label: 'OPERATIVE INTEL [Operation Prometheus & Personal Journal] PRESS [P]',
+          color: '#00ff88',
+          text: 'Operative Raven, welcome to Metropolis. The Resistance has integrated an independent encrypted Operative Journal into your cyberdeck: Press [P] at any time to open the journal panel; press [N] to compose tactical notes, secrets, and reflections; press [ENTER] to save with automatic real-time timestamps and sector coordinates. Key Feature: The journal is stored in an independent memory matrix — even if you are defeated, rebooted, or start a new game, all journal entries are permanently preserved across reboots! Use [↑/↓] to browse history and [DEL] to delete.',
+        },
         {
           label: 'Chronicle I [Singularity // 2050-2099] The Silicon Dawn & The Cold Axiom',
           color: '#00f0ff',

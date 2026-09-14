@@ -1,8 +1,9 @@
 import { loadJournalEntries, saveJournalEntry, deleteJournalEntry, clearJournalEntries, memoryJournalBackup } from '../src/journalSystem';
 import { GameEngine } from '../src/game';
 import { drawJournalModal } from '../src/journalModal';
+import { drawTitleStoryModal } from '../src/titleStoryModal';
 
-console.log('=== 開始驗證特工日記 (Operative Journal) 系統 ===\n');
+console.log('=== 開始驗證特工日記 (Operative Journal) 與開局簡報系統 ===\n');
 
 // 模擬 Canvas 與 2D Context
 function createMockCanvas(): any {
@@ -136,4 +137,31 @@ drawJournalModal(800, 600, mockCtx, 1000, 'zh', game2.journalEntries, 0, 'compos
 drawJournalModal(800, 600, mockCtx, 1000, 'en', game2.journalEntries, 0, 'view', '', 'sector-1', { x: 10, y: 10 });
 console.log('✅ drawJournalModal 雙語與各模式繪製驗證通過！');
 
-console.log('\n🎉 特工日記 (Operative Journal) 全功能驗證 100% 通過！');
+// 7. 測試遊戲開局跳出故事與特工日記使用方法彈窗 (Game Intro Briefing Popup)
+console.log('\n7. 測試遊戲開局彈窗 (顯示故事與特工日記使用方法)...');
+const canvas3 = createMockCanvas();
+const game3 = new GameEngine(canvas3 as any);
+game3.isTitleScreen = true;
+game3.titleMenuIndex = 0; // NEW GAME
+game3.handleKeyDown('Enter');
+
+if (game3.isTitleScreen) throw new Error('按 Enter 進入新遊戲後 isTitleScreen 應為 false');
+if (!game3.isIntroBriefingOpen) throw new Error('遊戲開局應自動跳出故事與特工日記任務簡報彈窗');
+
+// 測試滾動簡報
+game3.handleKeyDown('ArrowDown');
+if (game3.introBriefingScrollOffset !== 36) {
+  throw new Error(`向下滾動 offset 應為 36，實際為 ${game3.introBriefingScrollOffset}`);
+}
+
+// 測試繪製開局彈窗
+game3.render();
+drawTitleStoryModal(800, 600, mockCtx, 1000, 'zh', game3.introBriefingScrollOffset);
+drawTitleStoryModal(800, 600, mockCtx, 1000, 'en', game3.introBriefingScrollOffset);
+
+// 測試按 Enter 關閉開局彈窗進入大都會探索
+game3.handleKeyDown('Enter');
+if (game3.isIntroBriefingOpen) throw new Error('按 Enter 後開局任務簡報彈窗應關閉');
+console.log('✅ 遊戲開局故事與特工日記彈窗彈出、滾動與關閉驗證通過！');
+
+console.log('\n🎉 特工日記與開局任務簡報全功能驗證 100% 通過！');

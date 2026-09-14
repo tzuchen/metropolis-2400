@@ -80,6 +80,8 @@ export class GameRenderer {
   journalSelectedIndex: number = 0;
   journalMode: 'view' | 'compose' = 'view';
   journalInputBuffer: string = '';
+  isIntroBriefingOpen: boolean = false;
+  introBriefingScrollOffset: number = 0;
   private beamRenderer: BeamRenderer;
   private atmosphereRenderer: AtmosphereRenderer;
   private modalRenderer: ModalRenderer;
@@ -483,6 +485,11 @@ export class GameRenderer {
         map?.id || 'sector-1',
         player ? { x: player.x, y: player.y } : undefined
       );
+    }
+
+    // 14.14 開局任務簡報與特工日記使用方法彈窗 (Intro Briefing & Journal Usage Modal)
+    if (this.isIntroBriefingOpen) {
+      this.drawTitleStoryModal(width, height, ctx, now, this.language, this.introBriefingScrollOffset || 0);
     }
 
     // 15. 死亡／勝利畫面橫幅 (Game Over / Victory Banner)
