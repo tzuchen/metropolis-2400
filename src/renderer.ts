@@ -9,6 +9,7 @@ import { drawManualModal } from './manualModal';
 import { drawBreachModal, type BreachSession } from './breachProtocol';
 import { drawMiniRadar } from './radar';
 import { drawBigMapModal } from './bigMapModal';
+import { drawJournalModal } from './journalModal';
 import { getFont, getTitleFont, CJK_FONT_STACK } from './uiFont';
 import type { FXManager } from './fx';
 import { BeamRenderer } from './beamRenderer';
@@ -74,6 +75,11 @@ export class GameRenderer {
   titleStoryScrollOffset: number = 0;
   pushableBlocks: PushableBlock[] = [];
   citadelAirdrops: CitadelAirdrop[] = [];
+  isJournalOpen: boolean = false;
+  journalEntries: any[] = [];
+  journalSelectedIndex: number = 0;
+  journalMode: 'view' | 'compose' = 'view';
+  journalInputBuffer: string = '';
   private beamRenderer: BeamRenderer;
   private atmosphereRenderer: AtmosphereRenderer;
   private modalRenderer: ModalRenderer;
@@ -459,6 +465,23 @@ export class GameRenderer {
         this.isFullMapActive,
         this.language,
         this.bigMapSelectedSector || 'current'
+      );
+    }
+
+    // 14.13 特工加密日記 (Operative Personal Journal Modal)
+    if (this.isJournalOpen) {
+      drawJournalModal(
+        width,
+        height,
+        ctx,
+        now,
+        this.language,
+        this.journalEntries || [],
+        this.journalSelectedIndex ?? 0,
+        this.journalMode || 'view',
+        this.journalInputBuffer || '',
+        map?.id || 'sector-1',
+        player ? { x: player.x, y: player.y } : undefined
       );
     }
 
@@ -1782,6 +1805,7 @@ export class GameRenderer {
       { key: '[U]', label: this.language === 'zh' ? '黑市' : 'SHOP', color: '#c77dff' },
       { key: '[M]', label: this.language === 'zh' ? '任務' : 'MISSIONS', color: '#00ffaa' },
       { key: '[L]', label: 'ARCHIVE', color: '#ffb700' },
+      { key: '[P]', label: this.language === 'zh' ? '日記' : 'DIARY', color: '#00f0ff' },
       { key: '[8]', label: 'SAVE', color: '#00f0ff' },
       { key: '[9]', label: 'LOAD', color: '#b388ff' },
       { key: '[Z]', label: this.language === 'zh' ? '中' : 'EN', color: '#ffea00' },

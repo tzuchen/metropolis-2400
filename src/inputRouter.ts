@@ -226,6 +226,11 @@ export class InputRouter {
         g.render();
         return;
       }
+      if (key === 'p' || key === 'P') {
+        g.openJournal();
+        soundFX.terminal();
+        return;
+      }
       if (key === '0' || key === 'F10') {
         g.cycleResolution();
         return;
@@ -365,7 +370,76 @@ export class InputRouter {
       return;
     }
 
-    // 11. Augment Shop Modal Mode
+    // 11. Journal Modal Mode
+    if (g.isJournalOpen) {
+      if (g.journalMode === 'compose') {
+        if (key === 'Enter') {
+          g.submitJournalEntry();
+          return;
+        }
+        if (key === 'Escape' || key === 'Esc') {
+          g.journalMode = 'view';
+          g.journalInputBuffer = '';
+          g.render();
+          return;
+        }
+        if (key === 'Backspace') {
+          g.journalInputBuffer = g.journalInputBuffer.slice(0, -1);
+          g.render();
+          return;
+        }
+        if (key.length === 1) {
+          g.journalInputBuffer += key;
+          g.render();
+          return;
+        }
+        return;
+      }
+
+      // view mode
+      if (key === 'Escape' || key === 'Esc' || key === 'p' || key === 'P') {
+        g.closeJournal();
+        return;
+      }
+      if (key === 'z' || key === 'Z') {
+        g.toggleLanguage();
+        return;
+      }
+      const totalItems = (g.journalEntries?.length || 0) + 1;
+      if (['ArrowUp', 'w', 'W', 'k', 'K'].includes(key)) {
+        g.journalSelectedIndex = (g.journalSelectedIndex - 1 + totalItems) % totalItems;
+        g.render();
+        return;
+      }
+      if (['ArrowDown', 's', 'S', 'j', 'J'].includes(key)) {
+        g.journalSelectedIndex = (g.journalSelectedIndex + 1) % totalItems;
+        g.render();
+        return;
+      }
+      if (key === 'n' || key === 'N') {
+        g.journalMode = 'compose';
+        g.journalInputBuffer = '';
+        g.render();
+        return;
+      }
+      if (key === 'Enter' || key === ' ' || key === 'Space') {
+        if (g.journalSelectedIndex === 0) {
+          g.journalMode = 'compose';
+          g.render();
+          return;
+        }
+        return;
+      }
+      if (key === 'Delete' || key === 'd' || key === 'D') {
+        if (g.journalSelectedIndex > 0) {
+          g.deleteSelectedJournalEntry();
+        }
+        return;
+      }
+      return;
+    }
+
+    // 12. Augment Shop Modal Mode
     if (g.isAugmentShopOpen) {
       if (key === 'Escape' || key === 'Esc' || key === 'u' || key === 'U') {
         g.isAugmentShopOpen = false;
@@ -599,6 +673,10 @@ export class InputRouter {
       return;
     } else if (key === 'j' || key === 'J') {
       g.performTacticalDash();
+      return;
+    } else if (key === 'p' || key === 'P') {
+      g.openJournal();
+      soundFX.terminal();
       return;
     } else if (key === ' ' || key === 'Enter' || key === '.') {
       if (g.player.isWeaponDrawn) {

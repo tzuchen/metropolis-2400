@@ -34,6 +34,7 @@ import {
 import { handleTerminalInput as _handleTerminalInput } from './terminalRunner';
 import { processConveyors as _processConveyors, detonateCanister as _detonateCanister } from './hazardSystem';
 import { checkQuestDiscovery as _checkQuestDiscovery, completeQuest as _completeQuest } from './questSystem';
+import { JournalEntry, loadJournalEntries, saveJournalEntry, deleteJournalEntry } from './journalSystem';
 
 
 export interface ResolutionPreset {
@@ -120,6 +121,11 @@ export class GameEngine {
   sectorGroundItems: Record<string, GroundItem[]> = {};
   pushableBlocks: PushableBlock[] = [];
   sectorPushableBlocks: Record<string, PushableBlock[]> = {};
+  isJournalOpen: boolean = false;
+  journalEntries: JournalEntry[] = [];
+  journalSelectedIndex: number = 0;
+  journalMode: 'view' | 'compose' = 'view';
+  journalInputBuffer: string = '';
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -1039,6 +1045,11 @@ export class GameEngine {
     this.renderer.pushableBlocks = this.pushableBlocks;
     this.renderer.graffitiMuralComplete = this.graffitiMuralComplete;
     (this.renderer as any).citadelAirdrops = this.citadelAirdrops;
+    (this.renderer as any).isJournalOpen = this.isJournalOpen;
+    (this.renderer as any).journalEntries = this.journalEntries;
+    (this.renderer as any).journalSelectedIndex = this.journalSelectedIndex;
+    (this.renderer as any).journalMode = this.journalMode;
+    (this.renderer as any).journalInputBuffer = this.journalInputBuffer;
     this.player.victory = this.victory;
     this.player.hasDefeatedBoss = this.robots.some((r) => !r.isAlive && isBossRobot(r));
     this.player.storyLogs = this.storyLogs;
@@ -1948,6 +1959,57 @@ export class GameEngine {
   private updateCitadelHorde(): void {
     if (!this.isCitadelHordeActive || this.victory || this.map?.id !== 'sector-citadel') return;
     _updateCitadelHorde(this.robots, this.player, this.turnCounter, this.citadelAirdrops, Date.now());
+  }
+
+  openJournal(): void {
+    this.journalEntries = loadJournalEntries();
+    this.isJournalOpen = true;
+    this.journalMode = 'view';
+    this.journalSelectedIndex = 0;
+    this.journalInputBuffer = '';
+    this.render();
+  }
+
+  closeJournal(): void {
+    this.isJournalOpen = false;
+    this.journalMode = 'view';
+    this.journalInputBuffer = '';
+    this.render();
+  }
+
+  submitJournalEntry(): boolean {
+    const content = this.journalInputBuffer.trim();
+    if (!content) {
+      return false;
+    }
+    saveJournalEntry(content, this.map?.id || 'sector-1', { x: this.player.x, y: this.player.y });
+    this.journalEntries = loadJournalEntries();
+    this.journalMode = 'view';
+    this.journalSelectedIndex = 1;
+    this.journalInputBuffer = '';
+    soundFX.pickup();
+    this.pushMessage(this.language === 'zh' ? '【日記】條目已儲存。' : '[JOURNAL] Entry saved.', 'success');
+    this.render();
+    return true;
+  }
+
+  deleteSelectedJournalEntry(): boolean {
+    if (this.journalSelectedIndex <= 0) {
+      return false;
+    }
+    const target = this.journalEntries[this.journalSelectedIndex - 1];
+    if (!target) {
+      return false;
+    }
+    deleteJournalEntry(target.id);
+    this.journalEntries = loadJournalEntries();
+    if (this.journalSelectedIndex > this.journalEntries.length) {
+      this.journalSelectedIndex = this.journalEntries.length;
+    }
+    soundFX.terminal();
+    this.pushMessage(this.language === 'zh' ? '【日記】條目已刪除。' : '[JOURNAL] Entry deleted.', 'info');
+    this.render();
+    return true;
   }
 }
 
