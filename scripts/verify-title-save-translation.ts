@@ -89,6 +89,69 @@ game.handleKeyDown('n');
 assert(!game.isTitleScreen, 'Pressing [N] on Title Screen should enter the game');
 console.log('✅ Title Screen controls & language toggle verified!');
 
+// 2b. Verify Title Screen Navigation Wraps Through 7 Entries
+game.isTitleScreen = true;
+game.titleMenuIndex = 0;
+game.handleKeyDown('ArrowDown');
+assert(game.titleMenuIndex === 1, 'ArrowDown from 0 should go to 1');
+game.handleKeyDown('ArrowDown');
+assert(game.titleMenuIndex === 2, 'ArrowDown from 1 should go to 2');
+game.handleKeyDown('ArrowDown');
+assert(game.titleMenuIndex === 3, 'ArrowDown from 2 should go to 3');
+game.handleKeyDown('ArrowDown');
+assert(game.titleMenuIndex === 4, 'ArrowDown from 3 should go to 4');
+game.handleKeyDown('ArrowDown');
+assert(game.titleMenuIndex === 5, 'ArrowDown from 4 should go to 5');
+game.handleKeyDown('ArrowDown');
+assert(game.titleMenuIndex === 6, 'ArrowDown from 5 should go to 6');
+game.handleKeyDown('ArrowDown');
+assert(game.titleMenuIndex === 0, 'ArrowDown from 6 should wrap to 0');
+game.handleKeyDown('ArrowUp');
+assert(game.titleMenuIndex === 6, 'ArrowUp from 0 should wrap to 6');
+game.handleKeyDown('ArrowUp');
+assert(game.titleMenuIndex === 5, 'ArrowUp from 6 should go to 5');
+console.log('✅ Title Screen navigation wraps through 7 entries!');
+
+// 2c. Verify Load remains at index 1 and Story opens from index 4.
+game.titleMenuIndex = 1;
+game.handleKeyDown('Enter');
+assert(game.isTitleStoryOpen === false, 'Load entry must not open Title Story');
+game.titleMenuIndex = 4;
+game.isTitleStoryOpen = false;
+const storyOpenStartX = game.player.x;
+const storyOpenStartY = game.player.y;
+game.handleKeyDown('Enter');
+assert(game.isTitleStoryOpen === true, 'Pressing Enter on Story entry should open Title Story');
+assert(game.isTitleScreen === true, 'Title Screen should remain active while Story is open');
+assert(game.player.x === storyOpenStartX && game.player.y === storyOpenStartY, 'Player should not move when opening Story');
+game.render();
+assert(game.renderer.isTitleStoryOpen === true, 'Renderer should receive active Title Story state');
+console.log('✅ Title Story entry opens correctly!');
+
+// 2d. Verify Z works while Story is open
+game.language = 'zh';
+game.handleKeyDown('z');
+assert(game.language === 'en', 'Pressing Z while Story is open should toggle language to en');
+game.handleKeyDown('z');
+assert(game.language === 'zh', 'Pressing Z again while Story is open should toggle language back to zh');
+console.log('✅ Language toggle works while Title Story is open!');
+
+// 2e. Verify Escape closes Story without activating menu action
+game.handleKeyDown('Escape');
+assert(game.isTitleStoryOpen === false, 'Pressing Escape should close Title Story');
+assert(game.isTitleScreen === true, 'Title Screen should still be active after closing Story');
+assert(game.titleMenuIndex === 4, 'Menu index should remain at 4 after closing Story');
+console.log('✅ Escape closes Title Story without side effects!');
+
+// 2f. Verify Enter closes Story without activating menu action
+game.handleKeyDown('Enter');
+assert(game.isTitleStoryOpen === true, 'Pressing Enter on Story entry should open Title Story again');
+game.handleKeyDown('Enter');
+assert(game.isTitleStoryOpen === false, 'Pressing Enter while Story is open should close it');
+assert(game.isTitleScreen === true, 'Title Screen should still be active after closing Story via Enter');
+assert(game.titleMenuIndex === 4, 'Menu index should remain at 4 after closing Story via Enter');
+console.log('✅ Enter closes Title Story without side effects!');
+
 // 3. Verify In-Game Language Toggle
 game.handleKeyDown('z');
 assert(game.language === 'en', 'Pressing [Z] during gameplay toggles language to en');
@@ -97,6 +160,9 @@ assert(game.language === 'zh', 'Pressing [Z] during gameplay toggles language to
 console.log('✅ In-game language switching verified!');
 
 // 4. Verify Save & Load Functionality
+// Ensure we are in-game mode for save/load shortcuts
+game.isTitleScreen = false;
+game.isTitleStoryOpen = false;
 game.player.x = 10;
 game.player.y = 12;
 game.player.credits = 888;

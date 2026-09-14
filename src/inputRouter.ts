@@ -129,14 +129,30 @@ export class InputRouter {
 
     // 5. Title Screen
     if (g.isTitleScreen) {
+      // 5.1 Title Story Modal
+      if (g.isTitleStoryOpen) {
+        if (key === 'Escape' || key === 'Esc' || key === 'Enter' || key === ' ' || key === 'Space') {
+          g.isTitleStoryOpen = false;
+          soundFX.terminal();
+          g.render();
+          return;
+        }
+        if (key === 'z' || key === 'Z') {
+          g.toggleLanguage();
+          return;
+        }
+        // Consume all other keys
+        return;
+      }
+
       if (key === 'ArrowUp' || key === 'w' || key === 'W') {
-        g.titleMenuIndex = (g.titleMenuIndex - 1 + 6) % 6;
+        g.titleMenuIndex = (g.titleMenuIndex - 1 + 7) % 7;
         g.render();
         soundFX.terminal();
         return;
       }
       if (key === 'ArrowDown' || key === 's' || key === 'S') {
-        g.titleMenuIndex = (g.titleMenuIndex + 1) % 6;
+        g.titleMenuIndex = (g.titleMenuIndex + 1) % 7;
         g.render();
         soundFX.terminal();
         return;
@@ -860,12 +876,21 @@ export class InputRouter {
         break;
       case 3:
         g.isManualOpen = !g.isManualOpen;
+        if (g.isManualOpen) {
+          g.isTitleStoryOpen = false;
+        }
         soundFX.terminal();
         g.render();
         break;
       case 4:
+        g.isTitleStoryOpen = true;
+        g.isManualOpen = false;
+        soundFX.terminal();
+        g.render();
         break;
       case 5:
+        break;
+      case 6:
         g.cycleResolution();
         break;
     }

@@ -3,6 +3,7 @@ import type { TerminalSession } from './terminal';
 import * as MapModule from './map';
 import { drawTileSprite, drawPlayerSprite, drawRobotSprite, drawNPCSprite, drawItemSprite, drawHazardSprite } from './sprites';
 import { drawTitleScreen } from './titleScreen';
+import { drawTitleStoryModal } from './titleStoryModal';
 import { wrapText } from './textWrap';
 import { drawManualModal } from './manualModal';
 import { drawBreachModal, type BreachSession } from './breachProtocol';
@@ -58,6 +59,7 @@ export class GameRenderer {
   language: Language = 'zh';
   hasSaveData: boolean = false;
   isManualOpen: boolean = false;
+  isTitleStoryOpen: boolean = false;
   activeBreachSession: BreachSession | null = null;
   isOmniVisionActive: boolean = false;
   isFullMapActive: boolean = false;
@@ -114,7 +116,9 @@ export class GameRenderer {
     const now = Date.now();
     if (this.isTitleScreen) {
       this.drawTitleScreen(width, height, ctx, now, this.hasSaveData, this.language, this.titleMenuIndex);
-      if (this.isManualOpen) {
+      if (this.isTitleStoryOpen) {
+        this.drawTitleStoryModal(width, height, ctx, now, this.language);
+      } else if (this.isManualOpen) {
         this.drawManualModal(width, height, ctx, now, this.language);
       }
       ctx.restore?.();
@@ -509,6 +513,10 @@ export class GameRenderer {
 
   drawTitleScreen(width: number, height: number, ctx: any, now: number, hasSaveData: boolean, language: Language, titleMenuIndex: number = 0): void {
     drawTitleScreen(width, height, ctx, now, hasSaveData, language, titleMenuIndex);
+  }
+
+  drawTitleStoryModal(width: number, height: number, ctx: any, now: number, language: Language): void {
+    drawTitleStoryModal(width, height, ctx, now, language);
   }
 
   drawTile(

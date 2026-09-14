@@ -396,7 +396,7 @@ export function drawTitleScreen(
   // ═══════════════════════════════════════════════════════════════════════════
 
   const menuW = Math.min(width - 40, 620);
-  const menuH = 310;
+  const menuH = height < 560 ? 340 : 360;
   const mx = (width - menuW) / 2;
   const my = height * 0.38;
 
@@ -533,10 +533,16 @@ export function drawTitleScreen(
       highlight: selectedMenuIndex === 3,
     },
     {
+      key: '[ STORY ]',
+      label: isZh ? '世界背景 (STORY / WORLD BACKGROUND)' : 'STORY / WORLD BACKGROUND',
+      color: '#ffea00',
+      highlight: selectedMenuIndex === 4,
+    },
+    {
       key: '[ 8 / 9 ]',
       label: isZh ? '戰術快速存讀 : [8] 存檔 / [9] 讀檔' : 'TACTICAL SAVE [8] / LOAD [9]',
       color: '#b388ff',
-      highlight: selectedMenuIndex === 4,
+      highlight: selectedMenuIndex === 5,
     },
     {
       key: '[ 0 / F10 ]',
@@ -547,7 +553,7 @@ export function drawTitleScreen(
   ];
 
   const itemStartY = my + 52;
-  const itemSpacing = height < 560 ? 38 : 42;
+  const itemSpacing = height < 560 ? 34 : 38;
 
   items.forEach((item, idx) => {
     const iy = itemStartY + idx * itemSpacing;

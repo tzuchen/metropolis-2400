@@ -78,6 +78,7 @@ export class GameEngine {
   titleMenuIndex: number = 0;
   language: Language = 'zh';
   isManualOpen: boolean = false;
+  isTitleStoryOpen: boolean = false;
   activeBreachSession: BreachSession | null = null;
   isOmniVisionActive: boolean = false;
   isFullMapActive: boolean = false;
@@ -1025,6 +1026,7 @@ export class GameEngine {
     this.renderer.hasSaveData = this.hasSaveGame();
     this.renderer.titleMenuIndex = this.titleMenuIndex;
     this.renderer.isManualOpen = this.isManualOpen;
+    this.renderer.isTitleStoryOpen = this.isTitleStoryOpen;
     this.renderer.activeBreachSession = this.activeBreachSession;
     this.renderer.isOmniVisionActive = this.hasOmniVision();
     this.renderer.isFullMapActive = this.hasFullMap();
@@ -1819,6 +1821,7 @@ export class GameEngine {
   }
 
   restartGame(): void {
+    this.isTitleStoryOpen = false;
     this.map = buildSector1Map();
     this.player = createPlayer(this.map.playerStart);
     this.robots = this.createSectorRobots();
@@ -1851,6 +1854,7 @@ export class GameEngine {
   returnToTitleScreen(): void {
     this.restartGame();
     this.isTitleScreen = true;
+    this.isTitleStoryOpen = false;
     this.titleMenuIndex = 0;
     this.updateMusicIntensity();
     this.render();
