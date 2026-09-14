@@ -421,12 +421,21 @@ export class InputRouter {
         return;
       }
       if (key === 'f' || key === 'F') {
+        const wasDisguised = g.player.isDisguised;
         const drawn = toggleWeaponDraw(g.player);
         soundFX.laser();
         g.pushMessage(
           drawn ? 'Blaster drawn! Security will treat operative as hostile.' : 'Blaster holstered.',
           drawn ? 'warning' : 'info'
         );
+        if (drawn && wasDisguised && !g.player.isDisguised) {
+          g.pushMessage(
+            g.language === 'zh'
+              ? '拔槍動作使全息偽裝崩解！'
+              : 'Drawing your weapon collapsed the holo-disguise!',
+            'warning'
+          );
+        }
         g.render();
         return;
       }
@@ -478,6 +487,7 @@ export class InputRouter {
       dx = 1;
       g.player.facing = 'right';
     } else if (key === 'f' || key === 'F') {
+      const wasDisguised = g.player.isDisguised;
       const drawn = toggleWeaponDraw(g.player);
       soundFX.laser();
       if (drawn) {
@@ -487,6 +497,14 @@ export class InputRouter {
             : 'Blaster drawn! Press [SPACE] or [ARROWS] to fire, [Q] to switch weapon.',
           'warning'
         );
+        if (wasDisguised && !g.player.isDisguised) {
+          g.pushMessage(
+            g.language === 'zh'
+              ? '拔槍動作使全息偽裝崩解！'
+              : 'Drawing your weapon collapsed the holo-disguise!',
+            'warning'
+          );
+        }
       } else {
         g.pushMessage(
           g.language === 'zh' ? '已收槍。' : 'Blaster holstered.',

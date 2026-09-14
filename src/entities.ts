@@ -237,6 +237,9 @@ export function createRobot(type: RobotType, startPos: Position, patrolPath?: Po
 
 export function toggleWeaponDraw(player: Player): boolean {
   player.isWeaponDrawn = !player.isWeaponDrawn;
+  if (player.isWeaponDrawn) {
+    player.isDisguised = false;
+  }
   return player.isWeaponDrawn;
 }
 

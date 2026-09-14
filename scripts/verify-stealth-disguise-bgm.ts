@@ -298,4 +298,147 @@ const map = buildSector1Map();
   console.log('✓ Immediate robot reaction on F keypress verified');
 }
 
+// 9. Verify Drawing Weapon While Disguised Collapses Disguise Without Energy Drain
+{
+  class MockCanvas {
+    getContext() {
+      return {
+        clearRect: () => {},
+        fillRect: () => {},
+        strokeRect: () => {},
+        fillText: () => {},
+        measureText: () => ({ width: 50 }),
+        beginPath: () => {},
+        moveTo: () => {},
+        lineTo: () => {},
+        stroke: () => {},
+        fill: () => {},
+        arc: () => {},
+        save: () => {},
+        restore: () => {},
+        drawImage: () => {},
+        setTransform: () => {},
+        resetTransform: () => {},
+      };
+    }
+  }
+
+  const game = new GameEngine(new MockCanvas() as any);
+  game.isTitleScreen = false;
+  game.player.energy = 50;
+  game.player.isDisguised = false;
+  game.player.isWeaponDrawn = false;
+
+  // Activate disguise
+  game.handleKeyDown('c');
+  assert.strictEqual(game.player.isDisguised, true, 'Disguise should be active after pressing C');
+  const energyAfterDisguise = game.player.energy;
+
+  // Draw weapon while disguised
+  game.handleKeyDown('f');
+  assert.strictEqual(game.player.isWeaponDrawn, true, 'Weapon should be drawn after pressing F');
+  assert.strictEqual(game.player.isDisguised, false, 'Disguise must be cleared when weapon is drawn');
+  assert.strictEqual(game.player.energy, energyAfterDisguise, 'Drawing weapon must not drain energy beyond existing behavior');
+
+  const msgs = game.messages.map((m: any) => m.text || m.message || m);
+  assert.ok(
+    msgs.some((t: string) => t.includes('collapsed the holo-disguise') || t.includes('全息偽裝崩解')),
+    'Should emit holo-disguise collapse feedback message'
+  );
+  console.log('✓ Drawing weapon while disguised collapses disguise without energy drain');
+}
+
+// 10. Verify Waiting (Tick) While Disguised Does Not Drain Energy
+{
+  class MockCanvas {
+    getContext() {
+      return {
+        clearRect: () => {},
+        fillRect: () => {},
+        strokeRect: () => {},
+        fillText: () => {},
+        measureText: () => ({ width: 50 }),
+        beginPath: () => {},
+        moveTo: () => {},
+        lineTo: () => {},
+        stroke: () => {},
+        fill: () => {},
+        arc: () => {},
+        save: () => {},
+        restore: () => {},
+        drawImage: () => {},
+        setTransform: () => {},
+        resetTransform: () => {},
+      };
+    }
+  }
+
+  const game = new GameEngine(new MockCanvas() as any);
+  game.isTitleScreen = false;
+  game.player.energy = 50;
+  game.player.isDisguised = false;
+  game.player.isWeaponDrawn = false;
+
+  // Activate disguise
+  game.handleKeyDown('c');
+  assert.strictEqual(game.player.isDisguised, true, 'Disguise should be active');
+  const energyBeforeWait = game.player.energy;
+
+  // Press space to wait/tick (weapon not drawn, so it just ticks)
+  game.handleKeyDown(' ');
+  assert.strictEqual(game.player.energy, energyBeforeWait, 'Waiting while disguised must not drain energy');
+  assert.strictEqual(game.player.isDisguised, true, 'Disguise should remain active after waiting');
+  console.log('✓ Waiting while disguised does not drain energy');
+}
+
+// 11. Verify Opening Mission Messages Include Neural-Vision Synchronization Guidance
+{
+  class MockCanvas {
+    getContext() {
+      return {
+        clearRect: () => {},
+        fillRect: () => {},
+        strokeRect: () => {},
+        fillText: () => {},
+        measureText: () => ({ width: 50 }),
+        beginPath: () => {},
+        moveTo: () => {},
+        lineTo: () => {},
+        stroke: () => {},
+        fill: () => {},
+        arc: () => {},
+        save: () => {},
+        restore: () => {},
+        drawImage: () => {},
+        setTransform: () => {},
+        resetTransform: () => {},
+      };
+    }
+  }
+
+  const game = new GameEngine(new MockCanvas() as any);
+  const msgs = game.messages.map((m: any) => m.text || m.message || m);
+  assert.ok(
+    msgs.some((t: string) => t.includes('Neural vision not yet calibrated') || t.includes('神經視覺尚未校準')),
+    'Opening messages must include neural-vision synchronization guidance'
+  );
+  assert.ok(
+    msgs.some((t: string) => t.includes('Move one step to synchronize') || t.includes('移動一步以同步')),
+    'Opening messages must instruct to move one step to synchronize optical sensors'
+  );
+
+  // Verify restartGame() also includes the guidance
+  game.restartGame();
+  const restartMsgs = game.messages.map((m: any) => m.text || m.message || m);
+  assert.ok(
+    restartMsgs.some((t: string) => t.includes('Neural vision not yet calibrated') || t.includes('神經視覺尚未校準')),
+    'Restart messages must include neural-vision synchronization guidance'
+  );
+  assert.ok(
+    restartMsgs.some((t: string) => t.includes('Move one step to synchronize') || t.includes('移動一步以同步')),
+    'Restart messages must instruct to move one step to synchronize optical sensors'
+  );
+  console.log('✓ Opening and restart mission messages include neural-vision synchronization guidance');
+}
+
 console.log('All Stealth, Disguise & BGM tests PASSED!');

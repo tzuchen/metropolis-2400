@@ -1754,7 +1754,8 @@ export class GameRenderer {
         ctx.fillStyle =
           index === recent.length - 1 ? msgColor : 'rgba(200, 220, 235, 0.45)';
         ctx.font = getFont(12, this.language === 'zh', true);
-        ctx.fillText?.(text, width - 12, height - 36 + index * 16);
+        const msgY = height - 36 - (recent.length - 1 - index) * 16;
+        ctx.fillText?.(text, width - 12, msgY);
       });
 
       ctx.textAlign = 'left';

@@ -153,6 +153,7 @@ export class GameEngine {
     this.pushMessage('OPERATION PROMETHEUS: Neural link restored. Operative Raven online.', 'info');
     this.pushMessage(this.language === 'zh' ? '【任務指示】搜集加密數據板並突破 01 號檢查哨。' : 'MISSION: Recover encrypted data slates & breach Checkpoint 01.', 'warning');
     this.pushMessage('INTEL: Speak with Kira [T], check tactical missions [M], inventory [I], archives [L].', 'info');
+    this.pushMessage(this.language === 'zh' ? '【系統提示】神經視覺尚未校準，請移動一步以同步光學感測器。' : 'SYSTEM: Neural vision not yet calibrated. Move one step to synchronize optical sensors.', 'info');
     this.visibleTiles = new Set<string>();
     this.exploredTiles = new Set<string>();
     this.activeTerminal = null;
@@ -1840,6 +1841,7 @@ export class GameEngine {
     this.messages = [];
     this.floatingTexts = [];
     this.pushMessage('OPERATION PROMETHEUS: Protocol restarted. Operative Raven deployed.', 'info');
+    this.pushMessage(this.language === 'zh' ? '【系統提示】神經視覺尚未校準，請移動一步以同步光學感測器。' : 'SYSTEM: Neural vision not yet calibrated. Move one step to synchronize optical sensors.', 'info');
     this.activeTerminal = null;
     this.activeDialogue = null;
     this.laserBeams = [];
