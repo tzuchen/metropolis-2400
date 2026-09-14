@@ -33,24 +33,28 @@ const isWalkableTile = (map: SectorMap, x: number, y: number): boolean => {
 
   let tile: any = null;
   if (typeof (mapModule as any).getTile === 'function') {
-    try {
-      tile = (mapModule as any).getTile(map, { x, y });
-    } catch {}
+    tile = (mapModule as any).getTile(map, { x, y });
   }
   if (tile == null && Array.isArray(m.tiles) && m.tiles[y]) {
     tile = m.tiles[y][x];
   }
   if (tile == null) return false;
 
-  const tStr = String(tile?.type ?? tile).toUpperCase();
-  if (tStr !== 'FLOOR' && tStr !== '1' && tStr !== 'DOOR_OPEN' && tStr !== '4') return false;
+  const tVal = tile?.type ?? tile;
+  if (tVal !== 'FLOOR' && tVal !== 1 && tVal !== 'DOOR_OPEN' && tVal !== 4) return false;
 
-  if (
-    m.pushableBlocks &&
-    Array.isArray(m.pushableBlocks) &&
-    m.pushableBlocks.some((b: any) => b.x === x && b.y === y)
-  ) {
-    return false;
+  if (m.pushableBlocks && Array.isArray(m.pushableBlocks)) {
+    if (m.pushableBlocks.length > 2) {
+      if (!(m as any)._pushableSet) {
+        (m as any)._pushableSet = new Set(m.pushableBlocks.map((b: any) => `${b.x},${b.y}`));
+      }
+      if ((m as any)._pushableSet.has(`${x},${y}`)) return false;
+    } else {
+      for (let i = 0; i < m.pushableBlocks.length; i++) {
+        const b = m.pushableBlocks[i];
+        if (b.x === x && b.y === y) return false;
+      }
+    }
   }
 
   return true;
@@ -156,9 +160,10 @@ const findNextStep = (
   }
 
   let iterations = 0;
-  while (queue.length > 0 && iterations < 80) {
+  let head = 0;
+  while (head < queue.length && iterations < 80) {
     iterations++;
-    const current = queue.shift()!;
+    const current = queue[head++];
 
     for (const d of dirs) {
       const nx = current.pos.x + d.x;

@@ -162,6 +162,9 @@ export function hasLineOfSight(map: SectorMap, from: Position, to: Position): bo
   if (!isTransparent(getTile(map, from))) return false;
   if (from.x === to.x && from.y === to.y) return true;
 
+  const tiles = getTiles(map);
+  if (!tiles) return false;
+
   let x0 = from.x;
   let y0 = from.y;
   const x1 = to.x;
@@ -178,9 +181,16 @@ export function hasLineOfSight(map: SectorMap, from: Position, to: Position): bo
   while (true) {
     if (!first) {
       if (x === x1 && y === y1) break;
-      if (!isTransparent(getTile(map, { x, y }))) return false;
+      const row = tiles[y];
+      if (!row) return false;
+      const tile = row[x] as TileType | undefined;
+      if (tile === undefined || !isTransparent(tile)) return false;
       const pushableBlocks = map.pushableBlocks;
-      if (Array.isArray(pushableBlocks) && pushableBlocks.some((b) => b.x === x && b.y === y)) return false;
+      if (Array.isArray(pushableBlocks)) {
+        for (let i = 0; i < pushableBlocks.length; i++) {
+          if (pushableBlocks[i].x === x && pushableBlocks[i].y === y) return false;
+        }
+      }
     }
     first = false;
     const e2 = 2 * err;
@@ -217,7 +227,7 @@ export function calculateFOV(map: SectorMap, origin: Position, radius: number): 
       const dy = y - origin.y;
       if (dx * dx + dy * dy <= r2) {
         if (hasLineOfSight(map, origin, { x, y })) {
-          visible.add(String(x) + ',' + String(y));
+          visible.add(`${x},${y}`);
         }
       }
     }
