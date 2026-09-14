@@ -133,6 +133,37 @@ export class InputRouter {
       if (g.isTitleStoryOpen) {
         if (key === 'Escape' || key === 'Esc' || key === 'Enter' || key === ' ' || key === 'Space') {
           g.isTitleStoryOpen = false;
+          g.titleStoryScrollOffset = 0;
+          soundFX.terminal();
+          g.render();
+          return;
+        }
+        if (key === 'ArrowDown' || key === 's' || key === 'S' || key === 'j' || key === 'J') {
+          g.titleStoryScrollOffset = (g.titleStoryScrollOffset || 0) + 40;
+          soundFX.terminal();
+          g.render();
+          return;
+        }
+        if (key === 'ArrowUp' || key === 'w' || key === 'W' || key === 'k' || key === 'K') {
+          g.titleStoryScrollOffset = Math.max(0, (g.titleStoryScrollOffset || 0) - 40);
+          soundFX.terminal();
+          g.render();
+          return;
+        }
+        if (key === 'PageDown') {
+          g.titleStoryScrollOffset = (g.titleStoryScrollOffset || 0) + 200;
+          soundFX.terminal();
+          g.render();
+          return;
+        }
+        if (key === 'PageUp') {
+          g.titleStoryScrollOffset = Math.max(0, (g.titleStoryScrollOffset || 0) - 200);
+          soundFX.terminal();
+          g.render();
+          return;
+        }
+        if (key === 'Home') {
+          g.titleStoryScrollOffset = 0;
           soundFX.terminal();
           g.render();
           return;
@@ -885,6 +916,7 @@ export class InputRouter {
       case 4:
         g.isTitleStoryOpen = true;
         g.isManualOpen = false;
+        g.titleStoryScrollOffset = 0;
         soundFX.terminal();
         g.render();
         break;

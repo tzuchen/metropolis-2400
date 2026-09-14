@@ -71,6 +71,7 @@ export class GameRenderer {
   fx: FXManager | null = null;
   activeWaypoint: { x: number; y: number; name: string } | null = null;
   storyArchiveSelectedIndex: number = 0;
+  titleStoryScrollOffset: number = 0;
   pushableBlocks: PushableBlock[] = [];
   citadelAirdrops: CitadelAirdrop[] = [];
   private beamRenderer: BeamRenderer;
@@ -117,7 +118,7 @@ export class GameRenderer {
     if (this.isTitleScreen) {
       this.drawTitleScreen(width, height, ctx, now, this.hasSaveData, this.language, this.titleMenuIndex);
       if (this.isTitleStoryOpen) {
-        this.drawTitleStoryModal(width, height, ctx, now, this.language);
+        this.drawTitleStoryModal(width, height, ctx, now, this.language, this.titleStoryScrollOffset);
       } else if (this.isManualOpen) {
         this.drawManualModal(width, height, ctx, now, this.language);
       }
@@ -515,8 +516,8 @@ export class GameRenderer {
     drawTitleScreen(width, height, ctx, now, hasSaveData, language, titleMenuIndex);
   }
 
-  drawTitleStoryModal(width: number, height: number, ctx: any, now: number, language: Language): void {
-    drawTitleStoryModal(width, height, ctx, now, language);
+  drawTitleStoryModal(width: number, height: number, ctx: any, now: number, language: Language, scrollOffset: number = 0): void {
+    drawTitleStoryModal(width, height, ctx, now, language, scrollOffset);
   }
 
   drawTile(

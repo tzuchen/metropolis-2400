@@ -136,6 +136,37 @@ game.handleKeyDown('z');
 assert(game.language === 'zh', 'Pressing Z again while Story is open should toggle language back to zh');
 console.log('✅ Language toggle works while Title Story is open!');
 
+// 2d-2. Verify Title Story scrolling and paging navigation
+game.isTitleStoryOpen = true;
+game.titleStoryScrollOffset = 0;
+assert(game.titleStoryScrollOffset === 0, 'Initial titleStoryScrollOffset should be 0');
+game.handleKeyDown('ArrowDown');
+assert(game.titleStoryScrollOffset === 40, `ArrowDown should increase scroll offset to 40, got ${game.titleStoryScrollOffset}`);
+game.handleKeyDown('s');
+assert(game.titleStoryScrollOffset === 80, `Pressing s should increase scroll offset to 80, got ${game.titleStoryScrollOffset}`);
+game.handleKeyDown('PageDown');
+assert(game.titleStoryScrollOffset === 280, `PageDown should increase scroll offset to 280, got ${game.titleStoryScrollOffset}`);
+game.handleKeyDown('PageUp');
+assert(game.titleStoryScrollOffset === 80, `PageUp should decrease scroll offset to 80, got ${game.titleStoryScrollOffset}`);
+game.handleKeyDown('ArrowUp');
+assert(game.titleStoryScrollOffset === 40, `ArrowUp should decrease scroll offset to 40, got ${game.titleStoryScrollOffset}`);
+game.handleKeyDown('Home');
+assert(game.titleStoryScrollOffset === 0, `Home should reset scroll offset to 0, got ${game.titleStoryScrollOffset}`);
+game.handleKeyDown('ArrowDown');
+game.handleKeyDown('ArrowDown');
+assert(game.titleStoryScrollOffset === 80, `Scroll offset should be 80 before closing, got ${game.titleStoryScrollOffset}`);
+game.handleKeyDown('Escape');
+assert(game.isTitleStoryOpen === false, 'Escape should close Title Story');
+assert(game.titleStoryScrollOffset === 0, `titleStoryScrollOffset should be reset to 0 after closing, got ${game.titleStoryScrollOffset}`);
+game.handleKeyDown('Enter');
+assert(game.isTitleStoryOpen === true, 'Enter should open Title Story again');
+game.handleKeyDown('ArrowDown');
+assert(game.titleStoryScrollOffset === 40, `ArrowDown should increase scroll offset to 40 after reopening, got ${game.titleStoryScrollOffset}`);
+game.handleKeyDown('Enter');
+assert(game.isTitleStoryOpen === false, 'Enter should close Title Story');
+assert(game.titleStoryScrollOffset === 0, `titleStoryScrollOffset should be reset to 0 after closing via Enter, got ${game.titleStoryScrollOffset}`);
+console.log('✅ Title Story scrolling and paging navigation verified!');
+
 // 2e. Verify Escape closes Story without activating menu action
 game.handleKeyDown('Escape');
 assert(game.isTitleStoryOpen === false, 'Pressing Escape should close Title Story');

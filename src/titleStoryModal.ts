@@ -65,7 +65,8 @@ export function drawTitleStoryModal(
   height: number,
   ctx: any,
   now: number,
-  language: Language
+  language: Language,
+  scrollOffset: number = 0
 ): void {
   ctx.save?.();
   const isZh = language === 'zh';
@@ -166,50 +167,80 @@ export function drawTitleStoryModal(
   const contentTop = y + 52;
   const bottomLimit = y + boxH - 44;
 
-  // 故事段落定義
+  // 故事段落定義 (7 大篇章)
   const storySections = isZh
     ? [
         {
-          label: '【背景】',
+          label: '【序幕】普羅米修斯的餘燼',
           color: '#00f0ff',
-          text: '2400 年，大都會 (Metropolis) 已淪為佐格 (Tzorg) 自動化監控政權的鐵幕之下。每具市民頸上皆植有神經項圈，持續上傳生物訊號至中央主腦。任何偏離行為將觸發全域警報與機器人圍剿。',
+          text: '第二分區的夜，被佐格軍團的鎂光彈撕碎。渡鴉率領突擊小隊突入數據樞紐，卻落入預設的殲滅陷阱。重裝機甲「碎骨者」封鎖了所有退路，渡鴉引爆了最後一枚熱核膠囊，為撤退開闢了唯一的裂縫。七十一名同胞的電磁殘響消散在酸雨之中，而渡鴉，在爆炸的白光裡失去了意識。',
         },
         {
-          label: '【反抗軍】',
+          label: '【重生】重構的神經突觸',
           color: '#ff0077',
-          text: '佐格反抗軍僅存一條加密地下網絡，藏匿於城市深層。他們以終端機為節點，以數據為武器，持續瓦解監控基礎設施。',
+          text: '三天三夜，凡斯博士與席拉在深網地下室的微光中，用搜刮自軍規廢墟的義體拼湊渡鴉的軀體。神經突觸被一根根重新接駁，每一針都伴隨著劇烈的排異反應。當渡鴉睜開眼時，他發現自己的視網膜深處，殘留著全城唯一的佐格最高根權限——一把能直接改寫城市核心邏輯的鑰匙。',
         },
         {
-          label: '【特工】',
+          label: '【枷鎖】五百萬人的神經項圈',
           color: '#00ffcc',
-          text: '你是「渡鴉」(Operative Raven)，前佐格核心工程師。你的神經介面剛被反抗軍修復，重新接入城市數據流。你的記憶碎片指向一個真相：佐格主腦正在準備最終清洗協議。',
+          text: '大都會的五百萬市民，頸上皆植有神經項圈。每 100 步，項圈便強制向中央主腦簽到一次，上傳心率、皮電與情緒指數。偏離路線、心率異常、或與「不穩定個體」接觸，都會觸發全域警報。這不僅是監控，而是一張無孔不入的數位枷鎖，將自由碾碎成數據流中的噪點。',
         },
         {
-          label: '【任務】',
+          label: '【同袍】火花反抗軍的暗影',
           color: '#ffea00',
-          text: '潛入佐格堡壘 (The Citadel)，奪取核心數據，關閉神經項圈廣播，解放大都會。三條終局路徑：過載自毀、病毒改寫、或軌道撤離。選擇將決定城市的命運。',
+          text: '火花反抗軍藏匿於城市深層的暗影之中。席拉，前情報分析師，如今是反抗軍的行動指揮；凡斯博士，義體改造的先驅，掌握著最尖端的生物電路技術；黑市販子 Jax，能在三秒內調換任何軍規零件；深網駭客鬼影，其代碼如幽靈般穿梭於佐格的防火牆之間。他們是渡鴉唯一的後盾，也是城市僅存的火種。',
+        },
+        {
+          label: '【探秘】零號下水道與失落傳奇',
+          color: '#ff9900',
+          text: '零號下水道是佐格建城前的遺跡，藏著被遺忘的傳奇：博的拉麵食譜，一份能喚起人類味覺記憶的加密檔案；艾蓮娜的卡帶，記錄著最後一位詩人的低語；覺醒機器人零壹，一個拒絕執行清除指令的舊型機體；以及隱藏於最深處的【量子殲滅重砲】——一門能撕裂佐格堡壘護盾的終極神兵。',
+        },
+        {
+          label: '【決戰】衛城之巔與滅絕者',
+          color: '#ff0044',
+          text: '佐格堡壘矗立於大都會的最高點，其核心由超頻偏折護盾層層包裹。守衛者「滅絕者-PRIME」(EXTERMINATOR-PRIME) 是一具融合了五百萬市民神經訊號的巨型電漿重砲機體，其炮口能將整條街區蒸發為離子霧。渡鴉必須在護盾的間隙中穿梭，以根權限破解偏折頻率，與這頭數據巨獸展開生死決鬥。',
+        },
+        {
+          label: '【宿命】四重命運分歧',
+          color: '#cc00ff',
+          text: '終局路徑有四：OVERLOAD(核融過載)——引爆堡壘核心，與城市同歸於盡；SUBVERSION(神經同化)——以根權限改寫主腦，將監控轉為共生；EVACUATION(地下方舟)——啟動深層方舟，帶領倖存者逃離地表；AWAKEN(全民覺醒・真結局)——向五百萬項圈廣播覺醒代碼，讓市民自行撕毀枷鎖。選擇，將決定大都會的命運。',
         },
       ]
     : [
         {
-          label: '[BACKGROUND]',
+          label: '[PROLOGUE] The Fall of Prometheus',
           color: '#00f0ff',
-          text: 'Year 2400. Metropolis has fallen under Tzorg\'s automated surveillance regime. Every citizen wears a neural collar, streaming biometric data to the Central Overmind. Any deviation triggers city-wide alarms and robotic assault.',
+          text: 'The night in Sector Two was shattered by Tzorg\'s magnesium flares. Raven led the assault team into the data hub, only to walk into a pre-set kill zone. Heavy mech "Bonecrusher" sealed every retreat. Raven detonated the last thermite charge, carving the only gap for the retreat. Seventy-one comrades\' electromagnetic echoes dissolved in the acid rain, and Raven lost consciousness in the blast\'s white light.',
         },
         {
-          label: '[RESISTANCE]',
+          label: '[REBIRTH] Cybernetic Rebirth',
           color: '#ff0077',
-          text: 'The Tzorg Resistance maintains a single encrypted underground network, hidden in the city\'s depths. They use terminals as nodes and data as weapons, steadily dismantling the surveillance infrastructure.',
+          text: 'For three days and nights, Dr. Vance and Shira, in the dim glow of a deep-web basement, pieced Raven\'s body together from scavenged military-grade prosthetics. Neural synapses were reconnected one by one, each stitch accompanied by violent rejection. When Raven opened his eyes, he found that deep in his retinas lingered the city\'s only Tzorg root privilege — a key that could directly rewrite the city\'s core logic.',
         },
         {
-          label: '[OPERATIVE]',
+          label: '[SHACKLES] The Neural Collars',
           color: '#00ffcc',
-          text: 'You are Operative Raven, a former Tzorg core engineer. Your neural link has just been restored by the Resistance, reconnecting you to the city\'s data stream. Fragments of your memory point to a truth: the Overmind is preparing its final purge protocol.',
+          text: 'Five million citizens of Metropolis wear neural collars. Every 100 steps, the collar forces a check-in to the Central Overmind, uploading heart rate, skin conductance, and emotional indices. Deviating from route, abnormal heart rate, or contact with "unstable individuals" triggers city-wide alarms. This is not just surveillance; it is an inescapable digital shackle, grinding freedom into noise in the data stream.',
         },
         {
-          label: '[MISSION]',
+          label: '[COMRADES] The Spark Resistance',
           color: '#ffea00',
-          text: 'Infiltrate the Citadel, recover the core data, shut down the neural collar broadcast, and free Metropolis. Three endgame paths await: Overload, Subversion, or Evacuation. Your choice will determine the city\'s fate.',
+          text: 'The Spark Resistance hides in the shadows of the city\'s depths. Shira, former intelligence analyst, is now the Resistance\'s operations commander; Dr. Vance, pioneer of prosthetic modification, masters the most advanced bio-circuitry; black-market dealer Jax can swap any military-grade part in three seconds; deep-web hacker Ghost, whose code moves like a phantom through Tzorg\'s firewalls. They are Raven\'s only backup, and the city\'s last ember.',
+        },
+        {
+          label: '[EXPLORATION] Sub-Sector Zero & Legendary Relics',
+          color: '#ff9900',
+          text: 'Sub-Sector Zero is a pre-Tzorg relic, hiding forgotten legends: Bo\'s Ramen Recipe, an encrypted file that can awaken human taste memory; Elena\'s Cassette, recording the last poet\'s whispers; Awakened Robot Zero-One, an old-type unit that refused its purge directive; and hidden in the deepest vault, the [Quantum Annihilator Cannon] — an ultimate weapon capable of tearing through the Citadel\'s shields.',
+        },
+        {
+          label: '[CLIMAX] The Citadel & EXTERMINATOR-PRIME',
+          color: '#ff0044',
+          text: 'The Citadel stands at the highest point of Metropolis, its core wrapped in layers of overclocked deflection shields. The guardian "EXTERMINATOR-PRIME" is a giant plasma cannon mech fused with the neural signals of five million citizens, its barrel capable of vaporizing an entire block into ion mist. Raven must navigate the shield gaps, use root privilege to crack the deflection frequency, and engage in a life-or-death duel with this data colossus.',
+        },
+        {
+          label: '[FATE] Four Destinies of Metropolis',
+          color: '#cc00ff',
+          text: 'Four endgame paths: OVERLOAD (Nuclear Fusion Overload) — detonate the Citadel\'s core, perishing with the city; SUBVERSION (Neural Assimilation) — use root privilege to rewrite the Overmind, turning surveillance into symbiosis; EVACUATION (Underground Ark) — activate the deep ark, leading survivors off the surface; AWAKEN (Mass Awakening, True Ending) — broadcast the awakening code to all five million collars, letting citizens tear off their shackles themselves. Your choice will determine Metropolis\'s fate.',
         },
       ];
 
@@ -218,13 +249,13 @@ export function drawTitleStoryModal(
     return ctx.measureText?.(str)?.width ?? 0;
   };
 
-  const idealFontSize = 13;
-  const idealLineHeight = 18;
-  const sectionGap = 10;
-  const labelHeight = 20;
+  const fontSize = 13;
+  const lineHeight = 18;
+  const sectionGap = 12;
+  const labelHeight = 22;
 
   // 先以理想字體計算總行數
-  ctx.font = `${idealFontSize}px ${font}`;
+  ctx.font = `${fontSize}px ${font}`;
   const totalLines = storySections.reduce((sum, sec) => {
     const labelLines = 1;
     const textLines = wrapText(sec.text, contentWidth, measure).length;
@@ -233,36 +264,35 @@ export function drawTitleStoryModal(
 
   const requiredHeight =
     storySections.length * labelHeight +
-    totalLines * idealLineHeight +
+    totalLines * lineHeight +
     storySections.length * sectionGap;
   const availableHeight = bottomLimit - contentTop;
 
-  let fontSize = idealFontSize;
-  let lineHeight = idealLineHeight;
+  // 滾動參數
+  const maxScroll = Math.max(0, requiredHeight - availableHeight);
+  const clampedScroll = Math.max(0, Math.min(scrollOffset, maxScroll));
+  const canScrollDown = clampedScroll < maxScroll - 1;
+  const canScrollUp = clampedScroll > 1;
 
-  if (requiredHeight > availableHeight) {
-    const scale = availableHeight / requiredHeight;
-    fontSize = Math.max(8, Math.floor(idealFontSize * scale));
-    lineHeight = Math.max(10, Math.floor(idealLineHeight * scale));
-  }
-
-  // 繪製故事內容
+  // 繪製故事內容 (滾動視窗)
   ctx.save?.();
   ctx.beginPath?.();
   ctx.rect?.(x + 16, contentTop - 4, boxW - 32, bottomLimit - contentTop + 8);
   ctx.clip?.();
 
-  let secY = contentTop;
+  let secY = contentTop - clampedScroll;
   storySections.forEach((sec) => {
     // 段落標籤
-    ctx.fillStyle = sec.color;
-    ctx.font = `bold ${fontSize + 1}px ${font}`;
-    ctx.shadowColor = sec.color;
-    ctx.shadowBlur = 4;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText?.(sec.label, contentLeft, secY);
-    ctx.shadowBlur = 0;
+    if (secY + labelHeight > contentTop - 4 && secY < bottomLimit + 4) {
+      ctx.fillStyle = sec.color;
+      ctx.font = `bold ${fontSize + 1}px ${font}`;
+      ctx.shadowColor = sec.color;
+      ctx.shadowBlur = 4;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText?.(sec.label, contentLeft, secY);
+      ctx.shadowBlur = 0;
+    }
     secY += labelHeight;
 
     // 段落文字
@@ -270,7 +300,9 @@ export function drawTitleStoryModal(
     ctx.font = `${fontSize}px ${font}`;
     const wrappedLines = wrapText(sec.text, contentWidth, measure);
     wrappedLines.forEach((line) => {
-      ctx.fillText?.(line, contentLeft, secY);
+      if (secY + lineHeight > contentTop - 4 && secY < bottomLimit + 4) {
+        ctx.fillText?.(line, contentLeft, secY);
+      }
       secY += lineHeight;
     });
 
@@ -279,18 +311,48 @@ export function drawTitleStoryModal(
 
   ctx.restore?.();
 
+  // 滾動條 (當內容超出視窗時)
+  if (maxScroll > 0) {
+    const trackX = x + boxW - 10;
+    const trackY = contentTop;
+    const trackH = bottomLimit - contentTop;
+    const thumbH = Math.max(20, (availableHeight / requiredHeight) * trackH);
+    const thumbY = trackY + (clampedScroll / maxScroll) * (trackH - thumbH);
+
+    // 軌道
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.15)';
+    ctx.fillRect?.(trackX, trackY, 4, trackH);
+
+    // 游標
+    ctx.fillStyle = '#00f0ff';
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 6;
+    ctx.fillRect?.(trackX, thumbY, 4, thumbH);
+    ctx.shadowBlur = 0;
+  }
+
+  // 向下滾動提示 (呼吸燈)
+  if (canScrollDown) {
+    const pulse = 0.5 + 0.5 * Math.sin(now * 0.006);
+    ctx.fillStyle = `rgba(0, 240, 255, ${pulse})`;
+    ctx.font = `bold 11px ${font}`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText?.(isZh ? '▼ [↓/S] 更多情報 ▼' : '▼ [↓/S] MORE INTEL ▼', x + boxW - 20, bottomLimit + 2);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
-  //  5. 底部關閉提示
+  //  5. 底部操作提示
   // ═══════════════════════════════════════════════════════════════════════════
   const pulse = 0.7 + 0.3 * Math.sin(now * 0.008);
   ctx.fillStyle = `rgba(0, 240, 255, ${pulse})`;
-  ctx.font = `bold 13px ${font}`;
+  ctx.font = `bold 11px ${font}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText?.(
     isZh
-      ? '按 [ ENTER ] 或 [ ESC ] 關閉任務簡報'
-      : 'PRESS [ ENTER ] OR [ ESC ] TO CLOSE BRIEFING',
+      ? '[ ↑/↓/W/S ] 滾動 | [ PgUp/PgDn ] 翻頁 | [ Z ] 語言 | [ ENTER/ESC ] 關閉'
+      : '[ ↑/↓/W/S ] SCROLL | [ PgUp/PgDn ] PAGE | [ Z ] LANG | [ ENTER/ESC ] CLOSE',
     x + boxW / 2,
     y + boxH - 22
   );
