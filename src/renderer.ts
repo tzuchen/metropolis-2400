@@ -80,6 +80,8 @@ export class GameRenderer {
   journalSelectedIndex: number = 0;
   journalMode: 'view' | 'compose' = 'view';
   journalInputBuffer: string = '';
+  journalTitleInputBuffer: string = '';
+  journalComposeField: 'title' | 'content' = 'title';
   isIntroBriefingOpen: boolean = false;
   introBriefingScrollOffset: number = 0;
   private beamRenderer: BeamRenderer;
@@ -483,7 +485,9 @@ export class GameRenderer {
         this.journalMode || 'view',
         this.journalInputBuffer || '',
         map?.id || 'sector-1',
-        player ? { x: player.x, y: player.y } : undefined
+        player ? { x: player.x, y: player.y } : undefined,
+        this.journalTitleInputBuffer || '',
+        this.journalComposeField || 'title'
       );
     }
 
@@ -504,6 +508,20 @@ export class GameRenderer {
     }
 
     ctx.restore?.();
+  }
+
+  getDoorOrientation(map: SectorMap, x: number, y: number): 'horizontal' | 'vertical' {
+    const tileAbove = this.getTile(map, x, y - 1);
+    const tileBelow = this.getTile(map, x, y + 1);
+    const isWall = (tile: any) => {
+      if (tile === null || tile === undefined) return false;
+      const t = String(tile).toUpperCase();
+      return t === 'WALL' || t === '2' || t === '3' || t === '4' || tile === 2;
+    };
+    if (isWall(tileAbove) || isWall(tileBelow)) {
+      return 'vertical';
+    }
+    return 'horizontal';
   }
 
   key(x: number, y: number): string {
@@ -588,7 +606,12 @@ export class GameRenderer {
       }
     }
 
-    drawTileSprite(ctx, tile ?? 'FLOOR', sx, sy, this.tileSize, visible, now, m?.id);
+    let doorOrientation: 'horizontal' | 'vertical' | undefined;
+    const tileStr = String(tile ?? 'FLOOR').toUpperCase();
+    if (tileStr === 'DOOR_OPEN' || tileStr === 'DOOR_CLOSED' || tileStr === '3' || tileStr === '4') {
+      doorOrientation = this.getDoorOrientation(m, x, y);
+    }
+    drawTileSprite(ctx, tile ?? 'FLOOR', sx, sy, this.tileSize, visible, now, m?.id, doorOrientation);
     ctx.restore?.();
   }
 

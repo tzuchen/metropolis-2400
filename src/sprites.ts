@@ -50,7 +50,8 @@ export function drawTileSprite(
   size: number,
   visible: boolean = true,
   time: number = 0,
-  sectorId?: string
+  sectorId?: string,
+  doorOrientation?: 'horizontal' | 'vertical'
 ): void {
   const sector = sectorId || 'sector-1';
   const kind = getTileKind(tile);
@@ -451,18 +452,33 @@ export function drawTileSprite(
     ctx.fillStyle = '#1c212a';
     ctx.fillRect(x, y, size, size);
 
-    // 左右門框
-    ctx.fillStyle = '#2d3744';
-    ctx.fillRect(x, y, 4, size);
-    ctx.fillRect(x + size - 4, y, 4, size);
+    if (doorOrientation === 'vertical') {
+      // 上下門框
+      ctx.fillStyle = '#2d3744';
+      ctx.fillRect(x, y, size, 4);
+      ctx.fillRect(x, y + size - 4, size, 4);
 
-    // 門板加強鋼板肋條
-    ctx.fillStyle = '#262d38';
-    ctx.fillRect(x + 5, y + 4, size - 10, size - 8);
+      // 門板加強鋼板肋條
+      ctx.fillStyle = '#262d38';
+      ctx.fillRect(x + 4, y + 5, size - 8, size - 10);
 
-    // 中縫隔離槽
-    ctx.fillStyle = '#0a0d12';
-    ctx.fillRect(x + size / 2 - 1, y + 4, 2, size - 8);
+      // 中縫隔離槽 (水平橫線)
+      ctx.fillStyle = '#0a0d12';
+      ctx.fillRect(x + 4, y + size / 2 - 1, size - 8, 2);
+    } else {
+      // 左右門框
+      ctx.fillStyle = '#2d3744';
+      ctx.fillRect(x, y, 4, size);
+      ctx.fillRect(x + size - 4, y, 4, size);
+
+      // 門板加強鋼板肋條
+      ctx.fillStyle = '#262d38';
+      ctx.fillRect(x + 5, y + 4, size - 10, size - 8);
+
+      // 中縫隔離槽 (垂直)
+      ctx.fillStyle = '#0a0d12';
+      ctx.fillRect(x + size / 2 - 1, y + 4, 2, size - 8);
+    }
 
     // 紅色鎖定安全光標
     const lockGlow = 0.7 + 0.3 * Math.sin(time * 0.005);
@@ -483,22 +499,41 @@ export function drawTileSprite(
     ctx.fillStyle = '#0a1017';
     ctx.fillRect(x, y, size, size);
 
-    // 收攏在兩側的門板
-    ctx.fillStyle = '#2b3644';
-    ctx.fillRect(x, y + 2, 4, size - 4);
-    ctx.fillRect(x + size - 4, y + 2, 4, size - 4);
+    if (doorOrientation === 'vertical') {
+      // 收攏在上下兩側的門板
+      ctx.fillStyle = '#2b3644';
+      ctx.fillRect(x + 2, y, size - 4, 4);
+      ctx.fillRect(x + 2, y + size - 4, size - 4, 4);
 
-    // 地面過道軌道
-    ctx.fillStyle = '#131e29';
-    ctx.fillRect(x + 5, y + size / 2 - 3, size - 10, 6);
+      // 地面過道軌道
+      ctx.fillStyle = '#131e29';
+      ctx.fillRect(x + size / 2 - 3, y + 5, 6, size - 10);
 
-    // 綠色通行指示光帶
-    ctx.fillStyle = '#00ff88';
-    ctx.shadowColor = '#00ff88';
-    ctx.shadowBlur = 5;
-    ctx.fillRect(x + 1, y + 3, 2, size - 6);
-    ctx.fillRect(x + size - 3, y + 3, 2, size - 6);
-    ctx.shadowBlur = 0;
+      // 綠色通行指示光帶 (上下兩條橫線)
+      ctx.fillStyle = '#00ff88';
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 5;
+      ctx.fillRect(x + 3, y + 1, size - 6, 2);
+      ctx.fillRect(x + 3, y + size - 3, size - 6, 2);
+      ctx.shadowBlur = 0;
+    } else {
+      // 收攏在左右兩側的門板
+      ctx.fillStyle = '#2b3644';
+      ctx.fillRect(x, y + 2, 4, size - 4);
+      ctx.fillRect(x + size - 4, y + 2, 4, size - 4);
+
+      // 地面過道軌道
+      ctx.fillStyle = '#131e29';
+      ctx.fillRect(x + 5, y + size / 2 - 3, size - 10, 6);
+
+      // 綠色通行指示光帶 (左右兩條豎線)
+      ctx.fillStyle = '#00ff88';
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 5;
+      ctx.fillRect(x + 1, y + 3, 2, size - 6);
+      ctx.fillRect(x + size - 3, y + 3, 2, size - 6);
+      ctx.shadowBlur = 0;
+    }
   } else if (kind === 'REBEL_CACHE') {
     // 反抗軍補給箱
     ctx.fillStyle = '#282015';

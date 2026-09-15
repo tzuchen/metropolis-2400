@@ -7,6 +7,7 @@ export interface JournalEntry {
   sectorId: string;
   playerPos?: { x: number; y: number };
   content: string;
+  title?: string;
 }
 
 export const JOURNAL_STORAGE_KEY = 'metropolis_2400_journal';
@@ -67,9 +68,21 @@ export function loadJournalEntries(): JournalEntry[] {
 export function saveJournalEntry(
   content: string,
   sectorId: string,
-  playerPos?: { x: number; y: number }
+  playerPos?: { x: number; y: number },
+  title?: string
 ): JournalEntry {
   const timestamp = Date.now();
+  let resolvedTitle: string;
+  if (title !== undefined) {
+    resolvedTitle = title.trim();
+  } else {
+    const firstLine = content.split('\n')[0]?.trim() ?? '';
+    resolvedTitle = firstLine.slice(0, 24);
+  }
+  if (resolvedTitle === '') {
+    resolvedTitle = 'Untitled Entry';
+  }
+
   const entry: JournalEntry = {
     id: generateJournalId(timestamp),
     timestamp,
@@ -77,6 +90,7 @@ export function saveJournalEntry(
     sectorId,
     playerPos,
     content,
+    title: resolvedTitle,
   };
 
   const entries = loadJournalEntries();

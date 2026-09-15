@@ -126,6 +126,8 @@ export class GameEngine {
   journalSelectedIndex: number = 0;
   journalMode: 'view' | 'compose' = 'view';
   journalInputBuffer: string = '';
+  journalTitleInputBuffer: string = '';
+  journalComposeField: 'title' | 'content' = 'content';
   isIntroBriefingOpen: boolean = false;
   introBriefingScrollOffset: number = 0;
 
@@ -1052,6 +1054,8 @@ export class GameEngine {
     (this.renderer as any).journalSelectedIndex = this.journalSelectedIndex;
     (this.renderer as any).journalMode = this.journalMode;
     (this.renderer as any).journalInputBuffer = this.journalInputBuffer;
+    (this.renderer as any).journalTitleInputBuffer = this.journalTitleInputBuffer;
+    (this.renderer as any).journalComposeField = this.journalComposeField;
     (this.renderer as any).isIntroBriefingOpen = this.isIntroBriefingOpen;
     (this.renderer as any).introBriefingScrollOffset = this.introBriefingScrollOffset;
     this.player.victory = this.victory;
@@ -1975,6 +1979,8 @@ export class GameEngine {
     this.journalMode = 'view';
     this.journalSelectedIndex = 0;
     this.journalInputBuffer = '';
+    this.journalTitleInputBuffer = '';
+    this.journalComposeField = 'content';
     this.render();
   }
 
@@ -1982,6 +1988,8 @@ export class GameEngine {
     this.isJournalOpen = false;
     this.journalMode = 'view';
     this.journalInputBuffer = '';
+    this.journalTitleInputBuffer = '';
+    this.journalComposeField = 'content';
     this.render();
   }
 
@@ -1990,11 +1998,14 @@ export class GameEngine {
     if (!content) {
       return false;
     }
-    saveJournalEntry(content, this.map?.id || 'sector-1', { x: this.player.x, y: this.player.y });
+    const title = this.journalTitleInputBuffer.trim();
+    saveJournalEntry(content, this.map?.id || 'sector-1', { x: this.player.x, y: this.player.y }, title);
     this.journalEntries = loadJournalEntries();
     this.journalMode = 'view';
     this.journalSelectedIndex = 1;
     this.journalInputBuffer = '';
+    this.journalTitleInputBuffer = '';
+    this.journalComposeField = 'content';
     soundFX.pickup();
     this.pushMessage(this.language === 'zh' ? '【日記】條目已儲存。' : '[JOURNAL] Entry saved.', 'success');
     this.render();

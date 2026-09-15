@@ -23,7 +23,9 @@ export function drawJournalModal(
   mode: 'view' | 'compose',
   inputBuffer: string,
   currentSector: string,
-  playerPos?: { x: number; y: number }
+  playerPos?: { x: number; y: number },
+  titleInputBuffer: string = '',
+  composeField: 'title' | 'content' = 'title'
 ): void {
   const isZh = language === 'zh';
 
@@ -111,7 +113,9 @@ export function drawJournalModal(
     currentSector,
     isZh,
     now,
-    playerPos
+    playerPos,
+    titleInputBuffer,
+    composeField
   );
 
   // Footer: shortcut hints
@@ -207,16 +211,17 @@ function drawLeftPanel(
       ctx.fillStyle = isSelected ? neonGold : textDim;
       ctx.fillText(arrow, x + 4, itemY + itemHeight / 2);
 
-      // Timestamp
+      // Title
+      const title = entry.title || (isZh ? '無標題筆記' : 'Untitled Note');
       ctx.fillStyle = isSelected ? textPrimary : textSecondary;
+      ctx.font = '12px monospace';
+      ctx.fillText(title, x + 24, itemY + itemHeight / 2 - 6);
+
+      // Short time + sector
       const dateStr = entry.formattedDate || '';
       const shortDate = dateStr.length > 16 ? dateStr.slice(0, 16) : dateStr;
-      ctx.fillText(shortDate, x + 24, itemY + itemHeight / 2 - 6);
-
-      // Sector + snippet
       const sectorLabel = entry.sectorId || 'UNKNOWN';
-      const snippet = entry.content ? entry.content.slice(0, 20) : '';
-      const subLabel = `${sectorLabel} ${snippet}`;
+      const subLabel = `${shortDate} | ${sectorLabel}`;
       ctx.fillStyle = isSelected ? textSecondary : textDim;
       ctx.font = '10px monospace';
       ctx.fillText(subLabel, x + 24, itemY + itemHeight / 2 + 8);
@@ -239,7 +244,9 @@ function drawRightPanel(
   currentSector: string,
   isZh: boolean,
   now: number,
-  playerPos?: { x: number; y: number }
+  playerPos?: { x: number; y: number },
+  titleInputBuffer: string = '',
+  composeField: 'title' | 'content' = 'title'
 ): void {
   // Panel background
   ctx.save();
@@ -299,26 +306,68 @@ function drawRightPanel(
 
     contentY += 24;
 
-    // Input box
-    const inputBoxHeight = Math.min(120, h - (contentY - y) - 40);
-    const inputBoxY = contentY;
-
-    ctx.save();
-    ctx.strokeStyle = neonCyan;
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.6;
-    ctx.strokeRect(contentX, inputBoxY, contentW, inputBoxHeight);
-    ctx.restore();
-
-    // Draw input buffer text with wrapping
     const measureFn = (str: string): number => {
       ctx.font = '12px monospace';
       return ctx.measureText(str).width;
     };
 
+    // Title input box
+    const titleBoxHeight = 32;
+    const titleBoxY = contentY;
+    const isTitleActive = composeField === 'title';
+
+    ctx.save();
+    ctx.strokeStyle = isTitleActive ? neonCyan : 'rgba(0, 240, 255, 0.3)';
+    ctx.lineWidth = isTitleActive ? 2 : 1;
+    if (isTitleActive) {
+      ctx.shadowColor = neonCyan;
+      ctx.shadowBlur = 6;
+    }
+    ctx.strokeRect(contentX, titleBoxY, contentW, titleBoxHeight);
+    ctx.restore();
+
+    // Draw title text
+    ctx.save();
+    ctx.font = '12px monospace';
+    ctx.fillStyle = textPrimary;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const titleText = titleInputBuffer || (isZh ? '無標題筆記' : 'Untitled Note');
+    ctx.fillText(titleText, contentX + 8, titleBoxY + 8);
+
+    // Blinking cursor for title
+    const cursorPhase = Math.floor(now / 500) % 2 === 0;
+    if (cursorPhase && isTitleActive) {
+      const cursorX = contentX + 8 + measureFn(titleInputBuffer) + 2;
+      const cursorY = titleBoxY + 8;
+      ctx.fillStyle = neonCyan;
+      ctx.shadowColor = neonCyan;
+      ctx.shadowBlur = 4;
+      ctx.fillText('_', cursorX, cursorY);
+    }
+    ctx.restore();
+
+    contentY = titleBoxY + titleBoxHeight + 12;
+
+    // Content input box
+    const contentBoxHeight = Math.min(120, h - (contentY - y) - 40);
+    const contentBoxY = contentY;
+    const isContentActive = composeField === 'content';
+
+    ctx.save();
+    ctx.strokeStyle = isContentActive ? neonCyan : 'rgba(0, 240, 255, 0.3)';
+    ctx.lineWidth = isContentActive ? 2 : 1;
+    if (isContentActive) {
+      ctx.shadowColor = neonCyan;
+      ctx.shadowBlur = 6;
+    }
+    ctx.strokeRect(contentX, contentBoxY, contentW, contentBoxHeight);
+    ctx.restore();
+
+    // Draw content buffer text with wrapping
     const wrappedLines = wrapText(inputBuffer, contentW - 16, measureFn);
     const lineHeight = 16;
-    const maxLines = Math.floor((inputBoxHeight - 8) / lineHeight);
+    const maxLines = Math.floor((contentBoxHeight - 8) / lineHeight);
 
     ctx.save();
     ctx.font = '12px monospace';
@@ -328,15 +377,14 @@ function drawRightPanel(
 
     const displayLines = wrappedLines.slice(0, maxLines);
     for (let i = 0; i < displayLines.length; i++) {
-      ctx.fillText(displayLines[i], contentX + 8, inputBoxY + 8 + i * lineHeight);
+      ctx.fillText(displayLines[i], contentX + 8, contentBoxY + 8 + i * lineHeight);
     }
 
-    // Blinking cursor
-    const cursorPhase = Math.floor(now / 500) % 2 === 0;
-    if (cursorPhase) {
+    // Blinking cursor for content
+    if (cursorPhase && isContentActive) {
       const lastLine = displayLines.length > 0 ? displayLines[displayLines.length - 1] : '';
       const cursorX = contentX + 8 + measureFn(lastLine) + 2;
-      const cursorY = inputBoxY + 8 + (displayLines.length - 1) * lineHeight;
+      const cursorY = contentBoxY + 8 + (displayLines.length - 1) * lineHeight;
       ctx.fillStyle = neonCyan;
       ctx.shadowColor = neonCyan;
       ctx.shadowBlur = 4;
@@ -345,7 +393,7 @@ function drawRightPanel(
 
     ctx.restore();
 
-    contentY = inputBoxY + inputBoxHeight + 12;
+    contentY = contentBoxY + contentBoxHeight + 12;
 
     // Hint text
     ctx.save();
@@ -354,7 +402,9 @@ function drawRightPanel(
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(
-      isZh ? '[ENTER] 儲存日記 | [ESC] 取消' : '[ENTER] SAVE JOURNAL | [ESC] CANCEL',
+      isZh
+        ? '[TAB / ↑↓] 切換欄位 | [ENTER] 進入內容/儲存 | [ESC] 取消'
+        : '[TAB / ↑↓] SWITCH FIELD | [ENTER] ENTER CONTENT/SAVE | [ESC] CANCEL',
       contentX,
       contentY
     );
@@ -385,6 +435,20 @@ function drawRightPanel(
         ctx.restore();
         return;
       }
+
+      // Title
+      const entryTitle = entry.title || (isZh ? '無標題筆記' : 'Untitled Note');
+      ctx.save();
+      ctx.font = 'bold 14px monospace';
+      ctx.fillStyle = neonGold;
+      ctx.shadowColor = neonGold;
+      ctx.shadowBlur = 4;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`[ ${entryTitle} ]`, contentX, contentY);
+      ctx.restore();
+
+      contentY += 24;
 
       // Full date/time
       ctx.save();

@@ -165,43 +165,92 @@ export class InputRouter {
     // 11. Journal Modal Mode
     if (g.isJournalOpen) {
       if (g.journalMode === 'compose') {
-        if (key === 'Enter') {
-          g.submitJournalEntry();
-          return;
-        }
         if (key === 'Escape' || key === 'Esc') {
           g.journalMode = 'view';
           g.journalInputBuffer = '';
+          g.journalTitleInputBuffer = '';
+          g.journalComposeField = 'content';
           g.render();
-          return;
-        }
-        if (key === 'Backspace') {
-          g.journalInputBuffer = g.journalInputBuffer.slice(0, -1);
-          g.render();
-          return;
-        }
-        if (key === ' ' || key === 'Space') {
-          g.journalInputBuffer += ' ';
-          g.render();
-          return;
-        }
-        
-        // Exclude non-text control keys
-        const controlKeys = [
-          'Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab',
-          'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-          'PageUp', 'PageDown', 'Home', 'End',
-          'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
-          'Process', 'Unidentified'
-        ];
-        if (controlKeys.includes(key)) {
           return;
         }
 
-        // Append any other key (single char, CJK, digits, punctuation, etc.)
-        g.journalInputBuffer += key;
-        g.render();
-        return;
+        if (g.journalComposeField === 'title') {
+          if (key === 'Tab' || key === 'Enter' || key === 'ArrowDown') {
+            g.journalComposeField = 'content';
+            g.render();
+            return;
+          }
+          if (key === 'ArrowUp') {
+            g.journalComposeField = 'content';
+            g.render();
+            return;
+          }
+          if (key === 'Backspace') {
+            g.journalTitleInputBuffer = g.journalTitleInputBuffer.slice(0, -1);
+            g.render();
+            return;
+          }
+          if (key === ' ' || key === 'Space') {
+            g.journalTitleInputBuffer += ' ';
+            g.render();
+            return;
+          }
+          
+          // Exclude non-text control keys
+          const controlKeys = [
+            'Shift', 'Control', 'Alt', 'Meta', 'CapsLock',
+            'ArrowUp', 'ArrowLeft', 'ArrowRight',
+            'PageUp', 'PageDown', 'Home', 'End',
+            'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
+            'Process', 'Unidentified'
+          ];
+          if (controlKeys.includes(key)) {
+            return;
+          }
+
+          // Append any other key (single char, CJK, digits, punctuation, etc.)
+          g.journalTitleInputBuffer += key;
+          g.render();
+          return;
+        } else {
+          // content field
+          if (key === 'Enter') {
+            g.submitJournalEntry();
+            return;
+          }
+          if (key === 'Tab' || key === 'ArrowUp') {
+            g.journalComposeField = 'title';
+            g.render();
+            return;
+          }
+          if (key === 'Backspace') {
+            g.journalInputBuffer = g.journalInputBuffer.slice(0, -1);
+            g.render();
+            return;
+          }
+          if (key === ' ' || key === 'Space') {
+            g.journalInputBuffer += ' ';
+            g.render();
+            return;
+          }
+          
+          // Exclude non-text control keys
+          const controlKeys = [
+            'Shift', 'Control', 'Alt', 'Meta', 'CapsLock',
+            'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+            'PageUp', 'PageDown', 'Home', 'End',
+            'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
+            'Process', 'Unidentified'
+          ];
+          if (controlKeys.includes(key)) {
+            return;
+          }
+
+          // Append any other key (single char, CJK, digits, punctuation, etc.)
+          g.journalInputBuffer += key;
+          g.render();
+          return;
+        }
       }
 
       // view mode
@@ -227,12 +276,17 @@ export class InputRouter {
       if (key === 'n' || key === 'N') {
         g.journalMode = 'compose';
         g.journalInputBuffer = '';
+        g.journalTitleInputBuffer = '';
+        g.journalComposeField = 'content';
         g.render();
         return;
       }
       if (key === 'Enter' || key === ' ' || key === 'Space') {
         if (g.journalSelectedIndex === 0) {
           g.journalMode = 'compose';
+          g.journalInputBuffer = '';
+          g.journalTitleInputBuffer = '';
+          g.journalComposeField = 'content';
           g.render();
           return;
         }
@@ -1156,6 +1210,16 @@ export class InputRouter {
     Object.defineProperty(host, 'terminalInputBuffer', {
       get: () => g.terminalInputBuffer,
       set: (val: string) => { g.terminalInputBuffer = val; },
+      enumerable: true,
+      configurable: true,
+    });
+
+    Object.defineProperty(host, 'activeDialogue', {
+      get: () => g.activeDialogue,
+      set: (val: DialogueSession | null) => {
+        g.activeDialogue = val;
+        this.lastDialogueNpcId = val?.npc?.id ?? null;
+      },
       enumerable: true,
       configurable: true,
     });
