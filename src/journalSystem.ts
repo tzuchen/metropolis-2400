@@ -10,9 +10,19 @@ export interface JournalEntry {
   title?: string;
 }
 
-export const JOURNAL_STORAGE_KEY = 'metropolis_2400_journal';
+export const JOURNAL_STORAGE_KEY = 'metropolis_2400_journal_v2';
 
 export const memoryJournalBackup: JournalEntry[] = [];
+
+if (hasLocalStorage()) {
+  try {
+    localStorage.removeItem('metropolis_2400_journal');
+    localStorage.removeItem(JOURNAL_STORAGE_KEY);
+  } catch {
+    // Silently fail if localStorage is unavailable
+  }
+  memoryJournalBackup.length = 0;
+}
 
 function hasLocalStorage(): boolean {
   try {

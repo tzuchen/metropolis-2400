@@ -298,6 +298,10 @@ export class InputRouter {
         }
         return;
       }
+      if (key === 'c' || key === 'C') {
+        g.clearAllJournalEntries();
+        return;
+      }
       return;
     }
 

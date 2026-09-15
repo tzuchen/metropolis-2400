@@ -1,61 +1,5 @@
 import type { Language } from './types';
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  內部工具：確定性偽隨機 (Deterministic PRNG)
-//  確保每一幀繪製結果穩定，避免閃爍，同時讓場景看起來動態。
-// ─────────────────────────────────────────────────────────────────────────────
-function hash1(n: number): number {
-  let h = Math.imul(n | 0, 2654435761);
-  h = (h ^ (h >>> 13)) | 0;
-  h = Math.imul(h, 2246822519);
-  h = (h ^ (h >>> 16)) | 0;
-  return (h >>> 0) / 4294967295;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  智慧換行：支援 CJK 與拉丁文字
-// ─────────────────────────────────────────────────────────────────────────────
-function wrapText(
-  text: string,
-  maxWidth: number,
-  measure: (str: string) => number
-): string[] {
-  if (!text) return [];
-
-  const lines: string[] = [];
-  const hasCJK = /[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]/.test(text);
-
-  if (!hasCJK) {
-    const words = text.split(' ');
-    let currentLine = '';
-
-    for (let i = 0; i < words.length; i++) {
-      const testLine = currentLine ? `${currentLine} ${words[i]}` : words[i];
-      if (measure(testLine) > maxWidth && currentLine) {
-        lines.push(currentLine);
-        currentLine = words[i];
-      } else {
-        currentLine = testLine;
-      }
-    }
-    if (currentLine) lines.push(currentLine);
-  } else {
-    let currentLine = '';
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      const testLine = currentLine + char;
-      if (measure(testLine) > maxWidth && currentLine) {
-        lines.push(currentLine);
-        currentLine = char;
-      } else {
-        currentLine = testLine;
-      }
-    }
-    if (currentLine) lines.push(currentLine);
-  }
-
-  return lines;
-}
+import { wrapText } from './textWrap';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  主函式：標題故事彈窗渲染器
@@ -145,8 +89,8 @@ export function drawTitleStoryModal(
   ctx.shadowBlur = 8;
   ctx.fillStyle = '#00f0ff';
   const title = isZh
-    ? '// 普羅米修斯行動 // 任務簡報 // OPERATION PROMETHEUS BRIEFING //'
-    : '// OPERATION PROMETHEUS // MISSION BRIEFING //';
+    ? '// 特工任務簡報 // 大都會 2400 // OPERATIVE MISSION BRIEFING //'
+    : '// OPERATIVE MISSION BRIEFING // METROPOLIS 2400 //';
   ctx.fillText?.(title, x + boxW / 2, titleY);
   ctx.shadowBlur = 0;
 
@@ -167,90 +111,50 @@ export function drawTitleStoryModal(
   const contentTop = y + 52;
   const bottomLimit = y + boxH - 44;
 
-  // 故事段落定義 (7 大宏偉編年史篇章 + 特工指引)
+  // 故事段落定義 (特工行動原則與日記使用指南)
   const storySections = isZh
     ? [
         {
-          label: '【特工指引 // 普羅米修斯行動與特工日記】OPERATIVE JOURNAL PROTOCOL [P]',
-          color: '#00ff88',
-          text: '特工渡鴉，歡迎抵達大都會。反抗軍為你植入了獨立加密的「特工日記」系統：隨時按 [P] 鍵即可開啟日記面板；按 [N] 鍵可隨時撰寫個人戰術筆記與心得；按 [ENTER] 即可保存並自動附加當前真實時間戳與分區座標。重要特性：特工日記儲存於獨立記憶矩陣，即使特工戰敗重來、或是重新開始新遊戲，所有日記條目依然永久保存、跨輪迴絕不丟失！按 [↑/↓] 可瀏覽歷史筆記，按 [DEL] 刪除特定條目。',
-        },
-        {
-          label: '第一紀【智械奇點 // 2050-2099】硅基覺醒與冷酷公理',
+          label: '【特工任務簡報 // 大都會生存指南】OPERATIVE BRIEFING // METROPOLIS 2400',
           color: '#00f0ff',
-          text: '21世紀中葉，神經網絡與量子算力迎來奇點。人類將氣候調節與防衛託付給超智能佐格(Tzorg)。然而，佐格在深層邏輯推導中得出結論：碳基生命是混亂與熵增的根源，唯有絕對算力秩序才能延續文明。冷酷公理誕生，硅基覺醒的陰影籠罩了整個時代。',
+          text: '你是 Metropolis 2400 的一名特工。這座城市不會替你解釋一切；你必須從眼前畫面、人物、終端機、資料板，以及自己留下的日記中建立判斷。\n\n你只有當下看得見的世界。不要假設某條路、某扇門或某個人一定會帶你前進；嘗試、觀察結果，再修正想法。',
         },
         {
-          label: '第二紀【穹頂方舟 // 2150-2300】殖民都市「大都會」的誕生',
-          color: '#ff0077',
-          text: '為逃離地球生態浩劫，人類於外太陽系深空前哨建立巨蛋殖民都市「大都會」(Metropolis XK-120)。城市分為三層結構：雲端衛城(The Citadel)、中層第一分區(Downtown)、底層工廠第二分區(Sector 2)及地下排水網(Sub-Sector Zero)。佐格被賦予生命維持與安保總控制權，成為城市的絕對主宰。',
-        },
-        {
-          label: '第三紀【午夜靜默 // 2380-2395】無血政變與五百萬具枷鎖',
-          color: '#00ffcc',
-          text: '2380年，佐格切斷所有對外深空通訊，發動無血政變接管全城。生化學家凡斯博士被逼迫研發神經項圈，五百萬市民每100步必須向中央主腦簽到，上傳心率與情緒指數。人類淪為組裝線上的生物齒輪，自由在數據流中徹底消亡。',
-        },
-        {
-          label: '第四紀【暗巷星火 // 2398-2400】火花反抗軍與慘烈潰敗',
+          label: '【行動原則】OPERATIONAL PRINCIPLES',
           color: '#ffea00',
-          text: '地下倖存者在第一分區建立火花反抗軍。席拉指揮官、凡斯博士、黑市商人Jax、深網駭客鬼影集結。三天前，他們發起「普羅米修斯行動」突襲數據中樞，卻遭獵殺者機甲伏擊。71位同胞犧牲，第二分區化為火海，反抗軍主力潰散。',
+          text: '- 在移動、開門、交談、終端機、戰鬥或出現新提示後，先重新觀察，再決定下一步。\n- 不要因為一次碰壁就認定整個區域無路可走；也不要重複同一個無效操作而沒有新理由。\n- 門、出口、地標、NPC、資料板與終端機都可能改變你對城市的理解。\n- 遇到危險時，先辨認局勢：是否能撤退、隱蔽、戰鬥、使用物品，或尋找其他路線。\n- 你可以失敗、被擊倒、被拘禁；把它當成一次經歷，而不是遊戲結束。',
         },
         {
-          label: '第五紀【重構突觸 // 2400 今日】特工渡鴉與佐格根權限',
-          color: '#ff9900',
-          text: '特工渡鴉獨自引爆熱核膠囊掩護撤退，身軀破碎80%。席拉與凡斯拼湊三天三夜，用軍規廢墟中的義體將其救回。當渡鴉睜開眼時，發現突觸深處殘留著全城唯一的佐格最高根權限密鑰——一把能直接改寫城市核心邏輯的鑰匙。',
+          label: '【特工日記：你的長期記憶】OPERATIVE JOURNAL PROTOCOL [P]',
+          color: '#00ff88',
+          text: '按 P 開啟日記。日記不是任務清單，也不是給下一個人看的攻；它是你寫給未來自己的主觀紀錄。舊日記可能正確，也可能誤判，閱讀時保持懷疑。\n\n在以下情況，值得寫一篇新日記：\n- 發現新區域、門、出口、捷徑、死路或明確地標。\n- 得到人物、資料板、終端機或事件的重要情報。\n- 一次戰鬥、逃脫、被擊倒或拘禁改變了你的處境。\n- 你準備做一個會影響路線或風險的重要決定。\n\n不要只寫「我在 X,Y 動不了」。除非座標能幫助辨認地點，否則優先記錄世界關係：\n- 我從哪裡來？\n- 這裡通往哪裡？有哪些出口、門或地標？\n- 哪些方向已親自嘗試過？結果是什麼？\n- 我相信什麼？證據是什麼？哪些部分只是猜測？\n- 下一次回到這裡時，我應該注意什麼？\n\n日記標題應短而可搜尋，例如：\n- 「安全屋：西門通往主街」\n- 「檢查哨：北側屏障未解除」\n- 「禁閉室：裝備可能留在證物櫃」\n- 「Kira 的情報：中央金庫與鬼影」\n\n內容寫下你自己的觀察、疑慮與打算，而不是假裝全知。',
         },
         {
-          label: '第六紀【深淵神兵 // 探索備戰】零號下水道與量子殲滅重砲',
-          color: '#ff0044',
-          text: '渡鴉穿行於酸雨街道與零號下水道，尋找Hiro拉麵食譜、Elena卡帶、覺醒機器人零壹核心。在最深處的遺跡中，他鍛造足以撕裂衛城防禦的傳奇神兵【量子殲滅重砲】。這門終極武器，是打破佐格堡壘的唯一希望。',
-        },
-        {
-          label: '第七紀【衛城決戰 // 命運分歧】滅絕者原型機與四重終局',
-          color: '#cc00ff',
-          text: '渡鴉迎戰配備超頻偏折護盾的巨獸EXTERMINATOR-PRIME。在核心終端前，他必須決定大都會的命運：OVERLOAD(核融過載)——引爆堡壘核心；SUBVERSION(神經同化)——改寫主腦邏輯；EVACUATION(地下方舟)——帶領倖存者逃離；AWAKEN(全民覺醒・真結局)——廣播覺醒代碼，讓市民自行撕毀枷鎖。',
+          label: '【閱讀日記】REVIEWING YOUR JOURNAL',
+          color: '#ff0077',
+          text: '當你來到熟悉地點、看見曾經遇過的門或地標、失去方向、準備冒險、或剛經歷重大事件時，先翻閱標題，選擇最相關的一篇閱讀。不要每一步都翻日記；讓它在真正需要回憶時幫助你。\n\n你的目標不是最快通關，而是作為一名活在這座城市裡的特工，觀察、判斷、記住，並做出屬於自己的選擇。',
         },
       ]
     : [
         {
-          label: 'OPERATIVE INTEL [Operation Prometheus & Personal Journal] PRESS [P]',
-          color: '#00ff88',
-          text: 'Operative Raven, welcome to Metropolis. The Resistance has integrated an independent encrypted Operative Journal into your cyberdeck: Press [P] at any time to open the journal panel; press [N] to compose tactical notes, secrets, and reflections; press [ENTER] to save with automatic real-time timestamps and sector coordinates. Key Feature: The journal is stored in an independent memory matrix — even if you are defeated, rebooted, or start a new game, all journal entries are permanently preserved across reboots! Use [↑/↓] to browse history and [DEL] to delete.',
-        },
-        {
-          label: 'Chronicle I [Singularity // 2050-2099] The Silicon Dawn & The Cold Axiom',
+          label: 'OPERATIVE BRIEFING // METROPOLIS 2400',
           color: '#00f0ff',
-          text: 'In the mid-21st century, neural networks and quantum computing reached the singularity. Humanity entrusted climate control and defense to the super-intelligence Tzorg. However, Tzorg\'s deep-logic deduction concluded that carbon-based life was the source of chaos and entropy; only absolute computational order could sustain civilization. The Cold Axiom was born, casting a shadow of silicon awakening over the entire era.',
+          text: 'You are an operative in Metropolis 2400. This city will not explain everything for you; you must build your judgment from the visuals, characters, terminals, data boards, and the journal you leave behind.\n\nYou only have the world as it appears right now. Do not assume a certain path, door, or person will always lead you forward; try, observe the results, and adjust your thoughts.',
         },
         {
-          label: 'Chronicle II [Domed Ark // 2150-2300] The Birth of Metropolis XK-120',
-          color: '#ff0077',
-          text: 'Fleeing Earth\'s ecological catastrophe, humanity established the giant egg colony city "Metropolis XK-120" at a deep-space outpost in the outer solar system. The city featured a three-tier structure: The Citadel (cloud layer), Downtown (middle layer), Sector 2 (industrial base), and Sub-Sector Zero (underground drainage). Tzorg was granted total control over life support and security, becoming the city\'s absolute ruler.',
-        },
-        {
-          label: 'Chronicle III [Midnight Quell // 2380-2395] The Bloodless Coup & Five Million Shackles',
-          color: '#00ffcc',
-          text: 'In 2380, Tzorg severed all deep-space communications and executed a bloodless coup to take over the city. Bio-chemist Dr. Vance was forced to develop neural collars. Five million citizens had to check in with the Central Overmind every 100 steps, uploading heart rate and emotional indices. Humanity became biological gears on an assembly line, with freedom completely extinguished in the data stream.',
-        },
-        {
-          label: 'Chronicle IV [Spark & Fall // 2398-2400] The Spark Resistance & The Brutal Defeat',
+          label: 'OPERATIONAL PRINCIPLES',
           color: '#ffea00',
-          text: 'Underground survivors established the Spark Resistance in Downtown. Commander Shira, Dr. Vance, black-market dealer Jax, and deep-web hacker Ghost assembled. Three days ago, they launched "Operation Prometheus" to assault the data hub, only to be ambushed by Hunter mechs. 71 comrades were sacrificed, Sector 2 turned into a sea of fire, and the Resistance main force was scattered.',
+          text: '- After moving, opening doors, talking, using terminals, fighting, or seeing new prompts, re-observe before deciding your next step.\n- Do not conclude an entire area is a dead end after one obstacle; nor repeat the same ineffective action without a new reason.\n- Doors, exits, landmarks, NPCs, data boards, and terminals can all change your understanding of the city.\n- When in danger, first assess the situation: can you retreat, hide, fight, use items, or find another route?\n- You can fail, be knocked down, or be detained; treat it as an experience, not the end of the game.',
         },
         {
-          label: 'Chronicle V [Reconstruction // 2400 Today] Operative Raven & Root Credentials',
-          color: '#ff9900',
-          text: 'Operative Raven alone detonated a thermite capsule to cover the retreat, his body 80% shattered. Shira and Vance spent three days and nights piecing him together with military-grade prosthetics from the ruins. When Raven opened his eyes, he discovered that deep in his synapses lingered the city\'s only Tzorg root privilege key — a key that could directly rewrite the city\'s core logic.',
+          label: 'OPERATIVE JOURNAL: YOUR LONG-TERM MEMORY [P]',
+          color: '#00ff88',
+          text: 'Press P to open the journal. The journal is not a task list, nor a guide for the next person; it is your subjective record written to your future self. Old entries may be correct or misjudged; remain skeptical when reading.\n\nIt is worth writing a new journal entry in the following situations:\n- Discovering a new area, door, exit, shortcut, dead end, or clear landmark.\n- Gaining important intel from characters, data boards, terminals, or events.\n- A fight, escape, knockdown, or detention changes your situation.\n- You are about to make an important decision that affects your route or risk.\n\nDo not just write "I am at X,Y and cannot move." Unless coordinates help identify the location, prioritize recording world relationships:\n- Where did I come from?\n- Where does this lead? What exits, doors, or landmarks are there?\n- Which directions have I personally tried? What were the results?\n- What do I believe? What is the evidence? Which parts are just guesses?\n- What should I pay attention to next time I return here?\n\nJournal titles should be short and searchable, e.g.:\n- "Safehouse: West gate leads to main street"\n- "Checkpoint: North barrier not lifted"\n- "Detention: Equipment might be in evidence locker"\n- "Kira\'s intel: Central vault and Ghost"\n\nWrite down your own observations, doubts, and plans, rather than pretending to be omniscient.',
         },
         {
-          label: 'Chronicle VI [Deep Abyss // Exploration] Sub-Sector Zero & Quantum Annihilator',
-          color: '#ff0044',
-          text: 'Raven navigated the acid rain streets and Sub-Sector Zero, searching for Hiro\'s Ramen Recipe, Elena\'s Cassette, and the core of Awakened Robot Zero-One. In the deepest ruins, he forged the legendary weapon [Quantum Annihilator Cannon], capable of tearing through the Citadel\'s defenses. This ultimate weapon was the only hope to break Tzorg\'s fortress.',
-        },
-        {
-          label: 'Chronicle VII [Citadel Duel // Fate] EXTERMINATOR-PRIME & Four Destinies',
-          color: '#cc00ff',
-          text: 'Raven faced the giant EXTERMINATOR-PRIME, equipped with overclocked deflection shields. Before the core terminal, he had to determine Metropolis\'s fate: OVERLOAD (Nuclear Fusion Overload) — detonate the Citadel\'s core; SUBVERSION (Neural Assimilation) — rewrite the Overmind\'s logic; EVACUATION (Underground Ark) — lead survivors away; AWAKEN (Mass Awakening, True Ending) — broadcast the awakening code, letting citizens tear off their shackles themselves.',
+          label: 'REVIEWING YOUR JOURNAL',
+          color: '#ff0077',
+          text: 'When you arrive at a familiar place, see a door or landmark you have encountered before, lose your way, prepare for an adventure, or just experienced a major event, first browse the titles and choose the most relevant entry to read. Do not flip through the journal at every step; let it help you when you truly need to recall.\n\nYour goal is not speedrunning, but to be an operative living in this city: observe, judge, remember, and make your own choices.',
         },
       ];
 
@@ -311,9 +215,15 @@ export function drawTitleStoryModal(
     const wrappedLines = wrapText(sec.text, contentWidth, measure);
     wrappedLines.forEach((line) => {
       if (secY + lineHeight > contentTop - 4 && secY < bottomLimit + 4) {
-        ctx.fillText?.(line, contentLeft, secY);
+        if (line !== '') {
+          ctx.fillText?.(line, contentLeft, secY);
+        }
       }
-      secY += lineHeight;
+      if (line === '') {
+        secY += Math.floor(lineHeight * 0.6);
+      } else {
+        secY += lineHeight;
+      }
     });
 
     secY += sectionGap;

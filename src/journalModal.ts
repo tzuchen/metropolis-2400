@@ -120,8 +120,8 @@ export function drawJournalModal(
   // Footer: shortcut hints
   const footerY = height - padding - footerHeight / 2;
   const footerText = isZh
-    ? '[ ↑/↓ ] 選擇 | [ ENTER ] 進入/儲存 | [ N ] 新增 | [ DEL ] 刪除 | [ P / ESC ] 關閉'
-    : '[ ↑/↓ ] SELECT | [ ENTER ] CONFIRM/SAVE | [ N ] NEW | [ DEL ] DELETE | [ P / ESC ] CLOSE';
+    ? '[ ↑/↓ ] 選擇 | [ ENTER ] 進入/儲存 | [ N ] 新增 | [ DEL ] 刪除 | [ C ] 清空全部 | [ P / ESC ] 關閉'
+    : '[ ↑/↓ ] SELECT | [ ENTER ] CONFIRM/SAVE | [ N ] NEW | [ DEL ] DELETE | [ C ] CLEAR ALL | [ P / ESC ] CLOSE';
 
   ctx.save();
   ctx.font = '11px monospace';

@@ -34,7 +34,7 @@ import {
 import { handleTerminalInput as _handleTerminalInput } from './terminalRunner';
 import { processConveyors as _processConveyors, detonateCanister as _detonateCanister } from './hazardSystem';
 import { checkQuestDiscovery as _checkQuestDiscovery, completeQuest as _completeQuest } from './questSystem';
-import { JournalEntry, loadJournalEntries, saveJournalEntry, deleteJournalEntry } from './journalSystem';
+import { JournalEntry, loadJournalEntries, saveJournalEntry, deleteJournalEntry, clearJournalEntries } from './journalSystem';
 
 
 export interface ResolutionPreset {
@@ -2127,6 +2127,15 @@ export class GameEngine {
     this.pushMessage(this.language === 'zh' ? '【日記】條目已刪除。' : '[JOURNAL] Entry deleted.', 'info');
     this.render();
     return true;
+  }
+
+  clearAllJournalEntries(): void {
+    clearJournalEntries();
+    this.journalEntries = [];
+    this.journalSelectedIndex = 0;
+    soundFX.terminal();
+    this.pushMessage(this.language === 'zh' ? '【日記】已清空所有特工筆記。' : '[JOURNAL] All entries cleared.', 'info');
+    this.render();
   }
 }
 
