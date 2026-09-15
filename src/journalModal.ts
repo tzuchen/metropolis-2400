@@ -37,12 +37,11 @@ export function drawJournalModal(
   const contentBottom = height - padding - footerHeight;
   const contentHeight = contentBottom - contentTop;
 
-  const leftWidth = Math.floor(width * 0.4);
-  const rightWidth = width - leftWidth;
   const gap = 12;
-
   const leftX = padding;
+  const leftWidth = Math.floor((width - padding * 2 - gap) * 0.38);
   const rightX = leftX + leftWidth + gap;
+  const rightWidth = width - padding - rightX;
 
   // Background
   ctx.fillStyle = bg;
@@ -153,7 +152,12 @@ function drawLeftPanel(
   ctx.strokeRect(x, y, w, h);
   ctx.restore();
 
-  const itemHeight = 32;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+
+  const itemHeight = 38;
   const listPadding = 8;
   const listTop = y + listPadding;
   const listBottom = y + h - listPadding;
@@ -207,15 +211,27 @@ function drawLeftPanel(
       const entry = entries[i - 1];
       if (!entry) continue;
 
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x + 2, itemY, w - 4, itemHeight - 2);
+      ctx.clip();
+
       const arrow = isSelected ? '► ' : '  ';
       ctx.fillStyle = isSelected ? neonGold : textDim;
       ctx.fillText(arrow, x + 4, itemY + itemHeight / 2);
 
       // Title
-      const title = entry.title || (isZh ? '無標題筆記' : 'Untitled Note');
-      ctx.fillStyle = isSelected ? textPrimary : textSecondary;
+      let title = entry.title || (isZh ? '無標題筆記' : 'Untitled Note');
+      const maxTitleW = w - 36;
       ctx.font = '12px monospace';
-      ctx.fillText(title, x + 24, itemY + itemHeight / 2 - 6);
+      if (ctx.measureText(title).width > maxTitleW) {
+        while (title.length > 1 && ctx.measureText(title + '...').width > maxTitleW) {
+          title = title.slice(0, -1);
+        }
+        title = title + '...';
+      }
+      ctx.fillStyle = isSelected ? textPrimary : textSecondary;
+      ctx.fillText(title, x + 24, itemY + itemHeight / 2 - 7);
 
       // Short time + sector
       const dateStr = entry.formattedDate || '';
@@ -225,10 +241,14 @@ function drawLeftPanel(
       ctx.fillStyle = isSelected ? textSecondary : textDim;
       ctx.font = '10px monospace';
       ctx.fillText(subLabel, x + 24, itemY + itemHeight / 2 + 8);
+
+      ctx.restore();
     }
 
     ctx.restore();
   }
+
+  ctx.restore();
 }
 
 function drawRightPanel(
@@ -257,10 +277,17 @@ function drawRightPanel(
   ctx.strokeRect(x, y, w, h);
   ctx.restore();
 
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+
   const panelPadding = 12;
   const contentX = x + panelPadding;
   const contentW = w - panelPadding * 2;
   let contentY = y + panelPadding;
+
+  const measureFn = (str: string): number => (ctx.measureText ? ctx.measureText(str).width : str.length * 8);
 
   if (mode === 'compose') {
     // Compose mode
@@ -306,11 +333,6 @@ function drawRightPanel(
 
     contentY += 24;
 
-    const measureFn = (str: string): number => {
-      ctx.font = '12px monospace';
-      return ctx.measureText(str).width;
-    };
-
     // Title input box
     const titleBoxHeight = 32;
     const titleBoxY = contentY;
@@ -328,6 +350,9 @@ function drawRightPanel(
 
     // Draw title text
     ctx.save();
+    ctx.beginPath();
+    ctx.rect(contentX + 2, titleBoxY + 2, contentW - 4, titleBoxHeight - 4);
+    ctx.clip();
     ctx.font = '12px monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
@@ -385,7 +410,7 @@ function drawRightPanel(
     contentY = titleBoxY + titleBoxHeight + 12;
 
     // Content input box
-    const contentBoxHeight = Math.min(120, h - (contentY - y) - 40);
+    const contentBoxHeight = Math.max(60, Math.min(120, h - (contentY - y) - 45));
     const contentBoxY = contentY;
     const isContentActive = composeField === 'content';
 
@@ -405,6 +430,9 @@ function drawRightPanel(
     const maxLines = Math.floor((contentBoxHeight - 8) / lineHeight);
 
     ctx.save();
+    ctx.beginPath();
+    ctx.rect(contentX + 2, contentBoxY + 2, contentW - 4, contentBoxHeight - 4);
+    ctx.clip();
     ctx.font = '12px monospace';
     ctx.fillStyle = textPrimary;
     ctx.textAlign = 'left';
@@ -473,6 +501,7 @@ function drawRightPanel(
 
       // Title
       const entryTitle = entry.title || (isZh ? '無標題筆記' : 'Untitled Note');
+      const titleLines = wrapText(`[ ${entryTitle} ]`, contentW, measureFn);
       ctx.save();
       ctx.font = 'bold 14px monospace';
       ctx.fillStyle = neonGold;
@@ -480,10 +509,12 @@ function drawRightPanel(
       ctx.shadowBlur = 4;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(`[ ${entryTitle} ]`, contentX, contentY);
+      for (let i = 0; i < titleLines.length; i++) {
+        ctx.fillText(titleLines[i], contentX, contentY + i * 20);
+      }
       ctx.restore();
 
-      contentY += 24;
+      contentY += Math.max(26, titleLines.length * 20 + 6);
 
       // Full date/time
       ctx.save();
@@ -532,11 +563,6 @@ function drawRightPanel(
       contentY += 12;
 
       // Journal content with wrapping
-      const measureFn = (str: string): number => {
-        ctx.font = '12px monospace';
-        return ctx.measureText(str).width;
-      };
-
       const wrappedLines = wrapText(entry.content || '', contentW, measureFn);
       const lineHeight = 16;
       const maxLines = Math.floor((y + h - panelPadding - contentY) / lineHeight);
@@ -552,13 +578,9 @@ function drawRightPanel(
         ctx.fillText(displayLines[i], contentX, contentY + i * lineHeight);
       }
 
-      // Ellipsis if truncated
-      if (wrappedLines.length > maxLines) {
-        ctx.fillStyle = textDim;
-        ctx.fillText('...', contentX, contentY + maxLines * lineHeight);
-      }
-
       ctx.restore();
     }
   }
+
+  ctx.restore();
 }

@@ -1080,10 +1080,11 @@ export class InputRouter {
     } else if (tile === 3 || String(tile).toUpperCase() === 'DOOR_CLOSED') {
       if (toggleDoor(g.map, { x: nx, y: ny })) {
         soundFX.door();
-        g.pushMessage('Airlock blast door cycled open.', 'info');
         g.tick();
+        (g as any).lastAdjacentPassageKey = `door_open-${nx},${ny}-${g.player.x},${g.player.y}`;
+        g.pushMessage(g.language === 'zh' ? '氣密隔離門已開啟。' : 'Airlock blast door cycled open.', 'info');
       } else {
-        g.pushMessage('Blast door is locked. Use terminal to unlock.', 'warning');
+        g.pushMessage(g.language === 'zh' ? '隔離門已被鎖定，請使用終端機解鎖。' : 'Blast door is locked. Use terminal to unlock.', 'warning');
         g.render();
       }
       return;

@@ -135,12 +135,24 @@ export function handleEnvironmentalInteraction(host: InteractionSystemHost): voi
     const ty = player.y + oy;
     if (toggleDoor(map, { x: tx, y: ty })) {
       soundFX.door();
-      host.pushMessage('Airlock blast door cycled.', 'info');
       host.tick();
+      const newTile = getTile(map, { x: tx, y: ty });
+      const isOpen = newTile === 4 || newTile === ('DOOR_OPEN' as unknown as number);
+      (host as any).lastAdjacentPassageKey = `${isOpen ? 'door_open' : 'door_closed'}-${tx},${ty}-${player.x},${player.y}`;
+      host.pushMessage(
+        host.language === 'zh'
+          ? isOpen
+            ? '氣密隔離門已開啟。'
+            : '氣密隔離門已關閉。'
+          : isOpen
+            ? 'Airlock blast door cycled open.'
+            : 'Airlock blast door cycled closed.',
+        'info'
+      );
       return;
     }
   }
-  host.pushMessage('No blast door within reach.', 'warning');
+  host.pushMessage(host.language === 'zh' ? '周圍沒有可操作的隔離門。' : 'No blast door within reach.', 'warning');
   host.render();
 }
 
