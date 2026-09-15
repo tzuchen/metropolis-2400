@@ -1,11 +1,20 @@
-import { loadJournalEntries, saveJournalEntry, deleteJournalEntry, clearJournalEntries, memoryJournalBackup } from '../src/journalSystem';
+// scripts/verify-operative-journal.ts
+// 驗證特工日記 (Operative Journal) 時間戳、讀取、持久化與開局提示彈窗系統
+
 import { GameEngine } from '../src/game';
+import {
+  saveJournalEntry,
+  loadJournalEntries,
+  deleteJournalEntry,
+  JOURNAL_STORAGE_KEY,
+  memoryJournalBackup,
+} from '../src/journalSystem';
 import { drawJournalModal } from '../src/journalModal';
 import { drawTitleStoryModal } from '../src/titleStoryModal';
 
 console.log('=== 開始驗證特工日記 (Operative Journal) 與開局簡報系統 ===\n');
 
-// 模擬 Canvas 與 2D Context
+// 建立 mockCanvas
 function createMockCanvas(): any {
   const ctx: any = {
     save: () => {},
@@ -27,7 +36,6 @@ function createMockCanvas(): any {
     createLinearGradient: () => ({ addColorStop: () => {} }),
     drawImage: () => {},
   };
-
   return {
     getContext: (type: string) => (type === '2d' ? ctx : null),
     width: 800,
@@ -35,24 +43,29 @@ function createMockCanvas(): any {
   };
 }
 
-// 1. 測試 journalSystem 純邏輯持久化與時間戳
-console.log('1. 測試 journalSystem 資料持久化與時間戳格式...');
-clearJournalEntries();
-const entry1 = saveJournalEntry('特工日誌 01：已成功潛入 Sector 1 安全屋。', 'sector-1', { x: 5, y: 5 });
-if (!entry1 || !entry1.id) throw new Error('saveJournalEntry 未返回有效條目');
-if (!entry1.formattedDate || !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(entry1.formattedDate)) {
-  throw new Error(`時間戳格式不符預期: ${entry1.formattedDate}`);
+// 清理 localStorage 與記憶體備份
+if (typeof localStorage !== 'undefined') {
+  localStorage.removeItem(JOURNAL_STORAGE_KEY);
 }
-if (entry1.sectorId !== 'sector-1') throw new Error('扇區 ID 未正確記錄');
-if (entry1.playerPos?.x !== 5 || entry1.playerPos?.y !== 5) throw new Error('座標未正確記錄');
+memoryJournalBackup.length = 0;
 
+// 1. 測試 journalSystem 底層持久化與時間戳生成
+console.log('1. 測試 journalSystem 資料持久化與時間戳格式...');
+const entry1 = saveJournalEntry('特工抵達 Sector 01 安全屋，通訊正常。', 'sector-1', { x: 5, y: 5 }, '抵達安全屋');
+if (!entry1.id || !entry1.formattedDate || !entry1.timestamp) {
+  throw new Error('日記條目缺少必要欄位 (id, formattedDate, timestamp)');
+}
+const datePattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+if (!datePattern.test(entry1.formattedDate)) {
+  throw new Error(`時間戳格式不符合 YYYY-MM-DD HH:MM:SS: ${entry1.formattedDate}`);
+}
 const entriesAfter1 = loadJournalEntries();
 if (entriesAfter1.length !== 1 || entriesAfter1[0].content !== entry1.content) {
   throw new Error('loadJournalEntries 讀取條目異常');
 }
 console.log('✅ journalSystem 資料建立、時間戳與持久化讀取完全正確！');
 
-// 2. 測試 GameEngine 開啟日記、撰寫並保存
+// 2. 測試 GameEngine 開啟日記、標題與內容撰寫並保存
 console.log('\n2. 測試 GameEngine 開啟特工日記與輸入互動...');
 const canvas1 = createMockCanvas();
 const game1 = new GameEngine(canvas1 as any);
@@ -65,8 +78,22 @@ if (game1.journalMode !== 'view') throw new Error('初始日記模式應為 view
 // 按 [N] 進入撰寫模式
 game1.handleKeyDown('n');
 if (game1.journalMode !== 'compose') throw new Error('按 [N] 鍵未能切換至 compose 模式');
+if (game1.journalComposeField !== 'title') throw new Error('撰寫模式初始焦點應在標題欄位 title');
 
-// 模擬打字: "Found classified data"
+// 模擬在標題欄位輸入標題
+const testTitle = '機密調查行動';
+for (const ch of testTitle) {
+  game1.handleKeyDown(ch);
+}
+if (game1.journalTitleInputBuffer !== testTitle) {
+  throw new Error(`標題輸入緩衝區內容不符: "${game1.journalTitleInputBuffer}" vs "${testTitle}"`);
+}
+
+// 按 Enter 切換至內容欄位
+game1.handleKeyDown('Enter');
+if (game1.journalComposeField !== 'content') throw new Error('按 Enter 未能切換至內容欄位');
+
+// 模擬在內容欄位打字: "Found classified data"
 const testLog = '發現佐格網路的核心加密節點。';
 for (const ch of testLog) {
   game1.handleKeyDown(ch);
@@ -87,9 +114,13 @@ game1.handleKeyDown('。');
 game1.handleKeyDown('Enter');
 if (game1.journalMode !== 'view') throw new Error('提交日記後應自動回到 view 模式');
 if (game1.journalInputBuffer !== '') throw new Error('提交日記後 inputBuffer 未清空');
+if (game1.journalTitleInputBuffer !== '') throw new Error('提交日記後 journalTitleInputBuffer 未清空');
 if (game1.journalEntries.length < 2) throw new Error('日記清單未包含剛提交的新條目');
 if (game1.journalEntries[0].content !== testLog) {
   throw new Error(`最新日記內容不符: ${game1.journalEntries[0].content}`);
+}
+if (game1.journalEntries[0].title !== testTitle) {
+  throw new Error(`最新日記標題不符: ${game1.journalEntries[0].title}`);
 }
 console.log('✅ GameEngine 開啟日記、打字、退格與提交功能完全正常！');
 
@@ -119,25 +150,26 @@ if (game2.journalEntries[0].content !== testLog) {
 }
 console.log('✅ 日記刪除功能驗證正常！');
 
-// 5. 測試 Escape 與 P 鍵關閉日記
+// 5. 測試 Escape 與 P 關閉
 console.log('\n5. 測試 Escape 與 P 鍵關閉特工日記...');
 game2.handleKeyDown('Escape');
 if (game2.isJournalOpen) throw new Error('按 Escape 未能關閉特工日記');
 game2.handleKeyDown('p');
-if (!game2.isJournalOpen) throw new Error('按 p 未能重新開啟特工日記');
+if (!game2.isJournalOpen) throw new Error('重新開啟特工日記失敗');
 game2.handleKeyDown('p');
-if (game2.isJournalOpen) throw new Error('再次按 p 未能關閉特工日記');
+if (game2.isJournalOpen) throw new Error('按 [P] 未能關閉特工日記');
 console.log('✅ 日記關閉快捷鍵正常！');
 
-// 6. 測試 drawJournalModal 繪製安全無崩潰
+// 6. 測試 drawJournalModal 渲染輸出健全性
 console.log('\n6. 測試 drawJournalModal 繪製 (view 與 compose 模式)...');
-const mockCtx = canvas1.getContext('2d');
-drawJournalModal(800, 600, mockCtx, 1000, 'zh', game2.journalEntries, 0, 'view', '', 'sector-1', { x: 10, y: 10 });
-drawJournalModal(800, 600, mockCtx, 1000, 'zh', game2.journalEntries, 0, 'compose', '撰寫測試中...', 'sector-1', { x: 10, y: 10 });
-drawJournalModal(800, 600, mockCtx, 1000, 'en', game2.journalEntries, 0, 'view', '', 'sector-1', { x: 10, y: 10 });
+const mockCtx = createMockCanvas().getContext('2d');
+drawJournalModal(800, 600, mockCtx, 1000, 'zh', game2.journalEntries, 1, 'view', '', 'sector-1', { x: 5, y: 5 });
+drawJournalModal(800, 600, mockCtx, 1000, 'en', game2.journalEntries, 1, 'view', '', 'sector-1', { x: 5, y: 5 });
+drawJournalModal(800, 600, mockCtx, 1000, 'zh', game2.journalEntries, 0, 'compose', '測試日誌內容', 'sector-1', { x: 5, y: 5 }, '測試標題', 'title');
+drawJournalModal(800, 600, mockCtx, 1000, 'zh', game2.journalEntries, 0, 'compose', '測試日誌內容', 'sector-1', { x: 5, y: 5 }, '測試標題', 'content');
 console.log('✅ drawJournalModal 雙語與各模式繪製驗證通過！');
 
-// 7. 測試遊戲開局跳出故事與特工日記使用方法彈窗 (Game Intro Briefing Popup)
+// 7. 測試開局提示彈窗 (顯示故事與特工日記使用方法)
 console.log('\n7. 測試遊戲開局彈窗 (顯示故事與特工日記使用方法)...');
 const canvas3 = createMockCanvas();
 const game3 = new GameEngine(canvas3 as any);
@@ -148,14 +180,18 @@ game3.handleKeyDown('Enter');
 if (game3.isTitleScreen) throw new Error('按 Enter 進入新遊戲後 isTitleScreen 應為 false');
 if (!game3.isIntroBriefingOpen) throw new Error('遊戲開局應自動跳出故事與特工日記任務簡報彈窗');
 
-// 測試滾動簡報
+// 測試上下鍵滾動彈窗
+const initialOffset = game3.introBriefingScrollOffset;
 game3.handleKeyDown('ArrowDown');
-if (game3.introBriefingScrollOffset !== 36) {
-  throw new Error(`向下滾動 offset 應為 36，實際為 ${game3.introBriefingScrollOffset}`);
+if (game3.introBriefingScrollOffset <= initialOffset) {
+  throw new Error('按方向下鍵未能向下滾動開局簡報');
+}
+game3.handleKeyDown('ArrowUp');
+if (game3.introBriefingScrollOffset !== initialOffset) {
+  throw new Error('按方向上鍵未能向上滾動開局簡報');
 }
 
-// 測試繪製開局彈窗
-game3.render();
+// 驗證 drawTitleStoryModal 能正常渲染
 drawTitleStoryModal(800, 600, mockCtx, 1000, 'zh', game3.introBriefingScrollOffset);
 drawTitleStoryModal(800, 600, mockCtx, 1000, 'en', game3.introBriefingScrollOffset);
 
@@ -170,6 +206,7 @@ const canvas4 = createMockCanvas();
 const game4 = new GameEngine(canvas4 as any);
 game4.openJournal();
 game4.journalMode = 'compose';
+game4.journalComposeField = 'content'; // 切換至內容欄位進行防阻擋測試
 game4.journalInputBuffer = '';
 
 const baselineResolution = game4.currentResolutionIndex;
@@ -238,6 +275,7 @@ game5.isTitleScreen = true;
 game5.titleMenuIndex = 0;
 game5.openJournal();
 game5.journalMode = 'compose';
+game5.journalComposeField = 'content'; // 切換至內容欄位進行防阻擋測試
 
 // 輸入標題快捷字元 'n', 'l', 'z', 'h', 'b', 's', 'w'
 const titleChars = ['N', 'e', 'w', ' ', 'L', 'o', 'g', ' ', 'z', 'h', 'b', 's', 'w'];

@@ -127,7 +127,7 @@ export class GameEngine {
   journalMode: 'view' | 'compose' = 'view';
   journalInputBuffer: string = '';
   journalTitleInputBuffer: string = '';
-  journalComposeField: 'title' | 'content' = 'content';
+  journalComposeField: 'title' | 'content' = 'title';
   isIntroBriefingOpen: boolean = false;
   introBriefingScrollOffset: number = 0;
 
@@ -182,6 +182,31 @@ export class GameEngine {
   private setupPointerEvents(): void {
     if (typeof window === 'undefined' || !this.canvas || typeof this.canvas.addEventListener !== 'function') return;
     this.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
+      if (this.isJournalOpen && this.journalMode === 'compose') {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const boxW = Math.min(this.canvas.width - 40, 720);
+        const boxH = Math.min(this.canvas.height - 60, 440);
+        const startX = (this.canvas.width - boxW) / 2;
+        const startY = (this.canvas.height - boxH) / 2;
+        const titleY = startY + 60;
+        const titleH = 40;
+        const contentY = startY + 110;
+        const contentH = boxH - 170;
+        if (x >= startX + 20 && x <= startX + boxW - 20) {
+          if (y >= titleY && y <= titleY + titleH) {
+            this.journalComposeField = 'title';
+            this.render();
+            return;
+          } else if (y >= contentY && y <= contentY + contentH) {
+            this.journalComposeField = 'content';
+            this.render();
+            return;
+          }
+        }
+        return;
+      }
       if (!this.isStoryArchiveOpen) return;
       const rect = this.canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -1980,7 +2005,7 @@ export class GameEngine {
     this.journalSelectedIndex = 0;
     this.journalInputBuffer = '';
     this.journalTitleInputBuffer = '';
-    this.journalComposeField = 'content';
+    this.journalComposeField = 'title';
     this.render();
   }
 
@@ -1989,7 +2014,7 @@ export class GameEngine {
     this.journalMode = 'view';
     this.journalInputBuffer = '';
     this.journalTitleInputBuffer = '';
-    this.journalComposeField = 'content';
+    this.journalComposeField = 'title';
     this.render();
   }
 
@@ -2005,7 +2030,7 @@ export class GameEngine {
     this.journalSelectedIndex = 1;
     this.journalInputBuffer = '';
     this.journalTitleInputBuffer = '';
-    this.journalComposeField = 'content';
+    this.journalComposeField = 'title';
     soundFX.pickup();
     this.pushMessage(this.language === 'zh' ? '【日記】條目已儲存。' : '[JOURNAL] Entry saved.', 'success');
     this.render();

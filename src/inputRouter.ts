@@ -169,7 +169,7 @@ export class InputRouter {
           g.journalMode = 'view';
           g.journalInputBuffer = '';
           g.journalTitleInputBuffer = '';
-          g.journalComposeField = 'content';
+          g.journalComposeField = 'title';
           g.render();
           return;
         }
@@ -277,7 +277,7 @@ export class InputRouter {
         g.journalMode = 'compose';
         g.journalInputBuffer = '';
         g.journalTitleInputBuffer = '';
-        g.journalComposeField = 'content';
+        g.journalComposeField = 'title';
         g.render();
         return;
       }
@@ -286,7 +286,7 @@ export class InputRouter {
           g.journalMode = 'compose';
           g.journalInputBuffer = '';
           g.journalTitleInputBuffer = '';
-          g.journalComposeField = 'content';
+          g.journalComposeField = 'title';
           g.render();
           return;
         }

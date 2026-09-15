@@ -329,21 +329,56 @@ function drawRightPanel(
     // Draw title text
     ctx.save();
     ctx.font = '12px monospace';
-    ctx.fillStyle = textPrimary;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    const titleText = titleInputBuffer || (isZh ? '無標題筆記' : 'Untitled Note');
-    ctx.fillText(titleText, contentX + 8, titleBoxY + 8);
 
-    // Blinking cursor for title
     const cursorPhase = Math.floor(now / 500) % 2 === 0;
-    if (cursorPhase && isTitleActive) {
-      const cursorX = contentX + 8 + measureFn(titleInputBuffer) + 2;
-      const cursorY = titleBoxY + 8;
-      ctx.fillStyle = neonCyan;
-      ctx.shadowColor = neonCyan;
-      ctx.shadowBlur = 4;
-      ctx.fillText('_', cursorX, cursorY);
+
+    if (titleInputBuffer.length > 0) {
+      // Draw entered title text
+      ctx.fillStyle = textPrimary;
+      ctx.fillText(titleInputBuffer, contentX + 8, titleBoxY + 8);
+
+      // Blinking cursor after text
+      if (cursorPhase && isTitleActive) {
+        const cursorX = contentX + 8 + measureFn(titleInputBuffer) + 2;
+        const cursorY = titleBoxY + 8;
+        ctx.fillStyle = neonCyan;
+        ctx.shadowColor = neonCyan;
+        ctx.shadowBlur = 4;
+        ctx.fillText('_', cursorX, cursorY);
+      }
+    } else {
+      // Empty title: show placeholder
+      if (isTitleActive) {
+        // Active empty: dim placeholder prompt
+        ctx.fillStyle = textDim;
+        ctx.globalAlpha = 0.7;
+        const placeholder = isZh
+          ? '請在此輸入標題 (完成後按 Enter 輸入內容)...'
+          : 'Type title here (press Enter to enter content)...';
+        ctx.fillText(placeholder, contentX + 8, titleBoxY + 8);
+        ctx.globalAlpha = 1;
+
+        // Blinking cursor at start
+        if (cursorPhase) {
+          const cursorX = contentX + 8;
+          const cursorY = titleBoxY + 8;
+          ctx.fillStyle = neonCyan;
+          ctx.shadowColor = neonCyan;
+          ctx.shadowBlur = 4;
+          ctx.fillText('_', cursorX, cursorY);
+        }
+      } else {
+        // Inactive empty: dim placeholder
+        ctx.fillStyle = textDim;
+        ctx.globalAlpha = 0.5;
+        const placeholder = isZh
+          ? '（未命名，將自動由內容第一行生成）'
+          : '(Unnamed, will auto-generate from first content line)';
+        ctx.fillText(placeholder, contentX + 8, titleBoxY + 8);
+        ctx.globalAlpha = 1;
+      }
     }
     ctx.restore();
 
