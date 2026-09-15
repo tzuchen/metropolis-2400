@@ -592,6 +592,11 @@ export class InputRouter {
 
     // 14. Dialogue Session
     if (g.activeDialogue) {
+      if (key === ' ' || key === 'Enter' || key === 'Space') {
+        advanceDialogue(g);
+        return;
+      }
+
       if (key === 'Escape' || key === 'Esc') {
         g.activeDialogue = null;
         soundFX.terminal();
@@ -599,12 +604,9 @@ export class InputRouter {
         return;
       }
 
-      if (key === ' ' || key === 'Enter' || key === 'Space') {
-        advanceDialogue(g);
-        return;
-      }
-
-      return;
+      // Other keys: close dialogue and fall through to Normal Gameplay
+      g.activeDialogue = null;
+      soundFX.terminal();
     }
 
     // 15. Normal Gameplay
