@@ -80,6 +80,7 @@ import type {
 
 export class InputRouter {
   private game: GameEngine;
+  private lastDialogueNpcId: string | null = null;
 
   constructor(game: GameEngine) {
     this.game = game;
@@ -605,6 +606,7 @@ export class InputRouter {
       }
 
       // Other keys: close dialogue and fall through to Normal Gameplay
+      this.lastDialogueNpcId = g.activeDialogue.npc.id;
       g.activeDialogue = null;
       soundFX.terminal();
     }
@@ -765,19 +767,41 @@ export class InputRouter {
     const targetNPC = g.npcs.find((n) => n.isAlive && n.x === nx && n.y === ny);
     if (targetNPC) {
       if (!g.player.isWeaponDrawn) {
-        soundFX.terminal();
-        g.updateNPCDialogues();
-        const dx = g.player.x - targetNPC.x;
-        const dy = g.player.y - targetNPC.y;
-        if (Math.abs(dx) > Math.abs(dy)) {
-          targetNPC.facing = dx > 0 ? 'right' : 'left';
+        if (this.lastDialogueNpcId === targetNPC.id || g.activeDialogue?.npc?.id === targetNPC.id) {
+          this.lastDialogueNpcId = null;
+          g.activeDialogue = null;
+          const px = g.player.x;
+          const py = g.player.y;
+          g.player.x = targetNPC.x;
+          g.player.y = targetNPC.y;
+          targetNPC.x = px;
+          targetNPC.y = py;
+          targetNPC.facing = g.player.facing;
+          soundFX.step();
+          const isZh = g.language === 'zh';
+          g.pushFloatingText(g.player.x, g.player.y, isZh ? '借過' : 'EXCUSE ME', '#00ff88');
+          g.pushMessage(isZh ? '【借過】特工與 NPC 交換了位置。' : '[EXCUSE ME] Operative and NPC swapped positions.', 'info');
+          g.handlePlayerStep();
+          g.checkItemPickup();
+          g.tick();
+          g.render();
+          return;
         } else {
-          targetNPC.facing = dy > 0 ? 'down' : 'up';
+          this.lastDialogueNpcId = targetNPC.id;
+          soundFX.terminal();
+          g.updateNPCDialogues();
+          const dx = g.player.x - targetNPC.x;
+          const dy = g.player.y - targetNPC.y;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            targetNPC.facing = dx > 0 ? 'right' : 'left';
+          } else {
+            targetNPC.facing = dy > 0 ? 'down' : 'up';
+          }
+          g.activeDialogue = { npc: targetNPC, textIndex: 0 };
+          g.checkSideQuestDiscovery(targetNPC.id);
+          g.render();
+          return;
         }
-        g.activeDialogue = { npc: targetNPC, textIndex: 0 };
-        g.checkSideQuestDiscovery(targetNPC.id);
-        g.render();
-        return;
       } else {
         const isZh = g.language === 'zh';
         g.pushMessage(
@@ -972,6 +996,7 @@ export class InputRouter {
 
     const tile = getTile(g.map, { x: nx, y: ny });
     if (tile && isWalkable(tile)) {
+      this.lastDialogueNpcId = null;
       g.player.x = nx;
       g.player.y = ny;
       soundFX.step();
