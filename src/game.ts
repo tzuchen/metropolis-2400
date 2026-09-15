@@ -112,6 +112,7 @@ export class GameEngine {
   private turnCounter: number = 0;
   private lastBroadcastTurn: number = 0;
   private lastBroadcastIndex: number = 0;
+  private lastAdjacentPassageKey: string = '';
   private broadcastQueue: string[] = [];
   private inputRouter: InputRouter;
   checkInAlertActive: boolean = false;
@@ -440,6 +441,78 @@ export class GameEngine {
       if (obs) {
         this.pushMessage(isZh ? obs.zh : obs.en, 'info');
       }
+    }
+
+    // Adjacent door / passage proximity hints
+    this.checkAdjacentPassageHints();
+  }
+
+  private checkAdjacentPassageHints(): void {
+    const px = this.player.x;
+    const py = this.player.y;
+    const isZh = this.language === 'zh';
+    const facing = this.player.facing || 'down';
+
+    // Directions in priority order: facing direction first, then the rest
+    const allDirs: Array<{ dx: number; dy: number; label: string; labelEn: string }> = [
+      { dx: 0, dy: -1, label: '上方', labelEn: 'above' },
+      { dx: 0, dy: 1, label: '下方', labelEn: 'below' },
+      { dx: -1, dy: 0, label: '左方', labelEn: 'to the left' },
+      { dx: 1, dy: 0, label: '右方', labelEn: 'to the right' },
+    ];
+    const facingDir =
+      facing === 'up' ? 0 : facing === 'down' ? 1 : facing === 'left' ? 2 : 3;
+    const ordered = [allDirs[facingDir], ...allDirs.filter((_, i) => i !== facingDir)];
+
+    let foundKey = '';
+    let foundMsg = '';
+
+    for (const dir of ordered) {
+      const nx = px + dir.dx;
+      const ny = py + dir.dy;
+      const tile = getTile(this.map, { x: nx, y: ny });
+      let kind: string | null = null;
+      if (tile !== undefined) {
+        const num = Number(tile);
+        if (num === 3) kind = 'door_closed';
+        else if (num === 4) kind = 'door_open';
+        else if (num === 9) kind = 'elevator';
+      }
+      if (!kind) {
+        const block = this.pushableBlocks.find((b) => b.x === nx && b.y === ny && b.secretDoor);
+        if (block) kind = 'secret_door';
+      }
+      if (kind) {
+        foundKey = `${kind}-${nx},${ny}`;
+        if (kind === 'door_closed') {
+          foundMsg = isZh
+            ? `${dir.label}似乎有一扇門。`
+            : `There seems to be a door ${dir.labelEn}.`;
+        } else if (kind === 'door_open') {
+          foundMsg = isZh
+            ? `${dir.label}有一扇敞開的門。`
+            : `There is an open door ${dir.labelEn}.`;
+        } else if (kind === 'elevator') {
+          foundMsg = isZh
+            ? `${dir.label}似乎有一處升降機通道。`
+            : `There seems to be an elevator passage ${dir.labelEn}.`;
+        } else {
+          foundMsg = isZh
+            ? `${dir.label}似乎有一處隱密通道。`
+            : `There seems to be a hidden passage ${dir.labelEn}.`;
+        }
+        break;
+      }
+    }
+
+    if (foundKey) {
+      const playerKey = `${foundKey}-${px},${py}`;
+      if (this.lastAdjacentPassageKey !== playerKey) {
+        this.lastAdjacentPassageKey = playerKey;
+        this.pushMessage(foundMsg, 'info');
+      }
+    } else {
+      this.lastAdjacentPassageKey = '';
     }
   }
 
@@ -1141,9 +1214,6 @@ export class GameEngine {
     // Citadel Horde endless reinforcement logic
     this.updateCitadelHorde();
 
-    // Check environmental observations (conveyor, plasma barrier, bionic canopy, landmarks)
-    this.checkEnvironmentalObservations();
-
     // Radio broadcast system: every 15 turns or on sector change
     const currentSectorId = this.map?.id || '';
     if (currentSectorId !== this.lastSectorId) {
@@ -1154,6 +1224,9 @@ export class GameEngine {
       this.pushBroadcast();
       this.lastBroadcastTurn = this.turnCounter;
     }
+
+    // Check environmental observations (conveyor, plasma barrier, bionic canopy, landmarks)
+    this.checkEnvironmentalObservations();
 
     this.map.pushableBlocks = this.pushableBlocks;
 
