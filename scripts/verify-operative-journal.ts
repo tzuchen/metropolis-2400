@@ -164,4 +164,99 @@ game3.handleKeyDown('Enter');
 if (game3.isIntroBriefingOpen) throw new Error('按 Enter 後開局任務簡報彈窗應關閉');
 console.log('✅ 遊戲開局故事與特工日記彈窗彈出、滾動與關閉驗證通過！');
 
-console.log('\n🎉 特工日記與開局任務簡報全功能驗證 100% 通過！');
+// 8. 關鍵回歸測試：特工輸入日記時，快捷鍵絕不阻擋或攔截輸入 (Anti-Intercept Test)
+console.log('\n8. 關鍵回歸測試：日記輸入期間快捷鍵絕不攔截、不阻擋輸入...');
+const canvas4 = createMockCanvas();
+const game4 = new GameEngine(canvas4 as any);
+game4.openJournal();
+game4.journalMode = 'compose';
+game4.journalInputBuffer = '';
+
+const baselineResolution = game4.currentResolutionIndex;
+const baselineWeapon = game4.player.equippedWeapon;
+const baselinePos = { x: game4.player.x, y: game4.player.y };
+const baselineLang = game4.language;
+const baselineMedkits = game4.player.consumables?.medkits ?? 0;
+const baselineDisguised = game4.player.isDisguised;
+const baselineWeaponDrawn = game4.player.isWeaponDrawn;
+
+// 鍵入包含全域快捷鍵的字元：'0' (解析度), 'q' (換槍), 'w/a/s/d' (移動), 'z' (語言), '1/2/3' (物品), 'c' (偽裝), 'f' (拔槍), '8' (存檔), '9' (讀檔), ' ' 與 'Space' (空格)
+const complexJournalText = [
+  'S', 'e', 'c', 't', 'o', 'r', ' ', '0', '1', ':', ' ',
+  'F', 'o', 'u', 'n', 'd', ' ', '8', ' ', 'c', 'r', 'a', 't', 'e', 's', ',', ' ',
+  'q', 'u', 'i', 'c', 'k', ' ', 's', 'w', 'a', 'p', ' ', 'w', 'e', 'a', 'p', 'o', 'n', ' ', 'q', '.', ' ',
+  '佐', '格', '網', '路', '2', '4', '0', '0'
+];
+
+for (const ch of complexJournalText) {
+  game4.handleKeyDown(ch);
+}
+// 測試 'Space' 關鍵字也能正確轉為空格
+game4.handleKeyDown('Space');
+game4.handleKeyDown('!');
+
+const expectedText = 'Sector 01: Found 8 crates, quick swap weapon q. 佐格網路2400 !';
+if (game4.journalInputBuffer !== expectedText) {
+  throw new Error(`日記逐字輸入受到快捷鍵阻擋或篡改！\n預期: "${expectedText}"\n實際: "${game4.journalInputBuffer}"`);
+}
+
+// 驗證全域狀態未受任何干擾
+if (game4.currentResolutionIndex !== baselineResolution) {
+  throw new Error('輸入字元 "0" 錯誤觸發了全域解析度切換！');
+}
+if (game4.player.equippedWeapon !== baselineWeapon) {
+  throw new Error('輸入字元 "q" 錯誤觸發了武器切換！');
+}
+if (game4.player.x !== baselinePos.x || game4.player.y !== baselinePos.y) {
+  throw new Error('輸入方向/移動字元 "w/a/s/d" 錯誤觸發了特工移動！');
+}
+if (game4.language !== baselineLang) {
+  throw new Error('輸入字元 "z" 錯誤觸發了語言切換！');
+}
+if ((game4.player.consumables?.medkits ?? 0) !== baselineMedkits) {
+  throw new Error('輸入數字字元 "1" 錯誤消耗了醫療包！');
+}
+if (game4.player.isDisguised !== baselineDisguised) {
+  throw new Error('輸入字元 "c" 錯誤觸發了全息偽裝！');
+}
+if (game4.player.isWeaponDrawn !== baselineWeaponDrawn) {
+  throw new Error('輸入字元 "f" 錯誤觸發了拔槍/收槍！');
+}
+
+// 提交此篇包含所有快捷鍵字元的日記
+game4.handleKeyDown('Enter');
+if (game4.journalEntries[0].content !== expectedText) {
+  throw new Error('保存之日記內容不完整！');
+}
+console.log('✅ 特工日記輸入獨佔性驗證通過：全域快捷鍵零攔截、零阻擋！');
+
+// 9. 測試標題畫面開啟日記並輸入時，不誤觸標題選單
+console.log('\n9. 測試標題畫面開啟日記輸入，標題選單零干擾...');
+const canvas5 = createMockCanvas();
+const game5 = new GameEngine(canvas5 as any);
+game5.isTitleScreen = true;
+game5.titleMenuIndex = 0;
+game5.openJournal();
+game5.journalMode = 'compose';
+
+// 輸入標題快捷字元 'n', 'l', 'z', 'h', 'b', 's', 'w'
+const titleChars = ['N', 'e', 'w', ' ', 'L', 'o', 'g', ' ', 'z', 'h', 'b', 's', 'w'];
+for (const ch of titleChars) {
+  game5.handleKeyDown(ch);
+}
+if (!game5.isTitleScreen) {
+  throw new Error('標題畫面輸入 "N" 錯誤觸發了開始新遊戲！');
+}
+if (game5.titleMenuIndex !== 0) {
+  throw new Error('標題畫面輸入 "s/w" 錯誤改變了選單索引！');
+}
+if (game5.journalInputBuffer !== 'New Log zhbsw') {
+  throw new Error(`標題畫面日記輸入內容不符: "${game5.journalInputBuffer}"`);
+}
+game5.handleKeyDown('Enter');
+if (game5.journalEntries[0].content !== 'New Log zhbsw') {
+  throw new Error('標題畫面日記保存內容不符');
+}
+console.log('✅ 標題畫面日記輸入獨佔性驗證通過！');
+
+console.log('\n🎉 特工日記防快捷鍵阻擋與全功能回歸測試 100% 通過！');
