@@ -14,16 +14,6 @@ export const JOURNAL_STORAGE_KEY = 'metropolis_2400_journal_v2';
 
 export const memoryJournalBackup: JournalEntry[] = [];
 
-if (hasLocalStorage()) {
-  try {
-    localStorage.removeItem('metropolis_2400_journal');
-    localStorage.removeItem(JOURNAL_STORAGE_KEY);
-  } catch {
-    // Silently fail if localStorage is unavailable
-  }
-  memoryJournalBackup.length = 0;
-}
-
 function hasLocalStorage(): boolean {
   try {
     return typeof localStorage !== 'undefined' && localStorage !== null;
@@ -65,7 +55,25 @@ export function loadJournalEntries(): JournalEntry[] {
       if (raw !== null) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
+          memoryJournalBackup.length = 0;
+          memoryJournalBackup.push(...(parsed as JournalEntry[]));
           return parsed as JournalEntry[];
+        }
+      }
+    } catch {
+      // Fall through to memory backup
+    }
+    
+    try {
+      const legacyRaw = localStorage.getItem('metropolis_2400_journal');
+      if (legacyRaw !== null) {
+        const legacyParsed = JSON.parse(legacyRaw);
+        if (Array.isArray(legacyParsed)) {
+          const entries = legacyParsed as JournalEntry[];
+          persistToLocalStorage(entries);
+          memoryJournalBackup.length = 0;
+          memoryJournalBackup.push(...entries);
+          return entries;
         }
       }
     } catch {

@@ -35,6 +35,8 @@ import { handleTerminalInput as _handleTerminalInput } from './terminalRunner';
 import { processConveyors as _processConveyors, detonateCanister as _detonateCanister } from './hazardSystem';
 import { checkQuestDiscovery as _checkQuestDiscovery, completeQuest as _completeQuest } from './questSystem';
 import { JournalEntry, loadJournalEntries, saveJournalEntry, deleteJournalEntry, clearJournalEntries } from './journalSystem';
+import { generateAIPerceptionSnapshot, AIPerceptionSnapshot, executeAIAction as _executeAIAction, AIActionOutcome, getActionSemantic, ACTION_SEMANTICS, ActionSemantic } from './aiPerception';
+import { getMentalMapSnapshot, planMentalMapRoute, MentalMapSnapshot, RoutePlan } from './mentalMap';
 
 
 export interface ResolutionPreset {
@@ -133,6 +135,7 @@ export class GameEngine {
   introBriefingScrollOffset: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
+    this.journalEntries = loadJournalEntries();
     this.canvas = canvas;
     let savedLang: Language = 'zh';
     try {
@@ -178,6 +181,16 @@ export class GameEngine {
     this.setupPointerEvents();
     this.player.checkInTimer = 100;
     this.inputRouter = new InputRouter(this);
+    if (typeof window !== 'undefined') {
+      (window as any).getAIPerceptionSnapshot = () => this.getAIPerceptionSnapshot();
+      (window as any).getGameStateSnapshot = () => this.getAIPerceptionSnapshot();
+      (window as any).executeAIAction = (action: string) => this.executeAIAction(action);
+      (window as any).sendAIAction = (action: string) => this.executeAIAction(action);
+      (window as any).getActionSemantic = (action: string) => this.getActionSemantic(action);
+      (window as any).ACTION_SEMANTICS = ACTION_SEMANTICS;
+      (window as any).getMentalMap = (options?: any) => this.getMentalMap(options);
+      (window as any).planMentalMapRoute = (target: string | { x: number; y: number }, startPos?: { x: number; y: number }) => this.planMentalMapRoute(target, startPos);
+    }
   }
 
   private setupPointerEvents(): void {
@@ -1286,7 +1299,14 @@ export class GameEngine {
         let enemyBeamColor = '#ffea00';
         let enemyBeamWidth = 2;
 
-        if (robot.robotType === 'HUNTER_KILLER') {
+        if (robot.robotType === 'SCOUT_DRONE') {
+          enemyBeamType = 'NEEDLE';
+          enemyBeamColor = '#ffea00';
+          enemyBeamWidth = 2;
+          soundFX.dart();
+          this.fx.spawnSparks(hitPlayerX, hitPlayerY, '#ffea00', 8);
+          this.fx.triggerShake(2);
+        } else if (robot.robotType === 'HUNTER_KILLER') {
           enemyBeamType = 'LASER';
           enemyBeamColor = '#ff1744';
           enemyBeamWidth = 3.5;
@@ -1617,16 +1637,49 @@ export class GameEngine {
     const gear = this.confiscatedGear;
 
     // Restore weapons
-    if (Array.isArray(gear.weapons)) {
+    if (Array.isArray(gear.weapons) && gear.weapons.length > 0) {
       p.weapons = [...gear.weapons];
     }
     if (gear.equippedWeapon) {
       p.equippedWeapon = { ...gear.equippedWeapon };
+    } else if (Array.isArray(p.weapons) && p.weapons.length > 0) {
+      p.equippedWeapon = { ...p.weapons[0] };
+    }
+
+    // Safety fallback: if weapons are still empty (e.g. corrupted save), use initial loadout
+    if (!Array.isArray(p.weapons) || p.weapons.length === 0) {
+      const fallback = createPlayer({ x: p.x, y: p.y });
+      p.weapons = [...(fallback.weapons || [])];
+      p.equippedWeapon = fallback.equippedWeapon ? { ...fallback.equippedWeapon } : null;
+    }
+
+    // Sync equipped flag on weapons and ensure equipped weapon is in inventory
+    if (Array.isArray(p.weapons)) {
+      for (const w of p.weapons) {
+        if (w && p.equippedWeapon && w.id === p.equippedWeapon.id) {
+          w.equipped = true;
+        } else if (w) {
+          w.equipped = false;
+        }
+      }
+      if (p.equippedWeapon && Array.isArray(p.inventory)) {
+        const eqId = p.equippedWeapon.id;
+        if (!p.inventory.some((it: any) => it?.id === eqId)) {
+          p.inventory.push({ ...p.equippedWeapon });
+        }
+      }
     }
 
     // Restore inventory
     if (Array.isArray(gear.inventory)) {
       p.inventory = [...gear.inventory];
+      // Re-ensure equipped weapon is in inventory after restoring gear inventory
+      if (p.equippedWeapon && Array.isArray(p.inventory)) {
+        const eqId = p.equippedWeapon.id;
+        if (!p.inventory.some((it: any) => it?.id === eqId)) {
+          p.inventory.push({ ...p.equippedWeapon });
+        }
+      }
     }
 
     // Restore consumables
@@ -1941,8 +1994,12 @@ export class GameEngine {
   }
 
   restartGame(): void {
+    this.journalEntries = loadJournalEntries();
     this.isTitleStoryOpen = false;
     this.titleStoryScrollOffset = 0;
+    this.defeatCutscene = null;
+    this.isGearConfiscated = false;
+    this.confiscatedGear = null;
     this.map = buildSector1Map();
     this.player = createPlayer(this.map.playerStart);
     this.robots = this.createSectorRobots();
@@ -1954,6 +2011,11 @@ export class GameEngine {
     this.isMissionLogOpen = false;
     this.isStoryArchiveOpen = false;
     this.activeStoryLog = null;
+    this.isManualOpen = false;
+    this.isAugmentShopOpen = false;
+    this.isBigMapOpen = false;
+    this.isJournalOpen = false;
+    this.activeBreachSession = null;
     this.securityLevel = 'CLEAR' as SecurityLevel;
     this.messages = [];
     this.floatingTexts = [];
@@ -1969,6 +2031,14 @@ export class GameEngine {
     this.isCitadelHordeActive = false;
     this.isIntroBriefingOpen = false;
     this.introBriefingScrollOffset = 0;
+    if (this.renderer) {
+      this.renderer.isTitleStoryOpen = false;
+      this.renderer.isManualOpen = false;
+      this.renderer.isBigMapOpen = false;
+      this.renderer.activeBreachSession = null;
+      this.renderer.storyArchiveSelectedIndex = 0;
+      this.renderer.defeatCutscene = null;
+    }
     soundFX.pickup();
     this.updateFOV();
     this.updateMusicIntensity();
@@ -1977,12 +2047,24 @@ export class GameEngine {
 
   returnToTitleScreen(): void {
     this.restartGame();
+    this.journalEntries = loadJournalEntries();
     this.isTitleScreen = true;
     this.isTitleStoryOpen = false;
     this.titleStoryScrollOffset = 0;
     this.titleMenuIndex = 0;
     this.isIntroBriefingOpen = false;
     this.introBriefingScrollOffset = 0;
+    this.defeatCutscene = null;
+    this.isGearConfiscated = false;
+    this.confiscatedGear = null;
+    if (this.renderer) {
+      this.renderer.isTitleStoryOpen = false;
+      this.renderer.isManualOpen = false;
+      this.renderer.isBigMapOpen = false;
+      this.renderer.activeBreachSession = null;
+      this.renderer.storyArchiveSelectedIndex = 0;
+      this.renderer.defeatCutscene = null;
+    }
     this.updateMusicIntensity();
     this.render();
   }
@@ -2136,6 +2218,26 @@ export class GameEngine {
     soundFX.terminal();
     this.pushMessage(this.language === 'zh' ? '【日記】已清空所有特工筆記。' : '[JOURNAL] All entries cleared.', 'info');
     this.render();
+  }
+
+  getAIPerceptionSnapshot(): AIPerceptionSnapshot {
+    return generateAIPerceptionSnapshot(this);
+  }
+
+  executeAIAction(action: string): AIActionOutcome {
+    return _executeAIAction(this, action);
+  }
+
+  getActionSemantic(action: string): ActionSemantic {
+    return getActionSemantic(action, this);
+  }
+
+  getMentalMap(options?: any): MentalMapSnapshot {
+    return getMentalMapSnapshot(this, options);
+  }
+
+  planMentalMapRoute(target: string | { x: number; y: number }, startPos?: { x: number; y: number }): RoutePlan {
+    return planMentalMapRoute(this, target, startPos);
   }
 }
 

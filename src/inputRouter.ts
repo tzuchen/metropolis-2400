@@ -140,6 +140,7 @@ export class InputRouter {
       if (key === 'Escape' || key === 'Esc' || key === ' ' || key === 'Space' || key === 'Enter') {
         g.executeDetentionRelocation(true);
         g.defeatCutscene = null;
+        g.renderer.defeatCutscene = null;
         g.render();
         return;
       }
@@ -501,6 +502,18 @@ export class InputRouter {
     }
 
     if (!g.player.isAlive) {
+      if (key === '9' || key === 'F9') {
+        g.loadGame();
+        return;
+      }
+      if (key === 'r' || key === 'R' || key === 'Enter' || key === ' ' || key === 'Space') {
+        g.restartGame();
+        return;
+      }
+      if (key === 'Escape' || key === 'Esc') {
+        g.returnToTitleScreen();
+        return;
+      }
       return;
     }
 

@@ -348,4 +348,66 @@ if (boundaryGame.defeatCutscene !== null) {
 
 console.log('✅ blur_out 邊界條件測試通過：確定性推進至 wake_up，玩家位置正確，BGM 恢復，過場正常結束！');
 
+// 13. 測試在 isGearConfiscated === true 的情況下跳過過場動畫
+console.log('\n13. 測試在 isGearConfiscated === true 的情況下跳過過場動畫...');
+const gearConfiscatedGame = new GameEngine(createMockCanvas(960, 600) as any);
+gearConfiscatedGame.isGearConfiscated = true;
+gearConfiscatedGame.player.hp = 0;
+gearConfiscatedGame.startDefeatCutscene();
+
+if (!gearConfiscatedGame.defeatCutscene) {
+  throw new Error('❌ startDefeatCutscene() 後應初始化 defeatCutscene');
+}
+
+gearConfiscatedGame.handleKeyDown('Escape');
+
+if (gearConfiscatedGame.defeatCutscene !== null) {
+  throw new Error('❌ 按下 Escape 後 defeatCutscene 應為 null');
+}
+if (!gearConfiscatedGame.player.isAlive) {
+  throw new Error('❌ 跳過過場後 player.isAlive 應為 true');
+}
+if (gearConfiscatedGame.player.x !== 35 || gearConfiscatedGame.player.y !== 5) {
+  throw new Error(`❌ 跳過過場後 player 應在 (35, 5)，實際為 (${gearConfiscatedGame.player.x}, ${gearConfiscatedGame.player.y})`);
+}
+console.log('✅ 在 isGearConfiscated === true 的情況下跳過過場動畫功能正常！');
+
+// 14. 測試在 Game Over 畫面（!player.isAlive）下的按鍵響應
+console.log('\n14. 測試在 Game Over 畫面（!player.isAlive）下的按鍵響應...');
+const deadGame = new GameEngine(createMockCanvas(960, 600) as any);
+deadGame.player.isAlive = false;
+deadGame.defeatCutscene = null;
+
+// 測試按 '9' 觸發 loadGame
+console.log('  14a. 測試按 "9" 觸發 loadGame...');
+let loadGameCalled = false;
+const originalLoadGame = deadGame.loadGame;
+deadGame.loadGame = (...args: any[]) => {
+  loadGameCalled = true;
+  return originalLoadGame.apply(deadGame, args);
+};
+deadGame.handleKeyDown('9');
+if (!loadGameCalled) {
+  throw new Error('❌ 按 "9" 應觸發 loadGame');
+}
+console.log('  ✅ 按 "9" 成功觸發 loadGame');
+
+// 測試按 'Enter' 觸發 restartGame
+console.log('  14b. 測試按 "Enter" 觸發 restartGame...');
+deadGame.player.isAlive = false;
+deadGame.handleKeyDown('Enter');
+if (!deadGame.player.isAlive) {
+  throw new Error('❌ 按 "Enter" 後 player.isAlive 應恢復為 true');
+}
+console.log('  ✅ 按 "Enter" 成功觸發 restartGame，player.isAlive 恢復為 true');
+
+// 測試按 'Escape' 觸發 returnToTitleScreen
+console.log('  14c. 測試按 "Escape" 觸發 returnToTitleScreen...');
+deadGame.player.isAlive = false;
+deadGame.handleKeyDown('Escape');
+if (!deadGame.isTitleScreen) {
+  throw new Error('❌ 按 "Escape" 後 isTitleScreen 應為 true');
+}
+console.log('  ✅ 按 "Escape" 成功觸發 returnToTitleScreen，isTitleScreen 為 true');
+
 console.log('\n🎉 所有玩家戰敗圍捕、模糊轉場與禁閉室甦醒測試全數通過！');

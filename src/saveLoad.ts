@@ -1,4 +1,6 @@
 import type { ConfiscatedGear, GroundItem, Hazard, Item, Language, MissionObjective, NPC, PushableBlock, Robot, SecurityLevel, StoryLog } from './types';
+import { createPlayer } from './entities';
+import { JournalEntry, loadJournalEntries, JOURNAL_STORAGE_KEY, memoryJournalBackup } from './journalSystem';
 
 export interface SaveData {
   version: number;
@@ -72,6 +74,7 @@ export interface SaveData {
   exploredTiles: string[];
   groundItems: GroundItem[];
   pushableBlocks?: PushableBlock[];
+  journalEntries?: JournalEntry[];
 }
 
 let memoryBackup: SaveData | null = null;
@@ -341,6 +344,7 @@ export function saveGameState(game: any): boolean {
         ...b,
         secretDoor: b.secretDoor ? { ...b.secretDoor } : undefined,
       })),
+      journalEntries: game.journalEntries && game.journalEntries.length > 0 ? game.journalEntries : loadJournalEntries(),
       checkInAlertActive: game.checkInAlertActive ?? false,
       securityLevel: game.securityLevel,
       graffitiMuralComplete: game.graffitiMuralComplete ?? false,
@@ -542,9 +546,48 @@ export function loadGameState(game: any): boolean {
       game.confiscatedGear = data.confiscatedGear;
     }
 
+    // Self-healing: repair lost weapons if gear was not confiscated
+    if (!game.isGearConfiscated && (!Array.isArray(game.player.weapons) || game.player.weapons.length === 0)) {
+      const defaultPlayer = createPlayer({ x: game.player.x, y: game.player.y });
+      game.player.weapons = defaultPlayer.weapons;
+      game.player.equippedWeapon = defaultPlayer.equippedWeapon;
+    }
+
+    // Self-healing: repair lost weapons in confiscated gear
+    if (game.isGearConfiscated && game.confiscatedGear && (!Array.isArray(game.confiscatedGear.weapons) || game.confiscatedGear.weapons.length === 0)) {
+      const defaultPlayer = createPlayer({ x: game.player.x, y: game.player.y });
+      game.confiscatedGear.weapons = defaultPlayer.weapons;
+    }
+
     // Restore citadel horde state
     if (typeof data.isCitadelHordeActive === 'boolean') {
       game.isCitadelHordeActive = data.isCitadelHordeActive;
+    }
+
+    // Restore journal entries
+    if (Array.isArray(data.journalEntries) && data.journalEntries.length > 0) {
+      const current = loadJournalEntries();
+      const currentIds = new Set(current.map((e: JournalEntry) => e.id));
+      let merged = false;
+      for (const entry of data.journalEntries) {
+        if (!currentIds.has(entry.id)) {
+          current.push(entry);
+          merged = true;
+        }
+      }
+      if (merged) {
+        current.sort((a, b) => b.timestamp - a.timestamp);
+        if (typeof localStorage !== 'undefined') {
+          try {
+            localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(current));
+          } catch {}
+        }
+        memoryJournalBackup.length = 0;
+        memoryJournalBackup.push(...current);
+      }
+      game.journalEntries = current;
+    } else {
+      game.journalEntries = loadJournalEntries();
     }
 
     game.isTitleScreen = false;

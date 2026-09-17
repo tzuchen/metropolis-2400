@@ -6,8 +6,11 @@ import type { GroundItem, Robot, SecurityLevel } from './types';
 
 export function executeDetentionRelocation(game: GameEngine, showMessages = true): void {
   const p = game.player;
-  game.confiscatedGear = { weapons: Array.isArray(p.weapons) ? [...p.weapons] : [], equippedWeapon: p.equippedWeapon ? { ...p.equippedWeapon } : null, inventory: Array.isArray(p.inventory) ? [...p.inventory] : [], consumables: p.consumables ? { ...p.consumables } : null, augments: p.augments ? { ...p.augments } : null, equippedShield: p.equippedShield ? { ...p.equippedShield } : null };
-  game.isGearConfiscated = true;
+  if (!game.isGearConfiscated || !game.confiscatedGear) {
+    const equippedWeapon = p.equippedWeapon ? { ...p.equippedWeapon } : (Array.isArray(p.weapons) && p.weapons.length > 0 ? { ...p.weapons[0] } : null);
+    game.confiscatedGear = { weapons: Array.isArray(p.weapons) ? [...p.weapons] : [], equippedWeapon, inventory: Array.isArray(p.inventory) ? [...p.inventory] : [], consumables: p.consumables ? { ...p.consumables } : null, augments: p.augments ? { ...p.augments } : null, equippedShield: p.equippedShield ? { ...p.equippedShield } : null };
+    game.isGearConfiscated = true;
+  }
   p.weapons = []; p.equippedWeapon = null; p.inventory = []; p.consumables = { medkits: 0, batteries: 0, empGrenades: 0 }; p.augments = {}; p.equippedShield = null;
   p.hp = Math.round(p.maxHp * 0.4); p.isAlive = true;
   game.securityLevel = 'CLEAR' as SecurityLevel; game.checkInAlertActive = false;
@@ -56,7 +59,11 @@ export function updateDefeatCutscene(game: GameEngine, now: number): void {
   if (cutscene.stage === 'swarm' && elapsed >= cutscene.duration) { cutscene.stage = 'blur_out'; cutscene.stageStartTime = now; cutscene.duration = 1600; return; }
   if (cutscene.stage === 'blur_out' && elapsed >= cutscene.duration) { cutscene.stage = 'wake_up'; cutscene.stageStartTime = now; cutscene.duration = 1400; executeDetentionRelocation(game, false); return; }
   if (cutscene.stage === 'wake_up' && elapsed >= cutscene.duration) {
-    game.defeatCutscene = null; bgm.setIntensity('exploration');
+    game.defeatCutscene = null;
+    if (game.renderer) {
+      game.renderer.defeatCutscene = null;
+    }
+    bgm.setIntensity('exploration');
     game.pushMessage(game.language === 'zh' ? '【脫逃提示】右上角 (36, 4) 為【鬆動的通風金屬柵板】！可按 [E] 拆開或推動它以顯現通風暗門！' : '[ESCAPE HINT] Top-right (36, 4) is a [Loose Ventilation Metal Grate]! Press [E] to pry it open or push it to reveal the ventilation secret door!', 'info');
     game.pushFloatingText(36, 4, 'LOOSE VENT [E]', '#00ff88'); game.render();
   }
