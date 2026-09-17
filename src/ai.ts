@@ -1,6 +1,7 @@
 import { SecurityLevel } from './types';
 import type { Position, Player, Robot, SectorMap } from './types';
 import * as mapModule from './map';
+import { createPursuitPlan } from './pursuitStrategies';
 
 export interface RobotActionResult {
   action: 'idle' | 'patrol' | 'chase' | 'attack' | 'alarm';
@@ -103,7 +104,8 @@ const findNextStep = (
   from: Position,
   target: Position,
   blockedPositions?: Set<string>,
-  targetIsEntity: boolean = false
+  targetIsEntity: boolean = false,
+  allowGreedyFallback: boolean = true
 ): Position | null => {
   const isCellPassable = (x: number, y: number): boolean => {
     if (blockedPositions && blockedPositions.has(`${x},${y}`)) return false;
@@ -159,9 +161,12 @@ const findNextStep = (
     }
   }
 
+  // Keep search bounded per robot while allowing ordinary tactical goals on an
+  // open sector to resolve before we fall back to a greedy direct chase.
+  const searchBudget = Math.max(80, Math.min((Number((map as any).width) || 0) * (Number((map as any).height) || 0), 256));
   let iterations = 0;
   let head = 0;
-  while (head < queue.length && iterations < 80) {
+  while (head < queue.length && iterations < searchBudget) {
     iterations++;
     const current = queue[head++];
 
@@ -185,6 +190,10 @@ const findNextStep = (
       }
     }
   }
+
+  // A tactical destination (intercept/flank) must be fully reachable. Direct
+  // pursuit retains the historical greedy fallback so normal chase behavior is unchanged.
+  if (!allowGreedyFallback) return null;
 
   let bestStep: Position | null = null;
   let minDistance = manhattanDistance(from, target);
@@ -311,14 +320,18 @@ export function updateRobotAI(
       };
     }
 
-    const nextStep = findNextStep(map, robotPos, playerPos, blocked, true);
-    if (nextStep) {
+    const pursuitPlan = createPursuitPlan(robot, player);
+    for (const goal of pursuitPlan.goals) {
+      const nextStep = findNextStep(map, robotPos, goal.position, blocked, goal.isPlayerEntity, !goal.isSpecial);
+      if (!nextStep) continue;
       robot.x = nextStep.x;
       robot.y = nextStep.y;
       return {
         action: 'chase',
         newPos: { x: robot.x, y: robot.y },
-        message: robot.name + ' is pursuing target.',
+        message: goal.isSpecial
+          ? robot.name + ' ' + pursuitPlan.verb + ' target.'
+          : robot.name + ' is pursuing target.',
       };
     }
 
