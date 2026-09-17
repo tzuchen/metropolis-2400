@@ -224,3 +224,57 @@ if (uniqueYRows.size < 2) {
 }
 
 console.log('Compact HUD regression test passed! Rows:', uniqueYRows.size, 'Labels:', hudRecordedTexts.length);
+
+// Compact HUD Chinese Regression Test
+let zhHudRecordedTexts: Array<{ text: string; x: number; y: number; width: number }> = [];
+const zhHudRecordingCtx = {
+  save: () => {},
+  restore: () => {},
+  fillRect: () => {},
+  strokeRect: () => {},
+  fillText: (text: string, x: number, y: number) => {
+    const width = String(text).length * MONO_CHAR_WIDTH;
+    zhHudRecordedTexts.push({ text: String(text), x, y, width });
+  },
+  beginPath: () => {},
+  closePath: () => {},
+  moveTo: () => {},
+  lineTo: () => {},
+  arc: () => {},
+  fill: () => {},
+  stroke: () => {},
+  setLineDash: () => {},
+  measureText: (text: string) => ({ width: String(text).length * MONO_CHAR_WIDTH }),
+};
+const zhHudRecordingCanvas = {
+  width: 1600,
+  height: 600,
+  getContext: () => zhHudRecordingCtx
+} as unknown as HTMLCanvasElement;
+
+const zhHudRenderer = new GameRenderer(zhHudRecordingCanvas);
+zhHudRenderer.language = 'zh';
+zhHudRenderer.activeWaypoint = { x: 10, y: 10, name: 'REBEL_BASE' };
+
+zhHudRecordedTexts = [];
+zhHudRenderer.drawHud(1600, 600, hudPlayer as any, SecurityLevel.CLEAR, [], zhHudRecordingCtx);
+
+// Assert expected Chinese descriptive labels are present in the bottom shortcut strip
+const expectedZhLabels = ['醫療包', '電池', 'EMP', '背包', '黑市', '任務', '檔案', '日記', '存檔', '讀檔', '音樂', '全視', '地圖', '解析', '拔槍'];
+for (const label of expectedZhLabels) {
+  const found = zhHudRecordedTexts.some((entry) => entry.text.includes(label));
+  if (!found) {
+    throw new Error(`Compact HUD zh regression: expected label "${label}" not found in recorded texts`);
+  }
+}
+
+// Assert representative stale English labels are absent from the zh shortcut-strip recordings
+const staleEnLabels = ['MED:', 'BAT:', 'INV', 'ARCHIVE', 'SAVE', 'LOAD', 'DRAW', 'SWAP'];
+for (const label of staleEnLabels) {
+  const found = zhHudRecordedTexts.some((entry) => entry.text.includes(label));
+  if (found) {
+    throw new Error(`Compact HUD zh regression: stale English label "${label}" found in recorded texts`);
+  }
+}
+
+console.log('Compact HUD Chinese regression test passed! Labels:', zhHudRecordedTexts.length);
