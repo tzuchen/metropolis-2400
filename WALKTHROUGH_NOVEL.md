@@ -135,26 +135,15 @@
 
 告別席薇亞後，我朝著市中心東側的 **01 號檢查哨** 推進。
 
-一道高達十公尺、燃燒著藍白色耀眼電弧的電漿力場封鎖了去路。在力場旁邊，聳立著佐格的警戒終端機：`CHECKPOINT_FF`。一臺重裝「電擊執法者」（Shock Enforcer）正背對著我駐守在控制台旁。
+一道高達十公尺、燃燒著藍白色耀眼電弧的電漿力場封鎖了去路（座標 `x: 27, y: 4..6`）。在力場西側正前方的控制台旁，聳立著佐格的檢查哨主控終端機：**`CHECKPOINT_FF`（座標 `x: 26, y: 5`）**。一臺重裝「電擊執法者」（Shock Enforcer）正在附近巡邏。
 
-我按 `[C]` 鍵開啟光學偽裝，無聲滑行至終端機前接入纜線。然而當我輸入 `OVERRIDE` 時，螢幕上赫然彈出紅色警告：
-`[ACCESS DENIED: Sub-relay clearance verification required. Forcefield locked to CHECKPOINT_RELAY_ANNEX.]`
-如果強行破譯失敗，終端機會觸發動態警報擴散，全城防衛機甲將進入搜索！
-
-### 任務鏈第一階段 (WO-MS-01)：檢查哨中繼站附樓 (Relay Annex)
-為了獲取合法的解除授權，我依照提示繞行至檢查哨北側的隱蔽建築——**檢查哨中繼站附樓（Checkpoint Relay Annex）**。
-
-在附樓深處，我找到了輔助終端機 `RELAY_SUB_01` 以及守衛殘骸旁的關鍵數據板——**【檢查哨中繼站運輸日誌】（`slate-checkpoint-relay`）**：
-> *「……運輸窗口授權碼已同步至附樓快取。此中繼節點同時記錄著佐格中央電網的第一道逆轉切換頻率——【逆轉金鑰 Ⅰ：中繼運輸窗口】！」*
-
-在 `RELAY_SUB_01` 輸入指令解鎖中繼快取後，我返回主終端機 `CHECKPOINT_FF`：
+我按 `[C]` 鍵開啟光學偽裝，無聲滑行至檢查哨終端機前（`x: 26, y: 5`）接入數據纜線：
 
 ```
 === TZORG NETWORK: Tzorg Checkpoint Security Terminal ===
 Type HELP for available commands.
 > STATUS
-TERMINAL: Checkpoint Security | SUB-RELAY VERIFIED: TRUE
-FORCEFIELD LINK: ONLINE (READY FOR OVERRIDE)
+TERMINAL: Checkpoint Security | FORCEFIELD LINK: ONLINE
 ENERGY CAPACITORS: CHARGED (30V)
 > SIPHON
 SIPHON COMPLETE: Extracted +30 EN from terminal capacitors!
@@ -164,7 +153,15 @@ FORCEFIELD OVERRIDDEN: CHECKPOINT_FF
 ```
 
 **轟！**
-狂暴的電漿光幕在一瞬間崩解成漫天飄散的藍色粒子！
+狂暴的電漿光幕在一瞬間崩解成漫天飄散的藍色粒子！01 號檢查哨能量屏障正式解除！
+
+### 任務鏈第一階段 (WO-MS-01)：檢查哨中繼站附樓 (Relay Annex)
+隨著力場消散，我穿過原本被封閉的通道（`x: 27, y: 5`），踏入了檢查哨後方原先被力場隔離的**中繼附屬區（Checkpoint Relay Annex）**。
+
+在附樓深處的合金架上（座標 `x: 30, y: 5`），我找到了關鍵數據板——**【檢查哨中繼站運輸日誌】（`slate-checkpoint-relay`，Data Slate 05）**：
+> *「……截獲堡壘上行鏈路中繼日誌：運輸窗口每 125 步開啟一次。在每個窗口期間，可逆轉該區域所有受試者的神經項圈廣播。此中繼節點同時記錄著佐格中央電網的第一道逆轉切換頻率——【逆轉金鑰 Ⅰ：中繼運輸窗口】！」*
+
+拾取該數據板後，我獲得了抵抗軍夢寐以求的【逆轉金鑰 Ⅰ】！接著在附樓南側的終端機 `TERMINAL_CHECKPOINT_RELAY`（座標 `x: 29, y: 9`）確認了中央主腦的量子通訊封包。
 潛伏在陰影中的滲透特工 **Ghost** 從走廊盡頭現身，對我比出拇指：
 「幹得漂亮，渡鴉！檢查哨已瓦解。但通往第二分區的主維護管道被鎖死了。要深入敵陣，你必須先下到這座城市的腸道裡——舊城廢棄下水道！」
 
@@ -521,8 +518,9 @@ Input system directive to resolve Metropolis Protocol:
 | **拉麵商 Hiro (博)** | Sector 1 商店街 | `(15, 5)` | 初次贈送熱拉麵 (+25 HP)；交付秘方後解鎖 **+50 MAX HP 永久上限！** |
 | **音軌保管人 Elena** | Sector 1 文化拱廊 | `(21, 11)` | 初次交流 +50 CR；交付卡帶後解鎖 **+20 MAX EN 永久能量上限！** |
 | **學者 Sylvia** | Sector 1 仿生生態公園 | `(28, 7)` | 領取隱藏超武組件 1/2：【量子約束核心】 |
-| **終端機 CHECKPOINT_FF** | Sector 1 檢查哨外圍 | `(25, 5)` | 驗證附樓代碼後關閉電漿屏障、汲取 30 EN 能量 |
-| **中繼站附樓 RELAY_SUB_01** | Sector 1 檢查哨附樓 | `(32, 5)` | 獲取中繼解除代碼與【逆轉金鑰 Ⅰ】數據板 |
+| **檢查哨終端 CHECKPOINT_FF** | Sector 1 檢查哨前哨 | `(26, 5)` | 操作終端執行 OVERRIDE 關閉電漿力場、汲取 30 EN 能量 |
+| **中繼日誌 (逆轉金鑰 Ⅰ)** | Sector 1 檢查哨附樓 | `(30, 5)` | 穿過力場後拾取 Data Slate 05，獲取【逆轉金鑰 Ⅰ】 |
+| **中繼站終端 CHECKPOINT_RELAY** | Sector 1 檢查哨附樓 | `(29, 9)` | 操作中繼終端確認中央主腦上行鏈路與同步封包 |
 | **滲透幽靈 Ghost** | Sector 1 檢查哨內側 | `(31, 23)` | 確認屏障解除、指引下水道通路 |
 | **受困技師 Technician** | Sub-Sector Zero 下水道 | `(22, 6)` | 提供維護管道故障情報與維修通行授權指引 |
 | **抽水主控 SEWER_PUMP_TERMINAL** | Sub-Sector Zero 下水道 | `(14, 14)` | 覆寫抽水主控、解除 SEWER_FF 力場 |
