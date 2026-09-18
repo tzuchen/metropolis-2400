@@ -3,6 +3,7 @@ import type { GameEngine } from './game';
 import { soundFX } from './audio';
 import { disableForcefield } from './map';
 import { createBreachSession } from './breachProtocol';
+import { completeMainStoryQuest } from './questSystem';
 
 export interface TerminalContext {
   hasDefeatedBoss: boolean;
@@ -37,6 +38,23 @@ export function handleTerminalInput(game: GameEngine, key: string): void {
     if (game.activeTerminal) game.activeTerminal.input = '';
 
     const upperCmd = cmd.toUpperCase();
+    const terminalId = game.activeTerminal?.terminal?.id;
+    if (terminalId === 'TERMINAL_SYNCHRONIZER' && (upperCmd === 'SUBVERSION' || upperCmd === 'OVERLOAD')) {
+      const completed = completeMainStoryQuest(game, {
+        sourceType: 'TERMINAL',
+        sourceId: 'TERMINAL_SYNCHRONIZER',
+      });
+      if (completed && game.activeTerminal) {
+        game.activeTerminal.history.push(
+          game.language === 'zh'
+            ? '同步器已遭破壞：神經項圈廣播正在逆轉。'
+            : 'Synchronizer disrupted: neural collar broadcast reversal initiated.'
+        );
+      }
+      game.render();
+      return;
+    }
+
     if (upperCmd === 'BREACH' || upperCmd === 'HACK') {
       game.activeBreachSession = createBreachSession(game.activeTerminal?.terminal?.id || 'CORE');
       game.render();

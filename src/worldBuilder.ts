@@ -124,6 +124,40 @@ export function createSectorStoryLogs(): StoryLog[] {
     });
   }
 
+  if (!existingIds.has('slate-factory-worker')) {
+    extraLogs.push({
+      id: 'slate-factory-worker',
+      title: 'Factory Worker Testimony',
+      titleZh: '工廠工人證詞',
+      author: 'Anonymous Sector 2 Worker',
+      timestamp: '2400-03-15T06:00:00Z',
+      read: false,
+      content: [
+        'I\'ve been on the assembly line for three years. Every 125 steps, the neural collar firmware syncs with the Overmind sub-core. The synchronization cycle is controlled by TERMINAL_SYNCHRONIZER in the central assembly hall. If you can disrupt that terminal during the sync window, the broadcast reverses for all subjects in the sector.',
+      ],
+      contentZh: [
+        '我在裝配線工作了三年。每 125 步，神經項圈韌體就會與主腦副核心同步。同步週期由中央裝配大廳的 TERMINAL_SYNCHRONIZER 控制。如果你能在同步窗口期間破壞該終端機，廣播將對該區域所有受試者逆轉。',
+      ],
+    });
+  }
+
+  if (!existingIds.has('slate-rebel-payload')) {
+    extraLogs.push({
+      id: 'slate-rebel-payload',
+      title: 'Rebel Interference Payload',
+      titleZh: '反抗軍干擾載荷',
+      author: 'Ghost',
+      timestamp: '2400-03-15T06:30:00Z',
+      read: false,
+      content: [
+        'Interference payload compiled. Inject this reversal code into TERMINAL_SYNCHRONIZER during the sync window. The payload will overwrite the collar broadcast firmware and reverse the neural lock for all Five Million subjects. Timing is critical: execute within 3 turns of the sync pulse.',
+      ],
+      contentZh: [
+        '干擾載荷編譯完成。在同步窗口期間將此逆轉代碼注入 TERMINAL_SYNCHRONIZER。載荷將覆寫項圈廣播韌體，逆轉所有五百萬受試者的神經鎖定。時機至關重要：在同步脈衝後 3 回合內執行。',
+      ],
+    });
+  }
+
   return [...baseLogs, ...extraLogs];
 }
 
@@ -324,6 +358,26 @@ export function createSector2Items(): GroundItem[] {
       amount: 1,
       iconColor: '#ff00ff',
     },
+    {
+      id: 'slate-item-factory-worker',
+      name: 'Data Slate 06',
+      itemType: 'DATA_SLATE',
+      x: 19,
+      y: 5,
+      description: 'Factory worker testimony: synchronizer cycle and reversal window.',
+      iconColor: '#ff7700',
+      storyLogId: 'slate-factory-worker',
+    },
+    {
+      id: 'slate-item-rebel-payload',
+      name: 'Data Slate 07',
+      itemType: 'DATA_SLATE',
+      x: 20,
+      y: 5,
+      description: 'Rebel interference payload for TERMINAL_SYNCHRONIZER.',
+      iconColor: '#9d4edd',
+      storyLogId: 'slate-rebel-payload',
+    },
   ];
 }
 
@@ -455,6 +509,16 @@ export function createSectorObjectives(): MissionObjective[] {
       titleZh: '破壞製造廠同步器',
       description: 'Infiltrate Sector 2 Manufacturing Plant and disrupt the sub-core synchronizer.',
       descriptionZh: '潛入第二區製造廠並破壞副核心同步器。',
+      completed: false,
+      isSideQuest: false,
+      discovered: false,
+    },
+    {
+      id: 'obj-reversal-keys',
+      title: 'Acquire Overmind Reversal Keys',
+      titleZh: '取得主腦逆轉金鑰',
+      description: 'Obtain the Overmind reversal keys to permanently disable the neural collar broadcast.',
+      descriptionZh: '取得主腦逆轉金鑰，以永久停用神經項圈廣播。',
       completed: false,
       isSideQuest: false,
       discovered: false,

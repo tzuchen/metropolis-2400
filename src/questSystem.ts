@@ -188,6 +188,27 @@ export const MAIN_STORY_QUEST_DEFINITIONS: MainStoryQuestDefinition[] = [
     completionMessageZh:
       '【任務完成】維修許可：通往第二區製造廠維護通道授權已開啟。',
   },
+  {
+    objectiveId: 'obj-disrupt-synchronizer',
+    prerequisiteObjectiveIds: ['obj-maintenance-clearance'],
+    discoverySources: [
+      { sourceType: 'NPC_DIALOGUE', sourceId: 'npc-zero-one' },
+      { sourceType: 'STORY_LOG', sourceId: 'slate-factory-worker' },
+    ],
+    discoveryMessageEn:
+      'MISSION UPDATE: Disrupt Factory Synchronizer — Infiltrate Sector 2 Manufacturing Plant and disrupt the sub-core synchronizer.',
+    discoveryMessageZh:
+      '【任務更新】破壞製造廠同步器 — 潛入第二區製造廠並破壞副核心同步器。',
+    completionSources: [
+      { sourceType: 'TERMINAL', sourceId: 'TERMINAL_SYNCHRONIZER' },
+      { sourceType: 'STORY_LOG', sourceId: 'slate-rebel-payload' },
+    ],
+    nextObjectiveId: 'obj-reversal-keys',
+    completionMessageEn:
+      'MISSION COMPLETE: Disrupt Factory Synchronizer — Sub-core synchronizer disrupted. Neural collar broadcast reversed for all subjects in the sector.',
+    completionMessageZh:
+      '【任務完成】破壞製造廠同步器：副核心同步器已破壞。該區域所有受試者的神經項圈廣播已逆轉。',
+  },
 ];
 
 export function discoverMainStoryQuest(

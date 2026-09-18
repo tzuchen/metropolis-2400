@@ -40,6 +40,20 @@ export const EFFECT_PRESETS: Record<string, EffectPreset> = {
     shockwaveLineWidth: 5,
     shockwaveLife: 30,
   },
+  SYNCHRONIZER_SABOTAGE: {
+    id: 'SYNCHRONIZER_SABOTAGE',
+    name: 'Synchronizer Sabotage',
+    shakeIntensity: 10,
+    particleCount: 20,
+    particleColors: ['#ff0000'],
+  },
+  SYNCHRONIZER_SUBVERSION: {
+    id: 'SYNCHRONIZER_SUBVERSION',
+    name: 'Synchronizer Subversion',
+    shakeIntensity: 5,
+    particleCount: 10,
+    particleColors: ['#00ff00'],
+  },
 };
 
 export function getEffectPreset(id: string): EffectPreset | undefined {

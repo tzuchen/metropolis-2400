@@ -699,6 +699,13 @@ export function buildSector2Map(): SectorMap {
       securityLevel: 'HIGH' as unknown as SecurityLevel,
       log: 'TZORG OVERMIND SUB-CORE: Neural broadcast central interface. Command subroutines: OVERLOAD, SUBVERSION, EVACUATION.',
     },
+    TERMINAL_SYNCHRONIZER: {
+      id: 'TERMINAL_SYNCHRONIZER',
+      position: { x: 22, y: 5 },
+      type: 'DATA',
+      securityLevel: 'HIGH' as unknown as SecurityLevel,
+      log: 'Sub-Core Synchronizer: Neural collar firmware sync cycle active. Inject interference payload to reverse broadcast for all Five Million subjects.',
+    },
   } as unknown as Record<string, TerminalData>;
 
   return {
