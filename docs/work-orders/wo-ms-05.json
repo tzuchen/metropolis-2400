@@ -37,6 +37,6 @@
     "核心終端能說明缺少哪一段、來自何區域。",
     "完整金鑰鏈不改變既有結局 API，且所有回歸測試通過。"
   ],
-  "status": "DRAFT",
+  "status": "COMPLETED",
   "assigned_worker": "codex"
 }
