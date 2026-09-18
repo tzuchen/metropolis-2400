@@ -281,6 +281,10 @@ export interface MainStoryQuestDefinition {
   discoverySources: QuestDiscoverySource[];
   discoveryMessageEn: string;
   discoveryMessageZh: string;
+  completionSources?: QuestDiscoverySource[];
+  nextObjectiveId?: string;
+  completionMessageEn?: string;
+  completionMessageZh?: string;
 }
 
 export interface QuestDefinition {

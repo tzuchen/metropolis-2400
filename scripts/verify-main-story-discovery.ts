@@ -8,6 +8,7 @@
 
 import {
   discoverMainStoryQuest,
+  completeMainStoryQuest,
   MAIN_STORY_QUEST_DEFINITIONS,
 } from '../src/questSystem';
 import type {
@@ -377,6 +378,216 @@ function testChineseHostEmitsCorrectMessage(): void {
   );
 }
 
+function testRelaySlate05DiscoversUndergroundLogistics(): void {
+  const host = createStubHost('en');
+
+  // Prerequisites: obj-forcefield and obj-checkpoint-relay must be completed
+  const forcefieldObj = host.missionObjectives.find(
+    (o) => o.id === 'obj-forcefield'
+  )!;
+  forcefieldObj.completed = true;
+
+  const relayObj = host.missionObjectives.find(
+    (o) => o.id === 'obj-checkpoint-relay'
+  )!;
+  relayObj.completed = true;
+
+  // Ensure obj-underground-logistics exists in the host's objectives
+  // (It's not in the default stub, so we add it to simulate a real game state)
+  host.missionObjectives.push({
+    id: 'obj-underground-logistics',
+    title: 'Underground Logistics',
+    description: 'Trace the subterranean supply routes.',
+    completed: false,
+    isSideQuest: false,
+    discovered: false,
+  });
+
+  const result = discoverMainStoryQuest(host, {
+    sourceType: 'STORY_LOG',
+    sourceId: 'slate-checkpoint-relay',
+  });
+
+  assertEqual(
+    result,
+    true,
+    'Relay Slate should discover obj-underground-logistics'
+  );
+
+  const logisticsObj = host.missionObjectives.find(
+    (o) => o.id === 'obj-underground-logistics'
+  )!;
+  assertEqual(
+    logisticsObj.discovered,
+    true,
+    'obj-underground-logistics should be discovered'
+  );
+}
+
+function testManifestDoesNotDiscoverUndiscoveredUndergroundLogistics(): void {
+  const host = createStubHost('en');
+
+  // Prerequisites: obj-forcefield and obj-checkpoint-relay must be completed
+  const forcefieldObj = host.missionObjectives.find(
+    (o) => o.id === 'obj-forcefield'
+  )!;
+  forcefieldObj.completed = true;
+
+  const relayObj = host.missionObjectives.find(
+    (o) => o.id === 'obj-checkpoint-relay'
+  )!;
+  relayObj.completed = true;
+
+  // Ensure obj-underground-logistics exists in the host's objectives
+  host.missionObjectives.push({
+    id: 'obj-underground-logistics',
+    title: 'Underground Logistics',
+    description: 'Trace the subterranean supply routes.',
+    completed: false,
+    isSideQuest: false,
+    discovered: false,
+  });
+
+  const result = discoverMainStoryQuest(host, {
+    sourceType: 'STORY_LOG',
+    sourceId: 'slate-underground-manifest',
+  });
+
+  assertEqual(
+    result,
+    false,
+    'Manifest should NOT discover obj-underground-logistics when undiscovered'
+  );
+
+  const logisticsObj = host.missionObjectives.find(
+    (o) => o.id === 'obj-underground-logistics'
+  )!;
+  assertEqual(
+    logisticsObj.discovered,
+    false,
+    'obj-underground-logistics should remain undiscovered'
+  );
+}
+
+function testUndergroundLogisticsCompletionMetadata(): void {
+  const definition = MAIN_STORY_QUEST_DEFINITIONS.find(
+    (d) => d.objectiveId === 'obj-underground-logistics'
+  );
+  assert(
+    definition !== undefined,
+    'obj-underground-logistics definition must exist'
+  );
+  if (!definition) return;
+
+  assert(
+    Array.isArray(definition.completionSources),
+    'obj-underground-logistics must have completionSources'
+  );
+  assert(
+    definition.completionSources!.some(
+      (s) => s.sourceType === 'STORY_LOG' && s.sourceId === 'slate-underground-manifest'
+    ),
+    'obj-underground-logistics completionSources must include slate-underground-manifest'
+  );
+  assert(
+    definition.completionMessageEn !== undefined &&
+      definition.completionMessageEn.length > 0,
+    'obj-underground-logistics must have completionMessageEn'
+  );
+  assert(
+    definition.completionMessageZh !== undefined &&
+      definition.completionMessageZh.length > 0,
+    'obj-underground-logistics must have completionMessageZh'
+  );
+}
+
+function testGenericCompletionViaManifestSource(): void {
+  const host = createStubHost('en');
+
+  // Prerequisites: obj-forcefield and obj-checkpoint-relay must be completed
+  const forcefieldObj = host.missionObjectives.find(
+    (o) => o.id === 'obj-forcefield'
+  )!;
+  forcefieldObj.completed = true;
+
+  const relayObj = host.missionObjectives.find(
+    (o) => o.id === 'obj-checkpoint-relay'
+  )!;
+  relayObj.completed = true;
+
+  // Ensure obj-underground-logistics exists in the host's objectives
+  host.missionObjectives.push({
+    id: 'obj-underground-logistics',
+    title: 'Underground Logistics',
+    description: 'Trace the subterranean supply routes.',
+    completed: false,
+    isSideQuest: false,
+    discovered: false,
+  });
+
+  // Ensure obj-maintenance-clearance exists in the host's objectives
+  host.missionObjectives.push({
+    id: 'obj-maintenance-clearance',
+    title: 'Maintenance Clearance',
+    description: 'Obtain maintenance clearance for the Citadel.',
+    completed: false,
+    isSideQuest: false,
+    discovered: false,
+  });
+
+  // First discover it via relay slate
+  const discoverResult = discoverMainStoryQuest(host, {
+    sourceType: 'STORY_LOG',
+    sourceId: 'slate-checkpoint-relay',
+  });
+  assertEqual(
+    discoverResult,
+    true,
+    'Relay Slate should discover obj-underground-logistics before completion'
+  );
+
+  const logisticsObj = host.missionObjectives.find(
+    (o) => o.id === 'obj-underground-logistics'
+  )!;
+  assertEqual(
+    logisticsObj.discovered,
+    true,
+    'obj-underground-logistics should be discovered'
+  );
+  assertEqual(
+    logisticsObj.completed,
+    false,
+    'obj-underground-logistics should not be completed yet'
+  );
+
+  // Now complete it via the manifest source
+  const completeResult = completeMainStoryQuest(host, {
+    sourceType: 'STORY_LOG',
+    sourceId: 'slate-underground-manifest',
+  });
+
+  assertEqual(
+    completeResult,
+    true,
+    'Manifest source should complete obj-underground-logistics'
+  );
+  assertEqual(
+    logisticsObj.completed,
+    true,
+    'obj-underground-logistics should be completed after manifest source'
+  );
+
+  // Verify that obj-maintenance-clearance was revealed
+  const maintenanceObj = host.missionObjectives.find(
+    (o) => o.id === 'obj-maintenance-clearance'
+  )!;
+  assertEqual(
+    maintenanceObj.discovered,
+    true,
+    'obj-maintenance-clearance should be revealed after completing obj-underground-logistics'
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Run all tests
 // ---------------------------------------------------------------------------
@@ -390,6 +601,10 @@ function runAllTests(): void {
   testCheckpointRelayDiscoveredAfterForcefieldCompletes();
   testEnglishHostEmitsCorrectMessage();
   testChineseHostEmitsCorrectMessage();
+  testRelaySlate05DiscoversUndergroundLogistics();
+  testManifestDoesNotDiscoverUndiscoveredUndergroundLogistics();
+  testUndergroundLogisticsCompletionMetadata();
+  testGenericCompletionViaManifestSource();
 }
 
 // Invoke the verifier at module bottom so npx tsx fails on assertion failure

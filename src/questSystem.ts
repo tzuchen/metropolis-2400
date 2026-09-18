@@ -152,12 +152,20 @@ export const MAIN_STORY_QUEST_DEFINITIONS: MainStoryQuestDefinition[] = [
     prerequisiteObjectiveIds: ['obj-checkpoint-relay'],
     discoverySources: [
       { sourceType: 'NPC_DIALOGUE', sourceId: 'npc-kira' },
-      { sourceType: 'STORY_LOG', sourceId: 'slate-underground-manifest' },
+      { sourceType: 'STORY_LOG', sourceId: 'slate-checkpoint-relay' },
     ],
     discoveryMessageEn:
       'MISSION UPDATE: Underground Logistics — Trace the subterranean supply routes to secure the Citadel\'s hidden transport corridors.',
     discoveryMessageZh:
       '【任務更新】地下物流 — 追蹤地下補給路線，確保堡壘的隱密運輸通道。',
+    completionSources: [
+      { sourceType: 'STORY_LOG', sourceId: 'slate-underground-manifest' },
+    ],
+    nextObjectiveId: 'obj-maintenance-clearance',
+    completionMessageEn:
+      'MISSION COMPLETE: Underground Logistics — Citadel hidden transport corridors secured.',
+    completionMessageZh:
+      '【任務完成】地下物流：已確保堡壘隱密運輸通道。',
   },
 ];
 
@@ -186,6 +194,48 @@ export function discoverMainStoryQuest(
       host.language === 'zh' ? definition.discoveryMessageZh : definition.discoveryMessageEn,
       'info'
     );
+    return true;
+  }
+
+  return false;
+}
+
+export function completeMainStoryQuest(
+  host: QuestHost,
+  source: QuestDiscoverySource
+): boolean {
+  const matchingDefinitions = MAIN_STORY_QUEST_DEFINITIONS.filter((definition) =>
+    definition.completionSources?.some(
+      (candidate) => candidate.sourceType === source.sourceType && candidate.sourceId === source.sourceId
+    )
+  );
+
+  for (const definition of matchingDefinitions) {
+    const target = host.missionObjectives.find((objective) => objective.id === definition.objectiveId);
+    if (!target || target.completed || !target.discovered) continue;
+
+    target.completed = true;
+    host.pushMessage(
+      host.language === 'zh'
+        ? definition.completionMessageZh || '【任務完成】'
+        : definition.completionMessageEn || 'MISSION COMPLETE',
+      'success'
+    );
+
+    if (definition.nextObjectiveId) {
+      const nextObjective = host.missionObjectives.find((o) => o.id === definition.nextObjectiveId);
+      if (nextObjective && !nextObjective.discovered) {
+        nextObjective.discovered = true;
+        host.pushMessage(
+          host.language === 'zh'
+            ? `【任務更新】${nextObjective.titleZh || nextObjective.title}`
+            : `MISSION UPDATE: ${nextObjective.title}`,
+          'info'
+        );
+      }
+    }
+
+    host.render();
     return true;
   }
 

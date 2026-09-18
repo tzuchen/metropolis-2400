@@ -24,7 +24,8 @@
     "透過受困技師對話或失事運輸艇維修記錄任一來源發現任務。",
     "完成可採「修復維護閘門」或「取得替代維護憑證」其中一條資料驅動路徑；兩者匯入同一完成狀態。",
     "獎勵為 Sector 2 維護入口授權與下一段同步器情報，不應直接給終局萬用通行證。",
-    "保持既有 Sector transit、電梯與門互動 API 向下相容。"
+    "保持既有 Sector transit、電梯與門互動 API 向下相容。",
+    "obj-maintenance-clearance 目標已由前階段預建於 createSectorObjectives()（discovered: false），本階段僅需將其 discovered 設為 true 並追蹤完成狀態，不需重複建立。"
   ],
   "verification_commands": [
     "npm run typecheck",

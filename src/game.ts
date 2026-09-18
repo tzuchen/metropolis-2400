@@ -33,7 +33,7 @@ import {
 } from './worldBuilder';
 import { handleTerminalInput as _handleTerminalInput } from './terminalRunner';
 import { processConveyors as _processConveyors, detonateCanister as _detonateCanister } from './hazardSystem';
-import { checkQuestDiscovery as _checkQuestDiscovery, completeQuest as _completeQuest, discoverMainStoryQuest as _discoverMainStoryQuest } from './questSystem';
+import { checkQuestDiscovery as _checkQuestDiscovery, completeQuest as _completeQuest, discoverMainStoryQuest as _discoverMainStoryQuest, completeMainStoryQuest as _completeMainStoryQuest } from './questSystem';
 import { JournalEntry, loadJournalEntries, saveJournalEntry, deleteJournalEntry, clearJournalEntries } from './journalSystem';
 import { generateAIPerceptionSnapshot, AIPerceptionSnapshot, executeAIAction as _executeAIAction, AIActionOutcome, getActionSemantic, ACTION_SEMANTICS, ActionSemantic } from './aiPerception';
 import { getMentalMapSnapshot, planMentalMapRoute, MentalMapSnapshot, RoutePlan } from './mentalMap';
@@ -1871,6 +1871,7 @@ export class GameEngine {
           foundLog.read = true;
           if (item.storyLogId) {
             _discoverMainStoryQuest(this, { sourceType: 'STORY_LOG', sourceId: item.storyLogId });
+            _completeMainStoryQuest(this, { sourceType: 'STORY_LOG', sourceId: item.storyLogId });
           }
           this.activeStoryLog = foundLog;
           soundFX.terminal();

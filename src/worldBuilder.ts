@@ -405,6 +405,16 @@ export function createSectorObjectives(): MissionObjective[] {
       isSideQuest: true,
       discovered: false,
     },
+    {
+      id: 'obj-maintenance-clearance',
+      title: 'Maintenance Clearance',
+      titleZh: '維修許可',
+      description: 'Obtain maintenance clearance to access restricted areas.',
+      descriptionZh: '取得維修許可以進入限制區域。',
+      completed: false,
+      isSideQuest: false,
+      discovered: false,
+    },
   ];
 }
 
