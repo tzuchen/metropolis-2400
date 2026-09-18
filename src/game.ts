@@ -33,7 +33,7 @@ import {
 } from './worldBuilder';
 import { handleTerminalInput as _handleTerminalInput } from './terminalRunner';
 import { processConveyors as _processConveyors, detonateCanister as _detonateCanister } from './hazardSystem';
-import { checkQuestDiscovery as _checkQuestDiscovery, completeQuest as _completeQuest } from './questSystem';
+import { checkQuestDiscovery as _checkQuestDiscovery, completeQuest as _completeQuest, discoverMainStoryQuest as _discoverMainStoryQuest } from './questSystem';
 import { JournalEntry, loadJournalEntries, saveJournalEntry, deleteJournalEntry, clearJournalEntries } from './journalSystem';
 import { generateAIPerceptionSnapshot, AIPerceptionSnapshot, executeAIAction as _executeAIAction, AIActionOutcome, getActionSemantic, ACTION_SEMANTICS, ActionSemantic } from './aiPerception';
 import { getMentalMapSnapshot, planMentalMapRoute, MentalMapSnapshot, RoutePlan } from './mentalMap';
@@ -1789,6 +1789,24 @@ export class GameEngine {
           this.updateFOV();
           this.pushFloatingText(this.player.x, this.player.y, 'FULL-MAP UPLINK ONLINE', '#ffea00');
           this.pushMessage(`Acquired [${item.name}]: Full-map exploration view activated.`, 'success');
+        } else if (item.id === 'item-forged-checkin-credential') {
+          const isZh = this.language === 'zh';
+          const currentMax = this.player.checkInMaxTimer ?? 100;
+          this.player.checkInMaxTimer = Math.max(currentMax, 125);
+          const relayObj = this.missionObjectives.find((o) => o.id === 'obj-checkpoint-relay');
+          if (relayObj && !relayObj.completed) {
+            relayObj.completed = true;
+            relayObj.discovered = true;
+            this.pushMessage(isZh ? '【任務更新】滲透檢查哨中繼附屬區任務完成！' : 'MISSION UPDATE: Infiltrate Checkpoint Relay Annex objective complete!', 'success');
+          }
+          this.gainExp(100, 'CREDENTIAL');
+          this.pushFloatingText(this.player.x, this.player.y, 'CHECK-IN CREDENTIAL', '#ffea00');
+          this.pushMessage(
+            isZh
+              ? `【取得簽到憑證】獲得【偽造簽到憑證】！未來每次簽到將重置為 125 步。`
+              : `[CHECK-IN CREDENTIAL] Acquired [${item.name}]! Future check-ins will now reset to 125 steps.`,
+            'success'
+          );
         } else {
           this.pushFloatingText(this.player.x, this.player.y, 'PASSCODE ACQUIRED', '#ffea00');
           this.pushMessage(`Acquired [${item.name}]: Tzorg security clearance elevated.`, 'success');
@@ -1851,6 +1869,9 @@ export class GameEngine {
         const foundLog = this.storyLogs.find((l) => l.id === item.storyLogId);
         if (foundLog) {
           foundLog.read = true;
+          if (item.storyLogId) {
+            _discoverMainStoryQuest(this, { sourceType: 'STORY_LOG', sourceId: item.storyLogId });
+          }
           this.activeStoryLog = foundLog;
           soundFX.terminal();
           this.pushFloatingText(this.player.x, this.player.y, 'LORE UNLOCKED!', '#00e5ff');

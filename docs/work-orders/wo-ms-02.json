@@ -1,0 +1,45 @@
+{
+  "id": "WO-MS-02",
+  "phase": 2,
+  "title": "地下運輸線調查：Sector 1 到 Sub-Sector 0",
+  "objective": "讓中繼附屬區的 Citadel 運輸窗口情報成為前往地下貨運線的明確主線目的。",
+  "allowed_files": [
+    "src/worldBuilder.ts",
+    "src/map.ts",
+    "src/sewerMap.ts",
+    "src/dialogueSystem.ts",
+    "src/questSystem.ts",
+    "scripts/verify-underground-logistics-quest.ts",
+    "src/game.ts",
+    "docs/work-orders/wo-ms-02.json"
+  ],
+  "forbidden_files": [
+    "src/renderer.ts",
+    "src/saveLoad.ts",
+    "src/audio.ts"
+  ],
+  "contracts": [
+    "QuestDefinition",
+    "QuestDiscoverySource",
+    "SectorMap TileType[][] invariant"
+  ],
+  "implementation_guidelines": [
+    "中繼資料板或 Kira 對話必須揭露「找出地下運輸線」任務，兩條來源均可取得。",
+    "Sector 1 放置可見但初期不可用的貨運線線索；Sub-Sector 0 放置運輸清單、失事貨艇或等價環境證據。",
+    "任務完成條件是取得地下線路圖／運輸 manifest，不是單純抵達座標。",
+    "維持 map.tiles 為數字 TileType[][]；地圖屬性透過 getTileProperties 查表。",
+    "game.ts 僅在既有 DATA_SLATE 成功拾取後，將 storyLogId 傳入已解耦的 QuestSystem discovery contract；不含其他遊戲流程改動。"
+  ],
+  "verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-underground-logistics-quest.ts",
+    "npm test"
+  ],
+  "acceptance_criteria": [
+    "玩家可先從 Kira 對話或 Relay Slate 05 任一來源取得任務。",
+    "未取得情報前，地下內容只提供世界觀線索、不誤標示為已完成主線。",
+    "取得運輸線資料後，下一任務「奪取維護通行權」被揭露。"
+  ],
+  "status": "DRAFT",
+  "assigned_worker": "codex"
+}

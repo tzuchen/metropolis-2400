@@ -7,7 +7,7 @@ import type {
   StoryLog,
   DialogueSession,
 } from './types';
-import { checkAndProgress, getQuestByNpcId } from './questSystem';
+import { checkAndProgress, getQuestByNpcId, discoverMainStoryQuest } from './questSystem';
 import { soundFX } from './audio';
 import { bgm } from './music';
 import { createQuantumAnnihilator } from './entities';
@@ -77,6 +77,8 @@ export function advanceDialogue(host: DialogueHost): void {
 
   const npc = activeDialogue.npc;
   host.checkSideQuestDiscovery(npc.id);
+
+  discoverMainStoryQuest(host, { sourceType: 'NPC_DIALOGUE', sourceId: npc.id });
 
   const isZh = host.language === 'zh';
   const zhDialogue = npc.dialogueZh;

@@ -1,0 +1,41 @@
+{
+  "id": "WO-MS-03",
+  "phase": 3,
+  "title": "維護通行權：Sub-Sector 0 貨運線突破",
+  "objective": "在地下貨運線建立一段有角色動機的主線突破：取得維護授權，開啟前往 Sector 2 製造廠的合法／替代路徑。",
+  "allowed_files": [
+    "src/sewerMap.ts",
+    "src/worldBuilder.ts",
+    "src/dialogueSystem.ts",
+    "src/questSystem.ts",
+    "scripts/verify-maintenance-clearance-quest.ts"
+  ],
+  "forbidden_files": [
+    "src/game.ts",
+    "src/renderer.ts",
+    "src/saveLoad.ts"
+  ],
+  "contracts": [
+    "QuestDefinition",
+    "QuestHost capability interface",
+    "Sector transit compatibility"
+  ],
+  "implementation_guidelines": [
+    "透過受困技師對話或失事運輸艇維修記錄任一來源發現任務。",
+    "完成可採「修復維護閘門」或「取得替代維護憑證」其中一條資料驅動路徑；兩者匯入同一完成狀態。",
+    "獎勵為 Sector 2 維護入口授權與下一段同步器情報，不應直接給終局萬用通行證。",
+    "保持既有 Sector transit、電梯與門互動 API 向下相容。"
+  ],
+  "verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-maintenance-clearance-quest.ts",
+    "npm test"
+  ],
+  "acceptance_criteria": [
+    "兩條發現來源與兩條完成路徑皆能正確更新同一任務。",
+    "未取得通行權前，Sector 2 的維護入口有可讀的阻擋理由。",
+    "取得後不會破壞既有 Sector 1／0／2 往返。"
+  ],
+  "status": "DRAFT",
+  "assigned_worker": "codex"
+}

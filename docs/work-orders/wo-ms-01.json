@@ -1,0 +1,42 @@
+{
+  "id": "WO-MS-01",
+  "phase": 1,
+  "title": "主線發現與任務鏈資料契約",
+  "objective": "建立資料驅動的主線任務鏈與「對話／資料板／終端」發現來源，讓任務不再只能由硬編碼位置觸發。",
+  "allowed_files": [
+    "src/types.ts",
+    "src/questSystem.ts",
+    "src/dialogueSystem.ts",
+    "src/worldBuilder.ts",
+    "scripts/verify-main-story-discovery.ts"
+  ],
+  "forbidden_files": [
+    "src/renderer.ts",
+    "src/map.ts",
+    "src/saveLoad.ts"
+  ],
+  "contracts": [
+    "QuestDefinition",
+    "QuestDiscoverySource",
+    "QuestProgressionEvent",
+    "QuestHost capability interface"
+  ],
+  "implementation_guidelines": [
+    "為主線任務定義穩定 ID、前置條件、發現來源、完成條件、獎勵與雙語文本。",
+    "發現來源至少支援 NPC dialogue node、story log ID、terminal command success 三種資料型態。",
+    "QuestSystem 僅透過最小 Host capability 讀寫任務與發訊息，禁止 import GameEngine。",
+    "既有 obj-forcefield 與 obj-checkpoint-relay 必須轉為相容的資料項目，名稱與既有行為不變。"
+  ],
+  "verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-main-story-discovery.ts",
+    "npm test"
+  ],
+  "acceptance_criteria": [
+    "同一主線任務可由指定對話或指定情報首次發現，重複閱讀不重複給獎勵。",
+    "既有存檔可載入且既有任務狀態不丟失。",
+    "任務資料可在不修改 renderer 的前提下新增。"
+  ],
+  "status": "DRAFT",
+  "assigned_worker": "codex"
+}

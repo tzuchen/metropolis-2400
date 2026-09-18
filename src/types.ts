@@ -270,6 +270,19 @@ export interface SectorMap {
 
 export type QuestReward = { type: 'HEAL' | 'ENERGY' | 'CREDITS'; amount: number; message: string; item?: any; } | { type: 'ITEM'; amount?: number; message: string; item: any; };
 
+export type QuestDiscoverySource =
+  | { sourceType: 'NPC_DIALOGUE'; sourceId: string }
+  | { sourceType: 'STORY_LOG'; sourceId: string }
+  | { sourceType: 'TERMINAL'; sourceId: string };
+
+export interface MainStoryQuestDefinition {
+  objectiveId: string;
+  prerequisiteObjectiveIds: string[];
+  discoverySources: QuestDiscoverySource[];
+  discoveryMessageEn: string;
+  discoveryMessageZh: string;
+}
+
 export interface QuestDefinition {
   id: string;
   npcId: string;

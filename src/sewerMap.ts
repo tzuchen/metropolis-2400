@@ -169,6 +169,16 @@ export function setupSubSectorZero(game: any): void {
       description: game.language === 'zh' ? '從佐格焚化爐中倖存的十四行詩古籍殘頁。交給 Sector 1 的藏書家 Archie 可強化心靈意志、提升項圈步數上限。' : 'A surviving sonnet folio from Tzorg incinerators. Give to Archie the Archivist in Sector 1 to strengthen mental will and increase collar step limit.',
       iconColor: '#ffd166',
     },
+    {
+      id: 'slate-item-underground-manifest',
+      name: game.language === 'zh' ? '地下物流清單' : 'Underground Logistics Manifest',
+      itemType: 'DATA_SLATE',
+      x: 25,
+      y: 20,
+      description: game.language === 'zh' ? '地下補給路線清單：堡壘隱密運輸通道與巡邏無人機監控記錄。' : 'Subterranean supply route manifest: Citadel hidden transport corridors and patrol drone surveillance logs.',
+      iconColor: '#00e5ff',
+      storyLogId: 'slate-underground-manifest',
+    },
   ];
   game.npcs = [];
   game.visibleTiles.clear();

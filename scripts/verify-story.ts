@@ -26,13 +26,22 @@ const mockCanvas = {
 const game = new GameEngine(mockCanvas);
 
 console.log('Testing story logs initialization...');
-if (!game.storyLogs || game.storyLogs.length !== 4) {
-  throw new Error(`Expected 4 story logs, got ${game.storyLogs?.length}`);
+const expectedStoryLogIds = ['slate-vance', 'slate-kira', 'slate-tzorg', 'slate-ghost', 'slate-checkpoint-relay'];
+for (const id of expectedStoryLogIds) {
+  if (!game.storyLogs?.find((l) => l.id === id)) {
+    throw new Error(`Expected story log with id '${id}' to exist`);
+  }
 }
 
+const expectedSlateIds = ['slate-vance', 'slate-kira', 'slate-tzorg', 'slate-ghost', 'slate-checkpoint-relay'];
 const slateItems = game.groundItems.filter((it) => it.itemType === 'DATA_SLATE');
-if (slateItems.length !== 4) {
-  throw new Error(`Expected 4 data slate ground items, got ${slateItems.length}`);
+if (slateItems.length !== expectedSlateIds.length) {
+  throw new Error(`Expected ${expectedSlateIds.length} data slate ground items, got ${slateItems.length}`);
+}
+for (const id of expectedSlateIds) {
+  if (!slateItems.find((it) => it.storyLogId === id)) {
+    throw new Error(`Expected data slate ground item with storyLogId '${id}' to exist`);
+  }
 }
 
 console.log('Testing Story Archive toggle [L]...');

@@ -1,4 +1,4 @@
-import type { Item, NPC, QuestDefinition, QuestState, QuestReward, MissionObjective, StoryLog, GameMessage, SecurityLevel, Language, GroundItem, Position, Robot, SectorMap, PushableBlock, Hazard, DialogueSession, TerminalData } from './types';
+import type { Item, NPC, QuestDefinition, QuestState, QuestReward, MissionObjective, StoryLog, GameMessage, SecurityLevel, Language, GroundItem, Position, Robot, SectorMap, PushableBlock, Hazard, DialogueSession, TerminalData, MainStoryQuestDefinition, QuestDiscoverySource } from './types';
 import { createQuantumAnnihilator } from './entities';
 import { soundFX } from './audio';
 import { bgm } from './music';
@@ -127,6 +127,70 @@ export const QUEST_DEFINITIONS: QuestDefinition[] = [
     } as any,
   },
 ];
+
+export const MAIN_STORY_QUEST_DEFINITIONS: MainStoryQuestDefinition[] = [
+  {
+    objectiveId: 'obj-forcefield',
+    prerequisiteObjectiveIds: ['obj-safehouse'],
+    discoverySources: [{ sourceType: 'NPC_DIALOGUE', sourceId: 'npc-kira' }],
+    discoveryMessageEn:
+      'MISSION UPDATE: Deactivate Checkpoint 01 — Access terminal CHECKPOINT_FF to lower the plasma barrier.',
+    discoveryMessageZh:
+      '【任務更新】解除 01 號檢查哨能量屏障 — 操作終端機 CHECKPOINT_FF 解除高能電漿力場。',
+  },
+  {
+    objectiveId: 'obj-checkpoint-relay',
+    prerequisiteObjectiveIds: ['obj-forcefield'],
+    discoverySources: [{ sourceType: 'TERMINAL', sourceId: 'CHECKPOINT_FF' }],
+    discoveryMessageEn:
+      'MISSION UPDATE: Infiltrate Checkpoint Relay Annex — Enter the sealed annex and locate the Citadel uplink relay node.',
+    discoveryMessageZh:
+      '【任務更新】滲透檢查哨中繼附屬區 — 進入封閉的中繼附屬區，尋找堡壘上行鏈路中繼節點。',
+  },
+  {
+    objectiveId: 'obj-underground-logistics',
+    prerequisiteObjectiveIds: ['obj-checkpoint-relay'],
+    discoverySources: [
+      { sourceType: 'NPC_DIALOGUE', sourceId: 'npc-kira' },
+      { sourceType: 'STORY_LOG', sourceId: 'slate-underground-manifest' },
+    ],
+    discoveryMessageEn:
+      'MISSION UPDATE: Underground Logistics — Trace the subterranean supply routes to secure the Citadel\'s hidden transport corridors.',
+    discoveryMessageZh:
+      '【任務更新】地下物流 — 追蹤地下補給路線，確保堡壘的隱密運輸通道。',
+  },
+];
+
+export function discoverMainStoryQuest(
+  host: QuestHost,
+  source: QuestDiscoverySource
+): boolean {
+  const matchingDefinitions = MAIN_STORY_QUEST_DEFINITIONS.filter((definition) =>
+    definition.discoverySources.some(
+      (candidate) => candidate.sourceType === source.sourceType && candidate.sourceId === source.sourceId
+    )
+  );
+
+  for (const definition of matchingDefinitions) {
+    const target = host.missionObjectives.find((objective) => objective.id === definition.objectiveId);
+    if (!target || target.completed || target.discovered) continue;
+
+    const prerequisitesMet = definition.prerequisiteObjectiveIds.every((id) => {
+      const prerequisite = host.missionObjectives.find((objective) => objective.id === id);
+      return prerequisite?.completed === true;
+    });
+    if (!prerequisitesMet) continue;
+
+    target.discovered = true;
+    host.pushMessage(
+      host.language === 'zh' ? definition.discoveryMessageZh : definition.discoveryMessageEn,
+      'info'
+    );
+    return true;
+  }
+
+  return false;
+}
 
 export function getQuestDefinition(questId: string): QuestDefinition | undefined {
   return QUEST_DEFINITIONS.find((q) => q.id === questId);
@@ -418,9 +482,11 @@ export function getQuestStates(host: QuestHost): QuestState[] {
 
 export default {
   QUEST_DEFINITIONS,
+  MAIN_STORY_QUEST_DEFINITIONS,
   getQuestDefinition,
   getQuestByNpcId,
   checkQuestDiscovery,
+  discoverMainStoryQuest,
   checkAndProgress,
   isQuestComplete,
   getQuestProgress,

@@ -90,6 +90,18 @@ export function handleTerminalInput(game: GameEngine, key: string): void {
         game.pushMessage(game.language === 'zh' ? '【任務更新】01 號檢查哨能量屏障已解除！' : 'MISSION UPDATE: Checkpoint 01 forcefield deactivated!', 'success');
         game.gainExp(50, 'MISSION_COMPLETE');
       }
+      if (ffName === 'CHECKPOINT_FF') {
+        const relayObj = game.missionObjectives.find((o) => o.id === 'obj-checkpoint-relay');
+        if (relayObj && !relayObj.discovered) {
+          relayObj.discovered = true;
+          game.pushMessage(
+            game.language === 'zh'
+              ? '【任務更新】中繼附屬區已開放：滲透檢查哨中繼附屬區，尋找堡壘上行鏈路中繼節點。'
+              : 'MISSION UPDATE: Relay Annex Unsealed: Infiltrate the Checkpoint Relay Annex and locate the Citadel uplink relay node.',
+            'info'
+          );
+        }
+      }
       game.pushMessage(`${ffName}: Plasma barrier capacitors short-circuited. Barrier offline.`, 'success');
       soundFX.victory();
       game.gainExp(60, 'HACK_SUCCESS');

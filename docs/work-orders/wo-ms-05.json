@@ -1,0 +1,42 @@
+{
+  "id": "WO-MS-05",
+  "phase": 5,
+  "title": "逆轉金鑰與 Citadel 終局整合",
+  "objective": "將已蒐集的中繼、地下線與製造廠情報收束為三段逆轉金鑰，讓 Citadel 終局選擇有可追溯的主線前因。",
+  "allowed_files": [
+    "src/worldBuilder.ts",
+    "src/dialogueSystem.ts",
+    "src/questSystem.ts",
+    "src/terminal.ts",
+    "src/terminalRunner.ts",
+    "scripts/verify-citadel-main-story-keys.ts"
+  ],
+  "forbidden_files": [
+    "src/renderer.ts",
+    "src/saveLoad.ts",
+    "src/audio.ts"
+  ],
+  "contracts": [
+    "QuestDefinition",
+    "TerminalSession public behavior",
+    "QuestHost capability interface"
+  ],
+  "implementation_guidelines": [
+    "三段金鑰分別對應：Relay 的運輸窗口、地下線的維護授權、製造廠的同步器情報。",
+    "Citadel 核心終端根據完整度提供既有結局的脈絡說明；不得移除既有 OVERLOAD、SUBVERSION、EVACUATION、AWAKEN 命令。",
+    "缺少金鑰時給出明確回溯線索，不能以無訊息拒絕阻斷玩家。",
+    "終局選擇與既有存檔／勝利流程保持相容。"
+  ],
+  "verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-citadel-main-story-keys.ts",
+    "npm test"
+  ],
+  "acceptance_criteria": [
+    "每段金鑰都有對話與情報至少兩種可發現來源。",
+    "核心終端能說明缺少哪一段、來自何區域。",
+    "完整金鑰鏈不改變既有結局 API，且所有回歸測試通過。"
+  ],
+  "status": "DRAFT",
+  "assigned_worker": "codex"
+}

@@ -1,0 +1,42 @@
+{
+  "id": "WO-MS-04",
+  "phase": 4,
+  "title": "製造廠同步器破壞：Sector 2 主線",
+  "objective": "把 Sector 2 變成主線核心：揭發項圈韌體同步器，讓玩家選擇破壞或植入反抗軍干擾程式。",
+  "allowed_files": [
+    "src/worldBuilder.ts",
+    "src/map.ts",
+    "src/dialogueSystem.ts",
+    "src/questSystem.ts",
+    "src/effectRegistry.ts",
+    "scripts/verify-syncer-sabotage-quest.ts"
+  ],
+  "forbidden_files": [
+    "src/renderer.ts",
+    "src/saveLoad.ts",
+    "src/music.ts"
+  ],
+  "contracts": [
+    "QuestDefinition",
+    "QuestHost capability interface",
+    "EffectRegistry presets"
+  ],
+  "implementation_guidelines": [
+    "由製造廠工人日誌或 Zero-One 對話揭露同步器目標，兩者須給一致事實但不同敘事觀點。",
+    "提供破壞與植入兩條完成方式；兩者影響後續 Citadel 情報文本，但不得分裂公開遊戲 API。",
+    "爆破與干擾的視覺常數使用 EFFECT_PRESETS，不在遊戲流程中散落數值。",
+    "完成後揭露「取得主腦逆轉金鑰」並給出三段金鑰的來源線索。"
+  ],
+  "verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-syncer-sabotage-quest.ts",
+    "npm test"
+  ],
+  "acceptance_criteria": [
+    "兩條發現與兩條完成路徑都可重現、不可重複發獎。",
+    "選擇結果可在任務／資料板中被讀回，且不影響原有 Boss 與電梯流程。",
+    "既有所有渲染與音訊行為無回歸。"
+  ],
+  "status": "DRAFT",
+  "assigned_worker": "codex"
+}

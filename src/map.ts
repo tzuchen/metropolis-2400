@@ -331,7 +331,7 @@ export function buildSector1Map(): SectorMap {
   }
   setDoor(tiles, 25, 7, true); // Main entrance to checkpoint
   for (let y = 4; y <= 10; y += 1) setForcefield(tiles, 27, y); // Forcefield barrier
-  setDoor(tiles, 29, 11, true); // Exit from checkpoint to data hub
+  setWall(tiles, 29, 11); // Sealed bottom of Checkpoint Relay Annex
 
   // === DETENTION CELL BLOCK (between Checkpoint 01 and Data Hub) ===
   for (let x = 33; x <= 38; x += 1) {
@@ -469,6 +469,13 @@ export function buildSector1Map(): SectorMap {
       type: 'SECURITY',
       securityLevel: 'LOW' as unknown as SecurityLevel,
       log: 'Detention Outpost Terminal: Inmate surveillance unit. Neural collar check-in authorization online.',
+    },
+    TERMINAL_CHECKPOINT_RELAY: {
+      id: 'TERMINAL_CHECKPOINT_RELAY',
+      position: { x: 29, y: 9 },
+      type: 'DATA',
+      securityLevel: 'HIGH' as unknown as SecurityLevel,
+      log: 'Checkpoint Relay Annex: Citadel uplink relay node. Intercepted transmission: Overmind sub-core synchronization at 94%. Tzorg Citadel broadcast array recalibrating. Neural collar firmware patch v7.3 pending deployment to all Sector 1 enforcement units.',
     },
   } as unknown as Record<string, TerminalData>;
 

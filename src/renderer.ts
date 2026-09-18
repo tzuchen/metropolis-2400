@@ -1503,7 +1503,8 @@ export class GameRenderer {
       chkColor = '#00ff88';
     } else {
       const chkTimer = typeof p?.checkInTimer === 'number' ? p.checkInTimer : 100;
-      chkText = 'CHK: ' + chkTimer + '/100';
+      const chkMaxTimer = (typeof p?.checkInMaxTimer === 'number' && Number.isFinite(p.checkInMaxTimer) && p.checkInMaxTimer > 0) ? p.checkInMaxTimer : 100;
+      chkText = 'CHK: ' + chkTimer + '/' + chkMaxTimer;
       chkColor = '#00ffcc';
       if (chkTimer <= 10) chkColor = '#ff2a4b';
       else if (chkTimer <= 30) chkColor = '#ffea00';

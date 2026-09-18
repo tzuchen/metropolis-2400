@@ -56,6 +56,40 @@ export function createSectorStoryLogs(): StoryLog[] {
     });
   }
 
+  if (!existingIds.has('slate-checkpoint-relay')) {
+    extraLogs.push({
+      id: 'slate-checkpoint-relay',
+      title: 'Citadel Transport Windows',
+      titleZh: '堡壘運輸窗口',
+      author: 'Checkpoint Relay Annex',
+      timestamp: '2400-03-15T02:00:00Z',
+      read: false,
+      content: [
+        'Intercepted Citadel uplink relay log: Transport windows open every 125 steps. During each window, the neural collar broadcast can be reversed for all subjects in the sector. The relay annex is sealed behind the checkpoint forcefield. Unauthorized access will trigger immediate lockdown.',
+      ],
+      contentZh: [
+        '截獲堡壘上行鏈路中繼日誌：運輸窗口每 125 步開啟一次。在每個窗口期間，可逆轉該區域所有受試者的神經項圈廣播。中繼附屬區被封閉在檢查哨力場後方。未經授權進入將立即觸發封鎖。',
+      ],
+    });
+  }
+
+  if (!existingIds.has('slate-underground-manifest')) {
+    extraLogs.push({
+      id: 'slate-underground-manifest',
+      title: 'Underground Logistics Manifest',
+      titleZh: '地下物流清單',
+      author: 'Checkpoint Relay Annex',
+      timestamp: '2400-03-15T04:30:00Z',
+      read: false,
+      content: [
+        'Subterranean supply route manifest: The Citadel maintains hidden transport corridors beneath the relay annex. Each corridor is gated by a pressure-locked bulkhead and monitored by autonomous patrol drones. Securing these routes will allow the resistance to intercept collar broadcast reversals before they reach the Five Million.',
+      ],
+      contentZh: [
+        '地下補給路線清單：堡壘在中繼附屬區下方維持隱密運輸通道。每條通道由壓力密封艙門把守，並由自動巡邏無人機監控。確保這些路線將使反抗軍得以在神經項圈廣播逆轉抵達五百萬受試者之前進行攔截。',
+      ],
+    });
+  }
+
   return [...baseLogs, ...extraLogs];
 }
 
@@ -181,6 +215,26 @@ export function createSectorItems(): GroundItem[] {
       amount: 200,
       iconColor: '#ffea00',
     },
+    {
+      id: 'item-forged-checkin-credential',
+      name: 'Forged Check-in Credential',
+      itemType: 'KEYCARD',
+      x: 29,
+      y: 7,
+      description: 'Forged neural collar check-in credential granting a 125-step check-in window at the Checkpoint Relay Annex terminal.',
+      amount: 1,
+      iconColor: '#ffea00',
+    },
+    {
+      id: 'slate-item-checkpoint-relay',
+      name: 'Data Slate 05',
+      itemType: 'DATA_SLATE',
+      x: 30,
+      y: 5,
+      description: 'Intercepted Citadel transport window schedule and collar broadcast reversal protocol.',
+      iconColor: '#00e5ff',
+      storyLogId: 'slate-checkpoint-relay',
+    },
   ];
 }
 
@@ -265,11 +319,31 @@ export function createSectorObjectives(): MissionObjective[] {
       id: 'obj-forcefield',
       title: 'Deactivate Checkpoint 01',
       titleZh: '解除 01 號檢查哨能量屏障',
-      description: 'Access terminal CHECKPOINT_FF to lower the high-energy plasma barrier.',
-      descriptionZh: '操作終端機 CHECKPOINT_FF 解除高能電漿力場屏障。',
+      description: 'Access terminal CHECKPOINT_FF to lower the high-energy plasma barrier and open the sealed relay annex.',
+      descriptionZh: '操作終端機 CHECKPOINT_FF 解除高能電漿力場屏障，開啟封閉的中繼附屬區。',
       completed: false,
       isSideQuest: false,
       discovered: true,
+    },
+    {
+      id: 'obj-checkpoint-relay',
+      title: 'Infiltrate Checkpoint Relay Annex',
+      titleZh: '滲透檢查哨中繼附屬區',
+      description: 'Enter the sealed relay annex behind the checkpoint forcefield and locate the Citadel uplink relay node.',
+      descriptionZh: '進入檢查哨力場後方封閉的中繼附屬區，尋找堡壘上行鏈路中繼節點。',
+      completed: false,
+      isSideQuest: false,
+      discovered: false,
+    },
+    {
+      id: 'obj-underground-logistics',
+      title: 'Underground Logistics',
+      titleZh: '地下物流',
+      description: 'Trace the subterranean supply routes to secure the Citadel\'s hidden transport corridors.',
+      descriptionZh: '追蹤地下補給路線，確保堡壘的隱密運輸通道。',
+      completed: false,
+      isSideQuest: false,
+      discovered: false,
     },
     {
       id: 'obj-vault',
