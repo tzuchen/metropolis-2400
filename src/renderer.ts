@@ -33,22 +33,35 @@ interface StreetSign {
   text: string;
   color: string;
   subtext?: string;
+  sectorId?: string;
 }
 
-const SECTOR_STREET_SIGNS: StreetSign[] = [
-  { x: 10, y: 4, text: '★ REBEL BASE', color: '#ff7700', subtext: 'ENTRY' },
-  { x: 14, y: 2, text: 'CYBER-ALLEY 4', color: '#00e5ff' },
-  { x: 25, y: 5, text: '⚠ TZORG CHECKPOINT', color: '#ff1744', subtext: 'RESTRICTED' },
-  { x: 27, y: 3, text: '⚡ HIGH-VOLTAGE', color: '#ffea00' },
-  { x: 30, y: 20, text: 'SYS // DATA HUB', color: '#9d4edd', subtext: 'AUTHORIZED ONLY' },
-  { x: 35, y: 17, text: 'SERVER VAULT', color: '#00ff88' },
+export const SECTOR_STREET_SIGNS: StreetSign[] = [
+  // 第一區 (Sector 1)
+  { sectorId: 'sector-1', x: 10, y: 4, text: '★ REBEL BASE', color: '#ff7700', subtext: 'ENTRY' },
+  { sectorId: 'sector-1', x: 14, y: 2, text: 'CYBER-ALLEY 4', color: '#00e5ff' },
+  { sectorId: 'sector-1', x: 25, y: 5, text: '⚠ TZORG CHECKPOINT', color: '#ff1744', subtext: 'RESTRICTED' },
+  { sectorId: 'sector-1', x: 27, y: 3, text: '⚡ HIGH-VOLTAGE', color: '#ffea00' },
+  { sectorId: 'sector-1', x: 30, y: 20, text: 'SYS // DATA HUB', color: '#9d4edd', subtext: 'AUTHORIZED ONLY' },
+  { sectorId: 'sector-1', x: 35, y: 17, text: 'SERVER VAULT', color: '#00ff88' },
   // 第二區 (Sector 2) - 黑市與工坊
-  { x: 42, y: 8, text: '⚙ BLACK MARKET', color: '#ff6600', subtext: 'NO QUESTIONS' },
-  { x: 45, y: 12, text: 'ZERO-ONE WORKSHOP', color: '#00ffcc', subtext: 'CUSTOM CYBERWARE' },
-  { x: 48, y: 6, text: '▲ CITADEL LIFT', color: '#ffea00', subtext: 'AUTHORIZED ONLY' },
+  { sectorId: 'sector-2', x: 4, y: 5, text: '▲ SECTOR 1 LIFT', color: '#00e5ff', subtext: 'TRANSIT' },
+  { sectorId: 'sector-2', x: 13, y: 3, text: 'ZERO-ONE WORKSHOP', color: '#00ffcc', subtext: 'CUSTOM CYBERWARE' },
+  { sectorId: 'sector-2', x: 17, y: 7, text: '⚙ ASSEMBLY LINE', color: '#ffea00', subtext: 'CAUTION CONVEYOR' },
+  { sectorId: 'sector-2', x: 22, y: 15, text: 'VESPER MURAL ALLEY', color: '#ff007f', subtext: 'ART FREEDOM' },
+  { sectorId: 'sector-2', x: 28, y: 4, text: 'JACKAL R&D LAB', color: '#ff4444', subtext: 'PROTOTYPES' },
+  { sectorId: 'sector-2', x: 35, y: 21, text: '▲ CITADEL LIFT', color: '#ffea00', subtext: 'AUTHORIZED ONLY' },
+  // 佐格堡壘 (Sector Citadel)
+  { sectorId: 'sector-citadel', x: 3, y: 14, text: '▲ SECTOR 2 LIFT', color: '#00e5ff', subtext: 'DESCENT' },
+  { sectorId: 'sector-citadel', x: 10, y: 7, text: '⚠ DEFENSE PERIMETER', color: '#ff1744', subtext: 'RESTRICTED' },
+  { sectorId: 'sector-citadel', x: 30, y: 14, text: '★ OVERMIND CORE', color: '#ff0055', subtext: 'CENTRAL VAULT' },
   // 零號下水道 (Sewer 0) - 排水與廢水
-  { x: 52, y: 25, text: '⚠ DRAIN VALVE 0-A', color: '#88ff00', subtext: 'TOXIC LEVEL' },
-  { x: 55, y: 28, text: '☣ SEWAGE BASIN', color: '#44ff88', subtext: 'DANGER' },
+  { sectorId: 'sub-sector-0', x: 3, y: 4, text: '▲ SECTOR 1 ACCESS', color: '#00e5ff', subtext: 'LADDER' },
+  { sectorId: 'sub-sector-0', x: 14, y: 13, text: '⚠ PUMP CONTROLLER', color: '#88ff00', subtext: 'VALVE TERMINAL' },
+  { sectorId: 'sub-sector-0', x: 22, y: 5, text: '☣ STRANDED TECH', color: '#ffaa00', subtext: 'MAINTENANCE' },
+  { sectorId: 'sub-sector-0', x: 12, y: 17, text: 'CRASHED TRANSPORT', color: '#ff3366', subtext: 'WRECKAGE' },
+  { sectorId: 'sub-sector-0', x: 32, y: 4, text: 'SMUGGLER HIDEOUT', color: '#ffd700', subtext: 'SECRET CACHE' },
+  { sectorId: 'sub-sector-0', x: 36, y: 21, text: '▲ SECTOR 2 CONDUIT', color: '#00e5ff', subtext: 'TRANSIT' },
 ];
 
 export class GameRenderer {
@@ -185,7 +198,7 @@ export class GameRenderer {
     });
 
     // 3. 繪製街景霓虹看板層 (Cyberpunk Neon Signboard Layer)
-    this.drawStreetSigns(camX, camY, visible, ctx, now);
+    this.drawStreetSigns(camX, camY, visible, ctx, now, map?.id);
 
     // 3.5 繪製反抗軍塗鴉壁畫 (Graffiti Mural)
     this.drawGraffitiMural(map, camX, camY, visible, ctx, now);
@@ -615,8 +628,9 @@ export class GameRenderer {
     ctx.restore?.();
   }
 
-  drawStreetSigns(camX: number, camY: number, visible: Set<string>, ctx: any, now: number): void {
+  drawStreetSigns(camX: number, camY: number, visible: Set<string>, ctx: any, now: number, mapId?: string): void {
     for (const sign of SECTOR_STREET_SIGNS) {
+      if (sign.sectorId && sign.sectorId !== (mapId || 'sector-1')) continue;
       const sx = sign.x * this.tileSize - camX;
       const sy = sign.y * this.tileSize - camY;
       const key = sign.x + ',' + sign.y;

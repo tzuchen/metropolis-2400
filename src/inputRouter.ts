@@ -835,7 +835,7 @@ export class InputRouter {
     const ny = g.player.y + dy;
 
     // Check if walking toward NPC for dialogue
-    const targetNPC = g.npcs.find((n) => n.isAlive && n.x === nx && n.y === ny);
+    const targetNPC = g.npcs.find((n) => n.isAlive !== false && n.x === nx && n.y === ny);
     if (targetNPC) {
       if (!g.player.isWeaponDrawn) {
         if (this.lastDialogueNpcId === targetNPC.id || g.activeDialogue?.npc?.id === targetNPC.id) {
@@ -941,7 +941,7 @@ export class InputRouter {
       const targetTile = inBounds ? getTile(g.map, { x: bx, y: by }) : undefined;
       const targetWalkable = targetTile !== undefined && isWalkable(targetTile);
       const blockingRobot = g.robots.find((r) => r.isAlive && r.x === bx && r.y === by);
-      const blockingNPC = g.npcs.find((n) => n.isAlive && n.x === bx && n.y === by);
+      const blockingNPC = g.npcs.find((n) => n.isAlive !== false && n.x === bx && n.y === by);
       const blockingHazard = g.hazards.find((h) => !h.exploded && h.x === bx && h.y === by);
       const blockingBlock = g.pushableBlocks.find((b) => b !== pushableBlock && b.x === bx && b.y === by);
 
@@ -956,7 +956,7 @@ export class InputRouter {
         const altTile = altInBounds ? getTile(g.map, { x: altX, y: altY }) : undefined;
         const altWalkable = altTile !== undefined && isWalkable(altTile);
         const altBlockingRobot = g.robots.find((r) => r.isAlive && r.x === altX && r.y === altY);
-        const altBlockingNPC = g.npcs.find((n) => n.isAlive && n.x === altX && n.y === altY);
+        const altBlockingNPC = g.npcs.find((n) => n.isAlive !== false && n.x === altX && n.y === altY);
         const altBlockingBlock = g.pushableBlocks.find((b) => b !== pushableBlock && b.x === altX && b.y === altY);
 
         if (altInBounds && altWalkable && !altBlockingRobot && !altBlockingNPC && !altBlockingBlock) {

@@ -217,6 +217,16 @@ export function setupSubSectorZero(game: any): void {
       roleZh: '維護技師',
       x: 22,
       y: 6,
+      isAlive: true,
+      hp: 100,
+      maxHp: 100,
+      avatarColor: '#ffaa00',
+      homeX: 22,
+      homeY: 6,
+      wanderRadius: 1,
+      facing: 'down',
+      actionState: 'repairing',
+      actionStateZh: '維修中',
       dialogue: [
         'The drainage valve malfunctioned and locked down the conduit to Sector 2!',
         'You can either override the pump terminal at (14, 14), or find my maintenance bypass slate near the crashed transport.',
@@ -224,6 +234,16 @@ export function setupSubSectorZero(game: any): void {
       dialogueZh: [
         '排水閥發生故障，通往第二區的管道被全面封鎖了！',
         '你可以操作位於 (14, 14) 的抽水主控終端機解除封鎖，或者調查失事運輸艇附近的維護備用資料板。',
+      ],
+      ambientBarks: [
+        'Ugh, this valve is stuck tight...',
+        'If only I had a wrench...',
+        'The pressure is building up...',
+      ],
+      ambientBarksZh: [
+        '唉，這個閥門卡得死死的...',
+        '要是我有扳手就好了...',
+        '壓力越來越高了...',
       ],
     },
   ];
