@@ -150,10 +150,10 @@ export function createSectorStoryLogs(): StoryLog[] {
       timestamp: '2400-03-15T06:30:00Z',
       read: false,
       content: [
-        'Interference payload compiled. Inject this reversal code into TERMINAL_SYNCHRONIZER during the sync window. The payload will overwrite the collar broadcast firmware and reverse the neural lock for all Five Million subjects. Timing is critical: execute within 3 turns of the sync pulse.',
+        'Interference payload compiled. Inject this reversal code into TERMINAL_SYNCHRONIZER during the sync pulse. The payload overwrites the collar broadcast firmware and reverses the neural lock for all Five Million subjects. Execute within 3 turns of the sync pulse.',
       ],
       contentZh: [
-        '干擾載荷編譯完成。在同步窗口期間將此逆轉代碼注入 TERMINAL_SYNCHRONIZER。載荷將覆寫項圈廣播韌體，逆轉所有五百萬受試者的神經鎖定。時機至關重要：在同步脈衝後 3 回合內執行。',
+        '干擾載荷編譯完成。在同步脈衝期間將此逆轉代碼注入 TERMINAL_SYNCHRONIZER。載荷將覆寫項圈廣播韌體，逆轉所有五百萬受試者的神經鎖定。在同步脈衝後 3 回合內執行。',
       ],
     });
   }

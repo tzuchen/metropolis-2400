@@ -572,9 +572,87 @@ export function getQuestStates(host: QuestHost): QuestState[] {
   }));
 }
 
+export interface ReversalKeyDefinition {
+  id: string;
+  titleEn: string;
+  titleZh: string;
+  sourceStoryLogId: string;
+  sourceObjectiveId: string;
+  sectorHint: string;
+  terminalHint: string;
+}
+
+export const REVERSAL_KEY_DEFINITIONS: ReversalKeyDefinition[] = [
+  {
+    id: 'reversal-key-relay',
+    titleEn: 'Reversal Key I — Relay Transport Window',
+    titleZh: '逆轉金鑰 Ⅰ — 中繼運輸窗口',
+    sourceStoryLogId: 'slate-checkpoint-relay',
+    sourceObjectiveId: 'obj-checkpoint-relay',
+    sectorHint: 'Checkpoint Relay Annex',
+    terminalHint: 'CHECKPOINT_FF',
+  },
+  {
+    id: 'reversal-key-maintenance',
+    titleEn: 'Reversal Key II — Underground Maintenance Authorization',
+    titleZh: '逆轉金鑰 Ⅱ — 地下維護授權',
+    sourceStoryLogId: 'slate-maintenance-override',
+    sourceObjectiveId: 'obj-maintenance-clearance',
+    sectorHint: 'Sub-Sector 0',
+    terminalHint: 'SEWER_PUMP_TERMINAL',
+  },
+  {
+    id: 'reversal-key-synchronizer',
+    titleEn: 'Reversal Key III — Factory Synchronizer Intelligence',
+    titleZh: '逆轉金鑰 Ⅲ — 製造廠同步器情報',
+    sourceStoryLogId: 'slate-factory-worker',
+    sourceObjectiveId: 'obj-disrupt-synchronizer',
+    sectorHint: 'Sector 2',
+    terminalHint: 'TERMINAL_SYNCHRONIZER',
+  },
+];
+
+export interface ReversalKeyStatus {
+  keyId: string;
+  titleEn: string;
+  titleZh: string;
+  available: boolean;
+  sourceStoryLogId: string;
+  sourceObjectiveId: string;
+}
+
+export function getReversalKeyStatuses(host: QuestHost): ReversalKeyStatus[] {
+  return REVERSAL_KEY_DEFINITIONS.map((def) => {
+    const storyLog = host.storyLogs.find((log) => log.id === def.sourceStoryLogId);
+    const objective = host.missionObjectives.find((obj) => obj.id === def.sourceObjectiveId);
+    const available = storyLog?.read === true && objective?.completed === true;
+    return {
+      keyId: def.id,
+      titleEn: def.titleEn,
+      titleZh: def.titleZh,
+      available,
+      sourceStoryLogId: def.sourceStoryLogId,
+      sourceObjectiveId: def.sourceObjectiveId,
+    };
+  });
+}
+
+export function getAvailableReversalKeys(host: QuestHost): ReversalKeyStatus[] {
+  return getReversalKeyStatuses(host).filter((key) => key.available);
+}
+
+export function getMissingReversalKeys(host: QuestHost): ReversalKeyStatus[] {
+  return getReversalKeyStatuses(host).filter((key) => !key.available);
+}
+
+export function hasAllReversalKeys(host: QuestHost): boolean {
+  return getReversalKeyStatuses(host).every((key) => key.available);
+}
+
 export default {
   QUEST_DEFINITIONS,
   MAIN_STORY_QUEST_DEFINITIONS,
+  REVERSAL_KEY_DEFINITIONS,
   getQuestDefinition,
   getQuestByNpcId,
   checkQuestDiscovery,
@@ -587,4 +665,8 @@ export default {
   getActiveQuests,
   getCompletedQuests,
   getQuestStates,
+  getReversalKeyStatuses,
+  getAvailableReversalKeys,
+  getMissingReversalKeys,
+  hasAllReversalKeys,
 };

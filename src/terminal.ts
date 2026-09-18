@@ -1,4 +1,5 @@
 import type { TerminalData } from './types';
+import { REVERSAL_KEY_DEFINITIONS } from './questSystem';
 
 export interface TerminalCommandResult {
   output: string;
@@ -101,6 +102,7 @@ export class TerminalSession {
     commands.push({ cmd: 'CLEAR_ALARM', desc: 'Reset sector security alert to CLEAR' });
     commands.push({ cmd: 'SCAN', desc: 'Scan sector security perimeter' });
     commands.push({ cmd: 'POETRY', desc: "Recite Shakespeare Sonnet 18 & Archie's notes" });
+    commands.push({ cmd: 'KEYS', desc: 'Report reversal-key completeness & missing source/sector hints' });
 
     // 條件指令
     if (!this.isSiphoned) {
@@ -321,6 +323,39 @@ export class TerminalSession {
       } else {
         result = { output: 'ACCESS DENIED: Requires Core Terminal' };
       }
+    } else if (c === 'keys' || c === 'reversal_keys' || c === 'reversal') {
+      // 非破壞性：僅回報逆轉金鑰完整性與缺失來源/區域提示，不影響任何結局指令
+      const slates: string[] = Array.isArray(decryptedSlates) ? decryptedSlates : [];
+      const hasSlate = (id: string): boolean => slates.some((s) => s === id || s?.includes(id));
+
+      const lines: string[] = ['--- REVERSAL KEY STATUS ---'];
+      let availableCount = 0;
+
+      for (const def of REVERSAL_KEY_DEFINITIONS) {
+        const available = hasSlate(def.sourceStoryLogId);
+        if (available) availableCount += 1;
+        const status = available ? 'AVAILABLE' : 'MISSING';
+        lines.push(
+          `[${status}] ${def.titleEn} / ${def.titleZh}`
+        );
+        if (!available) {
+          lines.push(`    Source: ${def.sourceStoryLogId} (story log not decrypted)`);
+          lines.push(`    Objective: ${def.sourceObjectiveId}`);
+          lines.push(`    Sector: ${def.sectorHint}`);
+          lines.push(`    Terminal: ${def.terminalHint}`);
+        }
+      }
+
+      lines.push('');
+      lines.push(
+        availableCount === REVERSAL_KEY_DEFINITIONS.length
+          ? 'ALL REVERSAL KEYS AVAILABLE: neural lattice reversal ready.'
+          : `${availableCount}/${REVERSAL_KEY_DEFINITIONS.length} reversal keys available. Missing keys do NOT block ending commands.`
+      );
+
+      result = {
+        output: lines.join('\n'),
+      };
     } else if (c === 'poetry' || c === 'poem' || c === 'verse' || c === 'sonnet') {
       result = {
         output:

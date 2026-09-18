@@ -3,7 +3,7 @@ import type { GameEngine } from './game';
 import { soundFX } from './audio';
 import { disableForcefield } from './map';
 import { createBreachSession } from './breachProtocol';
-import { completeMainStoryQuest } from './questSystem';
+import { completeMainStoryQuest, getReversalKeyStatuses } from './questSystem';
 
 export interface TerminalContext {
   hasDefeatedBoss: boolean;

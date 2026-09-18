@@ -71,6 +71,54 @@ export interface DialogueHost {
   render: () => void;
 }
 
+const NARRATIVE_CLUE_NPCS: Record<string, { questId: string; clueEn: string[]; clueZh: string[] }> = {
+  'npc-kira': {
+    questId: 'obj-checkpoint-relay',
+    clueEn: [
+      'Kira: The checkpoint relay annex holds the key to reversing the collar broadcast.',
+      'The transport window opens every 125 steps.',
+    ],
+    clueZh: [
+      '席拉：檢查哨中繼附屬區是逆轉項圈廣播的關鍵。',
+      '運輸窗口每 125 步開啟一次。',
+    ],
+  },
+  'npc-technician': {
+    questId: 'obj-maintenance-clearance',
+    clueEn: [
+      'Technician: The crashed transport locked the maintenance conduit.',
+      "You'll need to override the sewer pump terminal or find the bypass credential.",
+    ],
+    clueZh: [
+      '技師：失事運輸艇封鎖了維護通道。',
+      '你需要覆寫排污主控終端機或找到備用憑證。',
+    ],
+  },
+  'npc-zero-one': {
+    questId: 'obj-disrupt-synchronizer',
+    clueEn: [
+      'Zero-One: The factory synchronizer controls the collar broadcast cycle.',
+      'Disrupt it during the sync window and the broadcast reverses for all subjects.',
+    ],
+    clueZh: [
+      '零壹：製造廠同步器控制項圈廣播週期。',
+      '在同步窗口期間破壞它，廣播將對所有受試者逆轉。',
+    ],
+  },
+};
+
+function deliverNarrativeClue(host: DialogueHost, npcId: string): void {
+  const clue = NARRATIVE_CLUE_NPCS[npcId];
+  if (!clue) return;
+
+  const objective = host.missionObjectives.find((o) => o.id === clue.questId);
+  if (!objective || objective.completed) return;
+
+  const isZh = host.language === 'zh';
+  const messages = isZh ? clue.clueZh : clue.clueEn;
+  host.pushMessage(messages.join('\n'), 'info');
+}
+
 export function advanceDialogue(host: DialogueHost): void {
   const activeDialogue = host.activeDialogue;
   if (!activeDialogue) return;
@@ -78,7 +126,10 @@ export function advanceDialogue(host: DialogueHost): void {
   const npc = activeDialogue.npc;
   host.checkSideQuestDiscovery(npc.id);
 
-  discoverMainStoryQuest(host, { sourceType: 'NPC_DIALOGUE', sourceId: npc.id });
+  const discoveredQuest = discoverMainStoryQuest(host, { sourceType: 'NPC_DIALOGUE', sourceId: npc.id });
+  if (discoveredQuest) {
+    deliverNarrativeClue(host, npc.id);
+  }
 
   const isZh = host.language === 'zh';
   const zhDialogue = npc.dialogueZh;
