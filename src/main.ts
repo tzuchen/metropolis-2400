@@ -104,6 +104,11 @@ export function initGame(): GameEngineInstance {
     engine.handleKeyDown('Enter');
   }
 
+  const dismissParam = urlParams.get('dismiss');
+  if (dismissParam === '1' || dismissParam === 'true') {
+    engine.handleKeyDown('Escape');
+  }
+
   if (sectorParam) {
     engine.handleKeyDown('Enter');
     engine.switchSector(sectorParam);

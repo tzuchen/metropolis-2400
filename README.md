@@ -192,6 +192,48 @@ Your objective:
 - **二階段過載 (Phase 2 Overload)**: Boss 戰引入動態過載階段，當 Boss 血量低於特定閾值時，會觸發狂暴狀態並改變攻擊模式，提升戰術深度。
 - **正規力場解鎖機制**: 修復了 Checkpoint 01 力場解鎖邏輯，確保玩家必須透過終端機 `CHECKPOINT_FF` 執行 `OVERRIDE` 或 `HACK` 指令，並完成必要的劇情前置條件後，力場才會正式消散，避免跳過關鍵戰術環節。
 
+### 17. 🗺️ 主線戰役五大階段任務鏈 (5-Phase Main Storyline Expansion)
+Metropolis 2400 現已具備貫穿地下舊城至核心要塞的完整 5 階段主線戰役任務鏈：
+- **Phase 1 (WO-MS-01) 檢查哨中繼站附樓 (Checkpoint Relay Annex)**：
+  - 突破 Sector 1 檢查哨前置防線，進入中繼站附樓 (`CHECKPOINT_RELAY_ANNEX`)。
+  - 入侵 `RELAY_SUB_01` 輔助終端機，獲取解除代碼並解鎖核心中繼記錄。若密碼錯誤將觸發動態警報擴散！
+- **Phase 2 (WO-MS-02) 舊城地下廢棄水道與走私網絡 (Sub-Sector Zero Sewers)**：
+  - 穿過隱蔽通風柵板進入地下水道 (`sub-sector-0`)，面臨有毒廢水池與暗巷巡邏無人機。
+  - 尋回反抗軍失落的走私貨運清單，並獲得**偽造簽到憑證 (`FORGED_CHECKIN_CREDENTIAL`)**，將神經項圈時效延長至 **125 步**！
+  - 探索東北密室 (32, 5) 取得傳奇密寶【佐格主宰萬用通行證】，徹底永久解除項圈監控 (`CHK: UNLOCKED [∞]`)。
+
+![Sub-Sector Zero Sewers Preview](sewers-preview.png)
+
+- **Phase 3 (WO-MS-03) 維修授權與跨區滲透 (Sector 2 Maintenance Clearance)**：
+  - 取得維修授權鑰匙卡 (`SECTOR2_MAINT_KEY`)，解鎖前往 Sector 2 巨型重工業區的維修通道。
+  - 協助 Commander Kira 與 Netrunner Ghost 建立跨區安全加密通信頻道。
+- **Phase 4 (WO-MS-04) 自動化軍工廠同步器破壞 (Factory Synchronizer Sabotage)**：
+  - 潛入 Sector 2 的自動化戰鬥機器人組裝工廠，黑入主同步控制終端 (`TERMINAL_SYNCHRONIZER`)。
+  - 破壞核心同步器模組 (`FACTORY_SYNCHRONIZER`)，癱瘓自動組裝流水線，永久切斷要塞 (Citadel) 的無人機空投蜂擁增援！
+- **Phase 5 (WO-MS-05) 佐格要塞逆轉金鑰與終局解放 (Citadel Reversal Keys & Multiverse Endings)**：
+  - 收集三大分區逆轉金鑰 (`CITADEL_REVERSAL_KEY` - Relay, Maintenance, Synchronizer)。
+  - 要塞核心終端機提供專屬 `KEYS` 診斷命令，動態引導缺失金鑰的分區與終端機座標。
+  - 完整集齊逆轉金鑰後，迎戰 Overmind Subroutine 主腦，自由決定大都會的命運：
+    - `OVERLOAD`：超載核心能源網，玉石俱焚摧毀要塞。
+    - `SUBVERSION`：篡改主腦神經網絡，將佐格機械軍團轉化為反抗軍防衛隊。
+    - `EVACUATION`：解除全體五百萬市民的神經項圈，啟動地下方舟疏散。
+    - `AWAKEN`：合成人與人類意識交融，迎向全新的後奇異點黎明。
+
+### 18. 🧠 LLM 智慧體心智地圖與即時感知系統 (Autonomous AI Agent Perception & Mental Map)
+為支援自主編程與 LLM 遊戲智慧體（如 Qwen 27B / Claude / GPT），Metropolis 2400 深度整合了專為 Agent 打造的高效感知與決策層：
+- **特工心智地圖 API (`getMentalMap`)**：
+  - **ASCII 戰術雷達投影**：將目前視野與記憶地圖渲染為輕量級 ASCII 字符矩陣（包含特工 `@`、障礙 `#`、平地 `.`、門 `+`、NPC `N`、敵機 `R`、終端 `T` 與未知迷霧 ` `）。
+  - **前沿探索點推薦 (`?`)**：演算法自動計算已知區域邊界的探索前沿 (Frontiers)，為 Agent 提供高效探索建議。
+  - **四向 A* 戰術尋路 (`suggestedNextStep`)**：內建非對角 A* 尋路器，支援輸入目標座標立即回傳最佳下一步方向與距離，大幅降低 LLM 空間導航推理消耗。
+- **即時感知快照 API (`getAIPerceptionSnapshot`)**：
+  - 輸出完整的 JSON 語意環境狀態：特工生理狀態 (HP, EN, CR, 項圈倒數)、當前分區、視野內威脅清單與距離、相鄰可互動實體（NPC、終端機、暗門等）。
+  - **語意動作遮罩 (Action Masking)**：明確提供目前合法的戰術動作標籤 (`canAttack`, `canTalk`, `canHack`, `canDisarm`, `canWait` 等)，避免 Agent 產生非法動作試錯。
+
+### 19. 📓 特工主觀戰術日記系統 (Operative Journal System, `[P]`)
+- **特工第一人稱情報日誌**：隨時按下 `[P]` 鍵開啟戰術日記。
+- **主觀觀察記錄**：不同於客觀任務清單，日記專門記錄特工在探索中的主觀推測、暗門位置、地標方向、密碼線索與撤退備忘。
+- **瀏覽與撰寫雙模式**：支援標題快速滾動檢視與詳細內容編輯，所有條目與世界存檔同步持久化。
+
 ---
 
 ## 🎮 Controls & Keybindings (操作指南)
@@ -208,6 +250,7 @@ Your objective:
 | **`I`** | **Inventory** | Open Resistance Cyberdeck & Tactical Inventory modal |
 | **`U`** | **Cyber-Clinic** | Jack into Jax's Black Market Augmentation Clinic to buy upgrades |
 | **`M`** | **Mission Intel** | Toggle Mission Objectives & Directives log |
+| **`P`** | **Operative Journal** | Open/compose subjective field notes & tactical memory logs |
 | **`L`** | **Lore Archives** | Open Decrypted Data Slates & Story Archive reader |
 | **`T`** | **Interact / Hack** | Speak with adjacent friendly NPCs or jack into security terminals |
 | **`E`** | **Cycle Door** | Open / close adjacent blast doors and airlocks |
@@ -295,6 +338,11 @@ metropolis-2400/
 │   ├── npcDialogueManager.ts # NPC conversation progression
 │   ├── radar.ts          # Tactical radar/minimap helpers
 │   ├── worldBuilder.ts   # Sector entities, objectives and world initialization
+│   ├── agentMentalMap.ts # AI Agent ASCII radar & A* mental map planner
+│   ├── aiPerception.ts   # Structured perception snapshot & semantic action masking
+│   ├── journalSystem.ts  # Operative journal storage, schema & memory sync
+│   ├── journalModal.ts   # Journal modal CRT UI compositor
+│   ├── mainStoryQuest.ts # Main story 5-phase quest progression & clue delivery
 │   └── style.css         # Retro CRT scanline shaders & glowing cyber-interface styles
 ├── scripts/              # Automated verification test suite (41 scripts)
 │   ├── verify-game.ts    # Engine loop & turn validation
@@ -309,10 +357,11 @@ metropolis-2400/
 │   └── ...               # 32 additional verification scripts
 ├── live-gh-pages-preview.png # GitHub Pages live preview screenshot
 ├── npc-actions-preview.png   # NPC dynamic actions & VFX screenshot
+├── sewers-preview.png        # Sub-Sector Zero sewers & stealth exploration screenshot
 └── preview.png           # Live gameplay screenshot
 ```
 
-> 💡 **自動化測試覆蓋**：`scripts` 目前包含 41 套驗證腳本。執行 `npm test` 會同步執行 TypeScript 嚴格靜態型別檢驗與 37 套核心整合測試，涵蓋引擎回合推進、AI 尋路、戰鬥音訊、地圖扇區、存檔水合、Boss 多階段戰與支線任務。
+> 💡 **自動化測試覆蓋**：`scripts` 目前包含 54 套完整自動化驗證腳本。執行 `npm test` 會同步執行 TypeScript 嚴格靜態型別檢驗與 54 套端到端整合測試，涵蓋引擎回合推進、AI 尋路與心智地圖、感知快照、主線五大戰役任務鏈 (WO-MS-01 ~ WO-MS-05)、逆轉金鑰與終局分支。
 
 ### 🏛️ 架構演進與高可維護性設計 (Architecture & Maintainability)
 
