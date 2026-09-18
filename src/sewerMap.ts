@@ -105,8 +105,17 @@ export function buildSubSectorZeroMap(): SectorMap {
         forcefieldToDisable: 'SEWER_FF',
       },
     },
+    forcefields: [
+      {
+        id: 'SEWER_FF',
+        positions: [
+          { x: 28, y: 22 },
+          { x: 28, y: 23 },
+        ],
+      },
+    ],
     playerStart: { x: 4, y: 5 },
-  };
+  } as unknown as SectorMap;
 }
 
 export function setupSubSectorZero(game: any): void {
@@ -179,14 +188,64 @@ export function setupSubSectorZero(game: any): void {
       iconColor: '#00e5ff',
       storyLogId: 'slate-underground-manifest',
     },
+    {
+      id: 'slate-item-crashed-transport',
+      name: game.language === 'zh' ? '失事運輸艇維修日誌' : 'Crashed Transport Log',
+      itemType: 'DATA_SLATE',
+      x: 12,
+      y: 18,
+      description: game.language === 'zh' ? '失事運輸艇上的維修記錄：通往第二區製造廠的維護管道因閥門鎖死而封閉。' : 'Maintenance log on the crashed transport: Sector 2 access conduit locked down by valve malfunction.',
+      iconColor: '#00e5ff',
+      storyLogId: 'slate-crashed-transport',
+    },
+    {
+      id: 'slate-item-maintenance-override',
+      name: game.language === 'zh' ? '維護備用憑證' : 'Maintenance Bypass Credential',
+      itemType: 'DATA_SLATE',
+      x: 33,
+      y: 5,
+      description: game.language === 'zh' ? '堡壘緊急維護授權憑證：允許直接覆寫下水道屏障並進入第二區製造廠。' : 'Citadel emergency maintenance credential: grants direct authorization to bypass sewer barrier.',
+      iconColor: '#00e5ff',
+      storyLogId: 'slate-maintenance-override',
+    },
   ];
-  game.npcs = [];
+  game.npcs = [
+    {
+      id: 'npc-technician',
+      name: game.language === 'zh' ? '受困技師' : 'Stranded Technician',
+      role: 'Technician',
+      roleZh: '維護技師',
+      x: 22,
+      y: 6,
+      dialogue: [
+        'The drainage valve malfunctioned and locked down the conduit to Sector 2!',
+        'You can either override the pump terminal at (14, 14), or find my maintenance bypass slate near the crashed transport.',
+      ],
+      dialogueZh: [
+        '排水閥發生故障，通往第二區的管道被全面封鎖了！',
+        '你可以操作位於 (14, 14) 的抽水主控終端機解除封鎖，或者調查失事運輸艇附近的維護備用資料板。',
+      ],
+    },
+  ];
   game.visibleTiles.clear();
   game.exploredTiles.clear();
   game.updateFOV();
   soundFX.door();
   game.pushFloatingText(game.player.x, game.player.y, 'SUB-SECTOR ZERO: SEWERS', '#00ffaa');
   game.pushMessage(game.language === 'zh' ? '已潛入舊城廢棄下水道（Sub-Sector Zero）。小心毒素廢水與暗巷巡邏！' : 'TRANSIT COMPLETE: Entered Sub-Sector Zero Sewers.', 'warning');
+}
+
+export function canAccessSector2Maintenance(host: any): boolean {
+  if (!host) return false;
+  const objectives = host.missionObjectives || [];
+  const obj = objectives.find((o: any) => o.id === 'obj-maintenance-clearance');
+  return obj ? obj.completed === true : false;
+}
+
+export function getMaintenanceClearanceBlockReason(host: any, language: string = 'en'): string {
+  return language === 'zh'
+    ? '【通道封鎖】通往第二區製造廠的維護管道被鎖死，需要取得維護通行權或解除排污閘門。'
+    : 'ACCESS DENIED: Maintenance conduit to Sector 2 locked. Maintenance clearance or sewer barrier override required.';
 }
 
 export function getNextSectorId(currentMapId: string, playerX: number, playerY: number): string {

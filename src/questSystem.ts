@@ -167,6 +167,27 @@ export const MAIN_STORY_QUEST_DEFINITIONS: MainStoryQuestDefinition[] = [
     completionMessageZh:
       '【任務完成】地下物流：已確保堡壘隱密運輸通道。',
   },
+  {
+    objectiveId: 'obj-maintenance-clearance',
+    prerequisiteObjectiveIds: ['obj-underground-logistics'],
+    discoverySources: [
+      { sourceType: 'NPC_DIALOGUE', sourceId: 'npc-technician' },
+      { sourceType: 'STORY_LOG', sourceId: 'slate-crashed-transport' },
+    ],
+    discoveryMessageEn:
+      'MISSION UPDATE: Maintenance Clearance — Locate the stranded technician or examine the crashed transport in Sub-Sector 0.',
+    discoveryMessageZh:
+      '【任務更新】維修許可 — 尋找 Sub-Sector 0 的受困技師或調查失事運輸艇。',
+    completionSources: [
+      { sourceType: 'TERMINAL', sourceId: 'SEWER_PUMP_TERMINAL' },
+      { sourceType: 'STORY_LOG', sourceId: 'slate-maintenance-override' },
+    ],
+    nextObjectiveId: 'obj-disrupt-synchronizer',
+    completionMessageEn:
+      'MISSION COMPLETE: Maintenance Clearance — Access to Sector 2 Manufacturing Plant maintenance conduit authorized.',
+    completionMessageZh:
+      '【任務完成】維修許可：通往第二區製造廠維護通道授權已開啟。',
+  },
 ];
 
 export function discoverMainStoryQuest(

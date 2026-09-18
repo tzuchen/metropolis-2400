@@ -37,6 +37,6 @@
     "未取得通行權前，Sector 2 的維護入口有可讀的阻擋理由。",
     "取得後不會破壞既有 Sector 1／0／2 往返。"
   ],
-  "status": "DRAFT",
-  "assigned_worker": "codex"
+  "status": "COMPLETED",
+  "assigned_worker": "local-coder"
 }

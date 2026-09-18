@@ -90,6 +90,40 @@ export function createSectorStoryLogs(): StoryLog[] {
     });
   }
 
+  if (!existingIds.has('slate-crashed-transport')) {
+    extraLogs.push({
+      id: 'slate-crashed-transport',
+      title: 'Crashed Transport Log',
+      titleZh: '失事運輸艇維修日誌',
+      author: 'Sub-Sector 0 Maintenance',
+      timestamp: '2400-03-15T05:00:00Z',
+      read: false,
+      content: [
+        'Maintenance Log: Sub-Sector 0 freight transport crashed into drainage gate. The impact locked down the Sector 2 manufacturing plant access conduit. Authorization requires overriding the sewer pump terminal or retrieving the emergency maintenance bypass slate.',
+      ],
+      contentZh: [
+        '維護日誌：Sub-Sector 0 貨運艇撞毀於排水閘門。衝擊導致通往第二區製造廠的管道全面封鎖。需透過排污主控終端機覆寫或取回緊急維護備用憑證以取得授權。',
+      ],
+    });
+  }
+
+  if (!existingIds.has('slate-maintenance-override')) {
+    extraLogs.push({
+      id: 'slate-maintenance-override',
+      title: 'Maintenance Bypass Credential',
+      titleZh: '維護備用憑證',
+      author: 'Sub-Sector 0 Maintenance',
+      timestamp: '2400-03-15T05:30:00Z',
+      read: false,
+      content: [
+        'Citadel Engineering Override: Emergency maintenance credential. Grants direct clearance to bypass the sewer barrier and access Sector 2 Manufacturing Plant.',
+      ],
+      contentZh: [
+        '堡壘工程覆寫授權：緊急維護憑證。授權直接通過下水道屏障並進入第二區製造廠。',
+      ],
+    });
+  }
+
   return [...baseLogs, ...extraLogs];
 }
 
@@ -411,6 +445,16 @@ export function createSectorObjectives(): MissionObjective[] {
       titleZh: '維修許可',
       description: 'Obtain maintenance clearance to access restricted areas.',
       descriptionZh: '取得維修許可以進入限制區域。',
+      completed: false,
+      isSideQuest: false,
+      discovered: false,
+    },
+    {
+      id: 'obj-disrupt-synchronizer',
+      title: 'Disrupt Factory Synchronizer',
+      titleZh: '破壞製造廠同步器',
+      description: 'Infiltrate Sector 2 Manufacturing Plant and disrupt the sub-core synchronizer.',
+      descriptionZh: '潛入第二區製造廠並破壞副核心同步器。',
       completed: false,
       isSideQuest: false,
       discovered: false,
