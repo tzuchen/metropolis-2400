@@ -1720,6 +1720,18 @@ export class GameEngine {
         : '[GEAR RECOVERED] You retrieved all confiscated weapons, equipment, and supplies from the Tzorg evidence locker!',
       'success'
     );
+
+    const detentionObjective = this.missionObjectives.find((o) => o.id === 'obj-detention-escape');
+    if (detentionObjective && !detentionObjective.completed) {
+      detentionObjective.completed = true;
+      this.pushMessage(
+        this.language === 'zh'
+          ? '【任務完成】禁閉室死線脫逃與裝備奪還！所有武裝已完好回收。'
+          : 'MISSION COMPLETE: Detention Breakout & Gear Recovery! Gear restored.',
+        'success'
+      );
+    }
+
     this.render();
   }
 

@@ -1,0 +1,50 @@
+{
+  "id": "WO-AGENT-01",
+  "phase": 1,
+  "title": "特工任務驅動決策與區域感知架構升級",
+  "objective": "為遊戲引擎提供微觀子區域定位 API (current_location)、動態禁閉脫逃任務生命週期 (obj-detention-escape)，並強化特工在 playtester-v2.mjs 中的任務驅動決策、暗道 POI 經驗記憶與防死鎖反射。",
+  "allowed_files": [
+    "src/types.ts",
+    "src/zoneRegistry.ts",
+    "src/aiPerception.ts",
+    "src/defeatCutscene.ts",
+    "src/interactionSystem.ts",
+    "src/game.ts",
+    "scripts/verify-mission-zone-awareness.ts",
+    "docs/work-orders/wo-agent-mission-zone.json",
+    "/home/orin/.local/share/local-playtester/playtester-v2.mjs"
+  ],
+  "forbidden_files": [
+    "src/renderer.ts",
+    "src/audio.ts",
+    "src/music.ts"
+  ],
+  "contracts": [
+    "ZoneLocationInfo",
+    "AIPerceptionSnapshot.current_location",
+    "MissionObjective.priority",
+    "Detention Escape Quest Lifecycle (insert on detention, complete on locker loot)",
+    "Agent POI Memory & Reflex Anti-Deadlock"
+  ],
+  "implementation_guidelines": [
+    "建立 src/zoneRegistry.ts，以查表或 Bounding Box 定義各扇區 (Sector 1, Sub-Sector 0, Sector 2, Citadel) 語意區域，匯出純函式 resolveZoneLocation(sectorId, x, y)。",
+    "在 src/types.ts 與 src/aiPerception.ts 擴充 AIPerceptionSnapshot.current_location，包含 zone_id、雙語名稱、描述與禁區標記 (is_restricted)。",
+    "在 src/defeatCutscene.ts executeDetentionRelocation 中，動態插入高優先級任務 obj-detention-escape (【緊急】禁閉室死線脫逃與裝備奪還)，保留環境線索探索感，不給作弊座標；確保項圈計時器依 checkInMaxTimer 正確重置。",
+    "在 src/interactionSystem.ts (或 game.ts) 搜刮 item-confiscated-locker 時，標記 obj-detention-escape 完成並發出通知，任務焦點回歸次一個主線目標。",
+    "在 playtester-v2.mjs 中：戰略審查格式驗證失敗時自動重置 activeStrategicReview 避免死循環；門已開啟時禁止重複 INTERACT 改為 MOVE 穿過；消耗品為 0 時拋棄無效指令；在提示詞頂部注入任務清單與區域感知；脫逃後記錄通風口/終端/證物箱 POI，二次被捕直接調用 POI 最短路徑。",
+    "撰寫 scripts/verify-mission-zone-awareness.ts 驗證區域解析、禁閉任務插入與完成、項圈計時器狀態及感知快照完整性。"
+  ],
+  "verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-mission-zone-awareness.ts",
+    "npm test"
+  ],
+  "acceptance_criteria": [
+    "所有扇區座標均能透過 resolveZoneLocation 正確識別子區域，禁閉室 (35,5) 標記為 detention_cell 且 is_restricted=true。",
+    "被拘押時自動在任務頂部插入 obj-detention-escape；搜刮證物箱後該任務標記為 completed=true。",
+    "AIPerceptionSnapshot 包含完整的 current_location 與任務清單。",
+    "現有回歸與整合測試 100% 綠燈通過，無任何功能衰退。"
+  ],
+  "status": "APPROVED",
+  "assigned_worker": "local-coder"
+}

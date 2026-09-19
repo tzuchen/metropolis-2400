@@ -15,6 +15,27 @@ export function executeDetentionRelocation(game: GameEngine, showMessages = true
   p.hp = Math.round(p.maxHp * 0.4); p.isAlive = true;
   p.checkInTimer = p.checkInMaxTimer || 100;
   game.securityLevel = 'CLEAR' as SecurityLevel; game.checkInAlertActive = false;
+  if (!game.missionObjectives) game.missionObjectives = [];
+  const existingObjective = game.missionObjectives.find((obj) => obj.id === 'obj-detention-escape');
+  if (existingObjective) {
+    existingObjective.completed = false;
+    existingObjective.priority = 'CRITICAL';
+    existingObjective.discovered = true;
+    const index = game.missionObjectives.indexOf(existingObjective);
+    game.missionObjectives.splice(index, 1);
+    game.missionObjectives.unshift(existingObjective);
+  } else {
+    game.missionObjectives.unshift({
+      id: 'obj-detention-escape',
+      title: 'Detention Breakout & Gear Recovery',
+      titleZh: '【緊急】禁閉室死線脫逃與裝備奪還',
+      description: 'The detention cell blast doors are locked tight. Inspect perimeter for ventilation shafts or loose grates, then infiltrate the guard post to recover your confiscated locker.',
+      descriptionZh: '牢房防爆門已被鎖死；搜查牢房周圍尋找通風管或鬆動暗道，繞行至警衛室取回被沒收的個人裝備。',
+      completed: false,
+      priority: 'CRITICAL',
+      discovered: true,
+    });
+  }
   for (const robot of game.robots) { if (robot.isAlive) { robot.aiState = 'patrol'; robot.targetPos = null; robot.pursuitTurns = 0; } }
   game.switchSector('sector-1');
   if (game.map?.id !== 'sector-1') game.map = buildSector1Map();

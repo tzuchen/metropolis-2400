@@ -358,6 +358,16 @@ export interface MissionObjective {
   completed: boolean;
   isSideQuest?: boolean;
   discovered?: boolean;
+  priority?: 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW';
+}
+
+export interface ZoneLocationInfo {
+  zone_id: string;
+  name_zh: string;
+  name_en: string;
+  description: string;
+  description_zh: string;
+  is_restricted: boolean;
 }
 
 export interface StoryLog {

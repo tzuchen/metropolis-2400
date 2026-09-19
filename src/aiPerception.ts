@@ -4,8 +4,9 @@
 
 import type { GameEngine } from './game';
 import { getTile, getTileProperties, isWalkable } from './map';
-import { TileType, RobotType } from './types';
+import { TileType, RobotType, ZoneLocationInfo } from './types';
 import { saveJournalEntry, loadJournalEntries } from './journalSystem';
+import { resolveZoneLocation } from './zoneRegistry';
 import {
   getMentalMapSnapshot,
   planMentalMapRoute,
@@ -211,7 +212,9 @@ export interface AIPerceptionSnapshot {
     descriptionZh?: string;
     completed: boolean;
     is_side_quest: boolean;
+    priority?: string;
   }>;
+  current_location: ZoneLocationInfo;
   adjacent_neighborhood: AdjacentTileInfo[];
   visible_entities: {
     hostiles: RelativeHostile[]; // Strictly living robots within player FOV
@@ -1132,7 +1135,19 @@ export function generateAIPerceptionSnapshot(game: GameEngine): AIPerceptionSnap
     descriptionZh: m.descriptionZh,
     completed: Boolean(m.completed),
     is_side_quest: Boolean(m.isSideQuest || m.sideQuest),
+    priority: m.priority || (m.id === 'obj-detention-escape' ? 'CRITICAL' : 'NORMAL'),
   }));
+
+  // Sort active missions: incomplete first, then by priority (CRITICAL > HIGH > NORMAL > LOW)
+  const priorityOrder: Record<string, number> = { CRITICAL: 0, HIGH: 1, NORMAL: 2, LOW: 3 };
+  activeMissions.sort((a, b) => {
+    if (a.completed !== b.completed) {
+      return a.completed ? 1 : -1;
+    }
+    const pa = priorityOrder[a.priority || 'NORMAL'] ?? 2;
+    const pb = priorityOrder[b.priority || 'NORMAL'] ?? 2;
+    return pa - pb;
+  });
 
   // 7. Action Masking (valid_actions)
   const validActions: string[] = [];
@@ -1302,12 +1317,15 @@ export function generateAIPerceptionSnapshot(game: GameEngine): AIPerceptionSnap
     ),
   };
 
+  const currentLocation = resolveZoneLocation(player.currentSectorId || map.id || 'sector-1', px, py);
+
   return {
     turn: (game as any).turnCounter ?? 0,
     sector_id: player.currentSectorId || map.id || 'sector-1',
     sector_name: map.name || 'Metropolis Sector',
     player: playerTelemetry,
     active_missions: activeMissions,
+    current_location: currentLocation,
     adjacent_neighborhood: adjacentNeighborhood,
     visible_entities: {
       hostiles,
