@@ -13,6 +13,7 @@ export function executeDetentionRelocation(game: GameEngine, showMessages = true
   }
   p.weapons = []; p.equippedWeapon = null; p.inventory = []; p.consumables = { medkits: 0, batteries: 0, empGrenades: 0 }; p.augments = {}; p.equippedShield = null;
   p.hp = Math.round(p.maxHp * 0.4); p.isAlive = true;
+  p.checkInTimer = p.checkInMaxTimer || 100;
   game.securityLevel = 'CLEAR' as SecurityLevel; game.checkInAlertActive = false;
   for (const robot of game.robots) { if (robot.isAlive) { robot.aiState = 'patrol'; robot.targetPos = null; robot.pursuitTurns = 0; } }
   game.switchSector('sector-1');
