@@ -45,6 +45,6 @@
     "AIPerceptionSnapshot 包含完整的 current_location 與任務清單。",
     "現有回歸與整合測試 100% 綠燈通過，無任何功能衰退。"
   ],
-  "status": "APPROVED",
+  "status": "COMPLETED",
   "assigned_worker": "local-coder"
 }
