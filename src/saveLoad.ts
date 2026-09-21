@@ -1,6 +1,28 @@
 import type { ConfiscatedGear, GroundItem, Hazard, Item, Language, MissionObjective, NPC, PushableBlock, Robot, SecurityLevel, StoryLog } from './types';
 import { createPlayer } from './entities';
 import { JournalEntry, loadJournalEntries, JOURNAL_STORAGE_KEY, memoryJournalBackup } from './journalSystem';
+import { buildSector1Map } from './map';
+import { createSectorRobots, createSectorNPCs, createSectorStoryLogs, createSectorItems, createSectorObjectives } from './worldBuilder';
+
+export interface SaveHost {
+  language?: Language;
+  player: any;
+  map?: any;
+  robots?: Robot[];
+  hazards?: Hazard[];
+  npcs?: NPC[];
+  storyLogs?: StoryLog[];
+  groundItems?: GroundItem[];
+  missionObjectives?: MissionObjective[];
+  pushableBlocks?: PushableBlock[];
+  sectorGroundItems?: Record<string, GroundItem[]>;
+  sectorPushableBlocks?: Record<string, PushableBlock[]>;
+  isCollarDisarmed?: boolean;
+  checkInAlertActive?: boolean;
+  securityLevel?: string;
+  switchSector?: (sectorId: string) => void;
+  [key: string]: any;
+}
 
 export interface SaveData {
   version: number;
@@ -269,7 +291,7 @@ export function hasSavedGame(): boolean {
   return memoryBackup !== null;
 }
 
-export function saveGameState(game: any): boolean {
+export function saveGameState(game: SaveHost): boolean {
   try {
     const saveData: SaveData = {
       version: 1,
@@ -367,7 +389,7 @@ export function saveGameState(game: any): boolean {
   }
 }
 
-export function loadGameState(game: any): boolean {
+export function loadGameState(game: SaveHost): boolean {
   try {
     let raw: unknown = null;
     try {
@@ -391,7 +413,7 @@ export function loadGameState(game: any): boolean {
     const canRestoreSector = typeof data.sectorId === 'string'
       && validSectorIds.has(data.sectorId)
       && typeof game.switchSector === 'function';
-    if (canRestoreSector) game.switchSector(data.sectorId);
+    if (canRestoreSector && game.switchSector) game.switchSector(data.sectorId);
 
     // Restore player state
     Object.assign(game.player, data.player);
@@ -417,7 +439,7 @@ export function loadGameState(game: any): boolean {
           rob.hp = sr.hp;
           rob.maxHp = sr.maxHp;
           rob.isAlive = sr.isAlive;
-          rob.aiState = sr.aiState;
+          rob.aiState = sr.aiState as any;
           rob.currentPatrolIndex = sr.currentPatrolIndex;
           rob.stunnedTurns = sr.stunnedTurns;
         }
@@ -444,7 +466,7 @@ export function loadGameState(game: any): boolean {
             npc.homeX = sn.homeX;
             npc.homeY = sn.homeY;
             npc.wanderRadius = sn.wanderRadius;
-            npc.facing = sn.facing;
+            npc.facing = sn.facing as any;
             npc.actionState = sn.actionState;
             npc.actionStateZh = sn.actionStateZh;
           }
@@ -509,7 +531,7 @@ export function loadGameState(game: any): boolean {
         if (block.revealed && block.secretDoor) {
           const mapData = (game.map as any).tiles || (game.map as any).grid;
           if (Array.isArray(mapData) && Array.isArray(mapData[block.secretDoor.y])) {
-            mapData[block.secretDoor.y][block.secretDoor.x] = block.revealedTile ?? 4;
+            mapData[block.secretDoor.y][block.secretDoor.x] = (block as any).revealedTile ?? block.secretDoor.revealedTile ?? 4;
           }
         }
       }
@@ -596,5 +618,60 @@ export function loadGameState(game: any): boolean {
   } catch (err) {
     console.error('loadGameState error:', err);
     return false;
+  }
+}
+
+export function resetGameSession(host: any): void {
+  host.journalEntries = loadJournalEntries();
+  host.isTitleStoryOpen = false;
+  host.titleStoryScrollOffset = 0;
+  host.defeatCutscene = null;
+  host.isGearConfiscated = false;
+  host.confiscatedGear = null;
+  host.map = buildSector1Map();
+  host.player = createPlayer(host.map.playerStart);
+  host.robots = createSectorRobots();
+  host.npcs = createSectorNPCs();
+  host.storyLogs = createSectorStoryLogs();
+  host.groundItems = createSectorItems();
+  host.missionObjectives = createSectorObjectives();
+  host.isInventoryOpen = false;
+  host.isMissionLogOpen = false;
+  host.isStoryArchiveOpen = false;
+  host.activeStoryLog = null;
+  host.isManualOpen = false;
+  host.isAugmentShopOpen = false;
+  host.isBigMapOpen = false;
+  host.isJournalOpen = false;
+  host.activeBreachSession = null;
+  host.securityLevel = 'CLEAR' as SecurityLevel;
+  host.messages = [];
+  host.floatingTexts = [];
+  if (typeof host.pushMessage === 'function') {
+    host.pushMessage('OPERATION PROMETHEUS: Protocol restarted. Operative Raven deployed.', 'info');
+    host.pushMessage(
+      host.language === 'zh'
+        ? '【系統提示】神經視覺尚未校準，請移動一步以同步光學感測器。'
+        : 'SYSTEM: Neural vision not yet calibrated. Move one step to synchronize optical sensors.',
+      'info'
+    );
+  }
+  host.activeTerminal = null;
+  host.activeDialogue = null;
+  host.laserBeams = [];
+  host.terminalInputBuffer = '';
+  host.victory = false;
+  host.endgameChoice = null;
+  if (Array.isArray(host.citadelAirdrops)) host.citadelAirdrops.length = 0;
+  host.isCitadelHordeActive = false;
+  host.isIntroBriefingOpen = false;
+  host.introBriefingScrollOffset = 0;
+  if (host.renderer) {
+    host.renderer.isTitleStoryOpen = false;
+    host.renderer.isManualOpen = false;
+    host.renderer.isBigMapOpen = false;
+    host.renderer.activeBreachSession = null;
+    host.renderer.storyArchiveSelectedIndex = 0;
+    host.renderer.defeatCutscene = null;
   }
 }

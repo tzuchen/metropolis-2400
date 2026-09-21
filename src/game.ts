@@ -1,6 +1,6 @@
 import type { SectorMap, Player, Item, Robot, SecurityLevel, GameMessage, Position, RobotType, NPC, DialogueSession, GroundItem, MissionObjective, StoryLog, Hazard, Language, LaserBeam, PushableBlock, CitadelAirdrop } from './types';
 import { buildSector1Map, buildSector2Map, calculateFOV, disableForcefield, getTile, isWalkable, toggleDoor } from './map';
-import { hasSavedGame, saveGameState, loadGameState } from './saveLoad';
+import { hasSavedGame, saveGameState, loadGameState, resetGameSession } from './saveLoad';
 import { createPlayer, createRobot, toggleWeaponDraw, toggleDisguise, installAugment, cycleWeapon, createQuantumAnnihilator } from './entities';
 import { updateRobotAI } from './ai';
 import { TerminalSession } from './terminal';
@@ -1675,51 +1675,7 @@ export class GameEngine {
   }
 
   restartGame(): void {
-    this.journalEntries = loadJournalEntries();
-    this.isTitleStoryOpen = false;
-    this.titleStoryScrollOffset = 0;
-    this.defeatCutscene = null;
-    this.isGearConfiscated = false;
-    this.confiscatedGear = null;
-    this.map = buildSector1Map();
-    this.player = createPlayer(this.map.playerStart);
-    this.robots = this.createSectorRobots();
-    this.npcs = this.createSectorNPCs();
-    this.storyLogs = this.createSectorStoryLogs();
-    this.groundItems = this.createSectorItems();
-    this.missionObjectives = this.createSectorObjectives();
-    this.isInventoryOpen = false;
-    this.isMissionLogOpen = false;
-    this.isStoryArchiveOpen = false;
-    this.activeStoryLog = null;
-    this.isManualOpen = false;
-    this.isAugmentShopOpen = false;
-    this.isBigMapOpen = false;
-    this.isJournalOpen = false;
-    this.activeBreachSession = null;
-    this.securityLevel = 'CLEAR' as SecurityLevel;
-    this.messages = [];
-    this.floatingTexts = [];
-    this.pushMessage('OPERATION PROMETHEUS: Protocol restarted. Operative Raven deployed.', 'info');
-    this.pushMessage(this.language === 'zh' ? '【系統提示】神經視覺尚未校準，請移動一步以同步光學感測器。' : 'SYSTEM: Neural vision not yet calibrated. Move one step to synchronize optical sensors.', 'info');
-    this.activeTerminal = null;
-    this.activeDialogue = null;
-    this.laserBeams = [];
-    this.terminalInputBuffer = '';
-    this.victory = false;
-    this.endgameChoice = null;
-    this.citadelAirdrops.length = 0;
-    this.isCitadelHordeActive = false;
-    this.isIntroBriefingOpen = false;
-    this.introBriefingScrollOffset = 0;
-    if (this.renderer) {
-      this.renderer.isTitleStoryOpen = false;
-      this.renderer.isManualOpen = false;
-      this.renderer.isBigMapOpen = false;
-      this.renderer.activeBreachSession = null;
-      this.renderer.storyArchiveSelectedIndex = 0;
-      this.renderer.defeatCutscene = null;
-    }
+    resetGameSession(this);
     soundFX.pickup();
     this.updateFOV();
     this.updateMusicIntensity();

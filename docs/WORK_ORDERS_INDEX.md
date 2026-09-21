@@ -17,6 +17,7 @@
 | **[WO-INFRA-02](work-orders/WO-INFRA-02.md)** | 研發效能 | 測試運行器並行化加速與進程開銷消除 | **P0** | `COMPLETED` | `scripts/run-all-tests.ts` |
 | **[WO-REFACTOR-03](work-orders/WO-REFACTOR-03.md)** | 架構模組化 | 項圈計時與市民安檢系統解耦 | **P1** | `COMPLETED` | `src/collarSystem.ts`, `src/game.ts` |
 | **[WO-REFACTOR-04](work-orders/WO-REFACTOR-04.md)** | 架構模組化 | 分區切換與跨區狀態水合解耦 | **P1** | `COMPLETED` | `src/sectorManager.ts`, `src/game.ts` |
+| **[WO-REFACTOR-05](work-orders/WO-REFACTOR-05.md)** | 型別與架構 | 存檔讀檔契約化與狀態重置解耦 | **P1** | `COMPLETED` | `src/saveLoad.ts`, `src/game.ts` |
 
 ---
 
