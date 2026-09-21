@@ -73,7 +73,7 @@ async function runTacticalSimulation() {
   game.updateFOV();
 
   console.log('Simulation initialized in Sector 1 (Safehouse).');
-  console.log(`Initial Position: (${game.player.x}, ${game.player.y}), Collar CHK: ${game.player.collarStepsRemaining}/100, EN: ${game.player.energy}/100\n`);
+  console.log(`Initial Position: (${game.player.x}, ${game.player.y}), Collar CHK: ${game.player.checkInTimer}/100, EN: ${game.player.energy}/100\n`);
 
   const systemPrompt = `You are Operative Raven, an autonomous AI tactical agent playing Metropolis 2400.
 You have access to your operational field manual and narrative walkthrough ("WALKTHROUGH_NOVEL.md").
@@ -194,7 +194,7 @@ What is your next move according to the novel walkthrough?`;
   console.log('================================================================');
   console.log(`Final Position: (${game.player.x}, ${game.player.y})`);
   console.log(`Final Energy: ${game.player.energy} (Initial: 100)`);
-  console.log(`Collar Steps: ${game.player.collarStepsRemaining}/100`);
+  console.log(`Collar Steps: ${game.player.checkInTimer}/100`);
   console.log(`Total Messages Emitted: ${game.messages.length}`);
   console.log(`Recent In-Game Messages:`);
   game.messages.slice(-5).forEach(m => console.log(`  - [${m.type}] ${m.text}`));

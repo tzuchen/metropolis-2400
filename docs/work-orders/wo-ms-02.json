@@ -40,6 +40,6 @@
     "未取得情報前，地下內容只提供世界觀線索、不誤標示為已完成主線。",
     "取得運輸線資料後，下一任務「維護通道通行」被揭露。"
   ],
-  "status": "DRAFT",
+  "status": "COMPLETED",
   "assigned_worker": "codex"
 }

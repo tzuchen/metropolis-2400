@@ -40,6 +40,6 @@
     "scripts/test-novel-agent-simulation.ts 執行時正確顯示項圈倒數剩餘步數數值。",
     "主線工單 wo-ms-01 與 wo-ms-02 狀態已與實作對齊為 COMPLETED。"
   ],
-  "status": "READY",
+  "status": "COMPLETED",
   "assigned_worker": "local-coder"
 }

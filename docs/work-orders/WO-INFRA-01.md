@@ -1,7 +1,7 @@
 # 工單 WO-INFRA-01：統一測試運行器建置、遺漏測試整合與型別防護補齊
 
 - **工單編號**：`WO-INFRA-01`
-- **狀態**：`READY` (可立即執行)
+- **狀態**：`COMPLETED` (已完成)
 - **優先級**：`P0` (基礎架構與測試健全)
 - **指派執行代理**：`local-coder`
 - **架構審查員**：Antigravity (Cloud Architect)

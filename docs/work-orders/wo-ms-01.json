@@ -37,6 +37,6 @@
     "既有存檔可載入且既有任務狀態不丟失。",
     "任務資料可在不修改 renderer 的前提下新增。"
   ],
-  "status": "DRAFT",
+  "status": "COMPLETED",
   "assigned_worker": "codex"
 }

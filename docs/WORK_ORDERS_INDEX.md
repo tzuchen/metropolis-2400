@@ -8,7 +8,7 @@
 
 | 工單編號 | 類型 | 標題 | 優先級 | 狀態 | 核心模組 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **[WO-INFRA-01](work-orders/WO-INFRA-01.md)** | 基礎架構 | 統一測試運行器建置、遺漏測試整合與型別防護補齊 | **P0** | `READY` | `package.json`, `scripts/` |
+| **[WO-INFRA-01](work-orders/WO-INFRA-01.md)** | 基礎架構 | 統一測試運行器建置、遺漏測試整合與型別防護補齊 | **P0** | `COMPLETED` | `package.json`, `scripts/` |
 | **[WO-UI-01](work-orders/WO-UI-01.md)** | 使用者介面 | 控制面板快捷鍵補全（日記、手冊、雙語）與操作指引對齊 | **P0** | `READY` | `index.html`, `style.css` |
 | **[WO-REFACTOR-01](work-orders/WO-REFACTOR-01.md)** | 型別安全 | 戰鬥系統能力介面 (CombatHost) 解耦與消除 `combat.ts` 55 處 `as any` | **P1** | `READY` | `src/types.ts`, `src/combat.ts` |
 | **[WO-REFACTOR-02](work-orders/WO-REFACTOR-02.md)** | 架構模組化 | 地標系統 (landmarkSystem) 抽取與 AI 感官/動作模組化解耦 | **P2** | `READY` | `src/landmarkSystem.ts`, `src/actionExecutor.ts` |
