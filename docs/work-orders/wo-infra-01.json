@@ -1,0 +1,45 @@
+{
+  "id": "WO-INFRA-01",
+  "phase": 1,
+  "title": "統一測試運行器建置、遺漏測試整合與型別防護補齊",
+  "objective": "建立單一高效的測試批次執行器 (scripts/run-all-tests.ts)，整合 scripts/ 下遺漏的 4 套驗證測試，補齊 @types/node 型別定義，修正模擬測試中的項圈屬性讀取，並同步主線工單狀態。",
+  "allowed_files": [
+    "package.json",
+    "scripts/run-all-tests.ts",
+    "scripts/test-novel-agent-simulation.ts",
+    "docs/work-orders/wo-ms-01.json",
+    "docs/work-orders/wo-ms-02.json",
+    "docs/work-orders/wo-infra-01.json"
+  ],
+  "forbidden_files": [
+    "src/renderer.ts",
+    "src/combat.ts",
+    "src/game.ts",
+    "src/map.ts"
+  ],
+  "contracts": [
+    "RunAllTestsSummaryResult",
+    "UnifiedTestRunner CLI Interface",
+    "package.json test script"
+  ],
+  "implementation_guidelines": [
+    "在 package.json 安裝 @types/node 至 devDependencies。",
+    "撰寫 scripts/run-all-tests.ts：使用 glob 掃描 scripts/verify-*.ts，依序執行並收集各腳本的退出代碼、執行時間與輸出摘要；若全部成功退出碼為 0，若有任一失敗退出碼為 1 並列出失敗清單。",
+    "更新 package.json 中的 'test' 指令為 'tsc --noEmit && npx tsx scripts/run-all-tests.ts'，取代原本長達 2500+ 字元的串接指令。",
+    "整合遺漏的 4 套測試：scripts/verify-sprites.ts, scripts/verify-entities.ts, scripts/verify-renderer.ts, scripts/verify-terminal.ts，納入日常回歸測試。",
+    "修正 scripts/test-novel-agent-simulation.ts 第 76 行與 197 行：將 game.player.collarStepsRemaining 修正為 game.player.checkInTimer。",
+    "更新 docs/work-orders/wo-ms-01.json 與 wo-ms-02.json 的 status 為 'COMPLETED'。"
+  ],
+  "verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/run-all-tests.ts",
+    "npm test"
+  ],
+  "acceptance_criteria": [
+    "npm test 成功執行並涵蓋全量 61 套驗證測試，總執行時間顯著縮短。",
+    "scripts/test-novel-agent-simulation.ts 執行時正確顯示項圈倒數剩餘步數數值。",
+    "主線工單 wo-ms-01 與 wo-ms-02 狀態已與實作對齊為 COMPLETED。"
+  ],
+  "status": "READY",
+  "assigned_worker": "local-coder"
+}

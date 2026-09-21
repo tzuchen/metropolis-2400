@@ -1,0 +1,50 @@
+{
+  "id": "WO-REFACTOR-02",
+  "phase": 4,
+  "title": "地標系統抽取與 AI 感官/動作模組化解耦",
+  "objective": "將 src/game.ts 內 200+ 行的地標碰撞檢測與相鄰通道訊息抽取至獨立純模組 src/landmarkSystem.ts；將 src/aiPerception.ts 內 500+ 行的語意動作執行調度抽取至 src/actionExecutor.ts，降低巨型單檔維護負擔。",
+  "allowed_files": [
+    "src/types.ts",
+    "src/landmarkSystem.ts",
+    "src/game.ts",
+    "src/actionExecutor.ts",
+    "src/aiPerception.ts",
+    "scripts/verify-ai-perception.ts",
+    "scripts/verify-game.ts",
+    "docs/work-orders/wo-refactor-02.json"
+  ],
+  "forbidden_files": [
+    "src/renderer.ts",
+    "src/audio.ts",
+    "src/saveLoad.ts"
+  ],
+  "contracts": [
+    "LandmarkSystem checkLandmarks & checkAdjacentPassage pure functions",
+    "ActionExecutor executeAIAction interface",
+    "AIPerceptionSnapshot pure perception calculation"
+  ],
+  "implementation_guidelines": [
+    "建立 src/landmarkSystem.ts：",
+    "  - 抽取 checkLandmarks(sectorId, px, py, isZh, lastLandmarkKey) 返回 landmark 鍵值與提示訊息。",
+    "  - 抽取 checkAdjacentPassages(map, px, py, isZh, lastKey) 返回相鄰通道提示文字。",
+    "  - 保持純邏輯與享元查表，在 game.ts 的移動與分區切換中直接調用。",
+    "建立 src/actionExecutor.ts：",
+    "  - 抽取 executeAIAction(game: GameEngine, action: string): AIActionOutcome 完整調度邏輯，包含按鍵模擬、碰撞判定、開火回饋與終端指令分派。",
+    "  - 在 src/aiPerception.ts 重新匯出 executeAIAction 以保持外部呼叫端完全無感向下相容。",
+    "  - 使 src/aiPerception.ts 專注於 generateAIPerceptionSnapshot 與心智地圖生成。",
+    "全量回歸測試驗證，確保公開 API window.executeAIAction 與 window.getAIPerceptionSnapshot 行為一致。"
+  ],
+  "verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-ai-perception.ts",
+    "npx tsx scripts/verify-game.ts",
+    "npm test"
+  ],
+  "acceptance_criteria": [
+    "src/game.ts 行數減少 200+ 行，移除寫死之地標條件式。",
+    "src/aiPerception.ts 專注於知覺感知，行數降至 1,500 行以內。",
+    "所有既有測試與外部 API 完全向下相容。"
+  ],
+  "status": "READY",
+  "assigned_worker": "local-coder"
+}

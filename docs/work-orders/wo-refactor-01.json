@@ -1,0 +1,51 @@
+{
+  "id": "WO-REFACTOR-01",
+  "phase": 3,
+  "title": "戰鬥系統能力介面 (CombatHost) 解耦與消除 as any",
+  "objective": "定義 CombatHost capability 介面，重構 src/combat.ts，徹底消除該檔內 55 處 (game as any) 與 (game.fx as any) 型別斷言，強化型別安全與模組邊界。",
+  "allowed_files": [
+    "src/types.ts",
+    "src/combat.ts",
+    "src/game.ts",
+    "scripts/verify-weapons.ts",
+    "scripts/verify-combat-fx-dash-gps.ts",
+    "docs/work-orders/wo-refactor-01.json"
+  ],
+  "forbidden_files": [
+    "src/renderer.ts",
+    "src/map.ts",
+    "src/saveLoad.ts"
+  ],
+  "contracts": [
+    "CombatHost capability interface",
+    "fireEquippedWeapon signature compatibility",
+    "applyBossDamage signature compatibility"
+  ],
+  "implementation_guidelines": [
+    "在 src/types.ts 定義 CombatHost 介面：",
+    "  - 包含 player, robots, hazards, pushableBlocks, map, groundItems, beams, securityLevel, checkInAlertActive, language",
+    "  - 包含 pushMessage(text, type), pushFloatingText(x, y, text, color), gainExp(amount), render()",
+    "  - 包含 fx: { spawnExplosion(x, y, r), triggerShake(intensity), spawnSparks(x, y, color, count), ... }",
+    "  - 包含 renderer: { tileSize: number }",
+    "重構 src/combat.ts 的 fireEquippedWeapon(game: CombatHost, direction?: {dx: number; dy: number})：",
+    "  - 將所有 (game as any).pushMessage 改為 game.pushMessage",
+    "  - 將所有 (game as any).pushFloatingText 改為 game.pushFloatingText",
+    "  - 將所有 (game as any).gainExp 改為 game.gainExp",
+    "  - 將所有 (game.fx as any) 改為 game.fx",
+    "  - 清除全部 55 處 'as any'，恢復強型別推導。",
+    "在 src/game.ts 中確認 GameEngine 完整實作 CombatHost 契約，維持完全向下相容。"
+  ],
+  "verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-weapons.ts",
+    "npx tsx scripts/verify-combat-fx-dash-gps.ts",
+    "npm test"
+  ],
+  "acceptance_criteria": [
+    "src/combat.ts 內 'as any' 出現次數降為 0。",
+    "所有戰鬥、武器特效、Boss 戰、擊殺掉落與回歸測試 100% 綠燈通過。",
+    "無破壞性變更，對外公開 API 簽名與行為完全相容。"
+  ],
+  "status": "READY",
+  "assigned_worker": "local-coder"
+}

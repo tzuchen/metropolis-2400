@@ -1,0 +1,41 @@
+{
+  "id": "WO-UI-01",
+  "phase": 2,
+  "title": "控制面板快捷鍵補全與操作指引對齊",
+  "objective": "在 index.html 底部控制面板補全遊戲核心功能快捷鍵（[P] 戰術日記、[Z] 雙語切換、[H] 特工手冊），優化響應式排版，並新增驗證測試確保按鍵與系統綁定無缺漏。",
+  "allowed_files": [
+    "index.html",
+    "src/style.css",
+    "scripts/verify-control-panel-bindings.ts",
+    "docs/work-orders/wo-ui-01.json"
+  ],
+  "forbidden_files": [
+    "src/game.ts",
+    "src/combat.ts",
+    "src/renderer.ts"
+  ],
+  "contracts": [
+    "ControlPanelKeyGroups",
+    "KeybindingHelpAlignment"
+  ],
+  "implementation_guidelines": [
+    "在 index.html 的 .control-panel 中補齊三個關鍵功能：",
+    "  1. [P] JOURNAL（戰術日記）",
+    "  2. [Z] LANG: ZH/EN（雙語即時切換）",
+    "  3. [H] MANUAL（特工手冊與弱點分析）",
+    "在 src/style.css 微調 .control-panel 與 .key-group，確保在 960px 視窗與 CRT 邊框下換行整齊，不溢出也不壓迫主要畫面。",
+    "建立 scripts/verify-control-panel-bindings.ts，讀取 index.html 驗證關鍵鍵位文字 (P, Z, H, F, C, Q, 1, 2, 3, I, U, M, L, T, E, TAB) 是否全數存在於 DOM 結構中。"
+  ],
+  "verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-control-panel-bindings.ts",
+    "npm test"
+  ],
+  "acceptance_criteria": [
+    "index.html 完整展示 [P] 戰術日記、[Z] 雙語切換與 [H] 特工手冊。",
+    "scripts/verify-control-panel-bindings.ts 驗證通過。",
+    "現有所有回歸測試 100% 通過。"
+  ],
+  "status": "READY",
+  "assigned_worker": "local-coder"
+}
