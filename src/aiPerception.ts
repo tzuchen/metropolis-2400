@@ -1205,10 +1205,17 @@ export function generateAIPerceptionSnapshot(game: GameEngine): AIPerceptionSnap
     // Normal Gameplay
     validActions.push('MOVE_N', 'MOVE_S', 'MOVE_E', 'MOVE_W', 'WAIT');
 
+    const equippedWeapon = player.equippedWeapon as any;
+    const canFire = player.isWeaponDrawn || (equippedWeapon && player.energy >= (Number(equippedWeapon.energyCost) || 0));
+    
     if (player.isWeaponDrawn) {
-      validActions.push('HOLSTER_WEAPON', 'FIRE_FACING', 'FIRE_N', 'FIRE_S', 'FIRE_E', 'FIRE_W');
+      validActions.push('HOLSTER_WEAPON');
     } else {
       validActions.push('DRAW_WEAPON');
+    }
+    
+    if (canFire) {
+      validActions.push('FIRE_FACING', 'FIRE_N', 'FIRE_S', 'FIRE_E', 'FIRE_W');
     }
 
     if (player.weapons && player.weapons.length > 1) {

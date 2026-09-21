@@ -461,27 +461,69 @@ export function executeAIAction(game: GameEngine, action: string): AIActionOutco
   const preGroundItemsCount = game.groundItems?.length ?? 0;
   const preMessageCount = game.messages?.length ?? 0;
 
-  // Call handleKeyDown directly if available, otherwise dispatch to window
-  if (typeof game.handleKeyDown === 'function') {
-    game.handleKeyDown(key);
-  } else if (typeof window !== 'undefined') {
-    const event = new KeyboardEvent('keydown', {
-      key: key,
-      code: key === ' ' ? 'Space' : key,
-      bubbles: true,
-      cancelable: true,
-    });
-    window.dispatchEvent(event);
+  // Auto-draw weapon before firing to prevent direction keys from being treated as movement
+  if (action.startsWith('FIRE_') && !game.player.isWeaponDrawn) {
+    game.player.isWeaponDrawn = true;
+  }
+
+  // Handle FIRE_* actions directly to prevent accidental movement via direction keys
+  if (action.startsWith('FIRE_')) {
+    let fireDir: { dx: number; dy: number } = { dx: 0, dy: 0 };
+    if (action === 'FIRE_E') {
+      fireDir = { dx: 1, dy: 0 };
+    } else if (action === 'FIRE_W') {
+      fireDir = { dx: -1, dy: 0 };
+    } else if (action === 'FIRE_N') {
+      fireDir = { dx: 0, dy: -1 };
+    } else if (action === 'FIRE_S') {
+      fireDir = { dx: 0, dy: 1 };
+    }
+
+    // Update player facing
+    if (game.player.facing !== undefined) {
+      if (action === 'FIRE_E') {
+        game.player.facing = 'right';
+      } else if (action === 'FIRE_W') {
+        game.player.facing = 'left';
+      } else if (action === 'FIRE_N') {
+        game.player.facing = 'up';
+      } else if (action === 'FIRE_S') {
+        game.player.facing = 'down';
+      }
+    }
+
+    // Call fireEquippedWeapon if available
+    if (typeof game.fireEquippedWeapon === 'function') {
+      game.fireEquippedWeapon(fireDir);
+    }
+
+    // Render if available
+    if (typeof game.render === 'function') {
+      game.render();
+    }
   } else {
-    return {
-      accepted: false,
-      action,
-      moved: false,
-      reason: 'unknown_action',
-      turn_advanced: false,
-      player_pos: { x: preX, y: preY },
-      new_modal: null,
-    };
+    // Call handleKeyDown directly if available, otherwise dispatch to window
+    if (typeof game.handleKeyDown === 'function') {
+      game.handleKeyDown(key);
+    } else if (typeof window !== 'undefined') {
+      const event = new KeyboardEvent('keydown', {
+        key: key,
+        code: key === ' ' ? 'Space' : key,
+        bubbles: true,
+        cancelable: true,
+      });
+      window.dispatchEvent(event);
+    } else {
+      return {
+        accepted: false,
+        action,
+        moved: false,
+        reason: 'unknown_action',
+        turn_advanced: false,
+        player_pos: { x: preX, y: preY },
+        new_modal: null,
+      };
+    }
   }
 
   // Determine outcome
@@ -646,17 +688,15 @@ export function executeAIAction(game: GameEngine, action: string): AIActionOutco
     const equipped = game.player.equippedWeapon as any;
     const weaponEnergyCost = Number(equipped?.energyCost) || 0;
     const hasInsufficientEnergy = preEnergy < weaponEnergyCost;
+    const hasNoWeapon = !equipped;
     
     if (hasFireMessage || preEnergy > postEnergy) {
       fired = true;
       reason = 'weapon_fired';
     } else if (hasEnergyDepletedMessage || hasInsufficientEnergy) {
       reason = 'insufficient_energy';
-    } else if (!preWeaponDrawn) {
-      reason = 'weapon_not_drawn';
-    } else if (preX !== postX || preY !== postY) {
-      moved = true;
-      reason = 'moved_instead_of_fired';
+    } else if (hasNoWeapon) {
+      reason = 'no_weapon_equipped';
     } else {
       // Default to fired if weapon is drawn and energy is sufficient
       fired = true;

@@ -12,6 +12,7 @@
 | **[WO-UI-01](work-orders/WO-UI-01.md)** | 使用者介面 | 控制面板快捷鍵補全（日記、手冊、雙語）與操作指引對齊 | **P0** | `COMPLETED` | `index.html`, `style.css` |
 | **[WO-REFACTOR-01](work-orders/WO-REFACTOR-01.md)** | 型別安全 | 戰鬥系統能力介面 (CombatHost) 解耦與消除 `combat.ts` 55 處 `as any` | **P1** | `COMPLETED` | `src/types.ts`, `src/combat.ts` |
 | **[WO-REFACTOR-02](work-orders/WO-REFACTOR-02.md)** | 架構模組化 | 地標系統 (landmarkSystem) 抽取與 AI 感官/動作模組化解耦 | **P2** | `COMPLETED` | `src/landmarkSystem.ts`, `src/actionExecutor.ts` |
+| **[WO-COMBAT-01](work-orders/WO-COMBAT-01.md)** | 戰鬥反射 | 特工戰術即時拔槍開火 (Auto-Draw) 與交戰反射強化 | **P0** | `COMPLETED` | `src/actionExecutor.ts`, `src/aiPerception.ts` |
 
 ---
 
@@ -35,6 +36,7 @@ flowchart TD
     W1["Phase 1: WO-INFRA-01<br>統一測試運行器與管線修復<br>(P0 基礎設施)"] --> W2["Phase 2: WO-UI-01<br>控制面板快捷鍵補全<br>(P0 介面指引)"]
     W2 --> W3["Phase 3: WO-REFACTOR-01<br>CombatHost 介面與清除 as any<br>(P1 型別安全)"]
     W3 --> W4["Phase 4: WO-REFACTOR-02<br>地標系統與 AI 感知拆分<br>(P2 大檔瘦身)"]
+    W4 --> W5["Phase 5: WO-COMBAT-01<br>特工 Auto-Draw 開火與戰鬥反射<br>(P0 核心戰鬥)"]
 ```
 
 ---

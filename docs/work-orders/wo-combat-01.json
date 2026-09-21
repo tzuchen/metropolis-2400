@@ -1,0 +1,47 @@
+{
+  "id": "WO-COMBAT-01",
+  "phase": 5,
+  "title": "特工戰術即時拔槍開火 (Auto-Draw) 與交戰反射強化",
+  "objective": "解除特工在未拔槍狀態下無法直接開火與被誤導走向敵人的狀態機限制；實作開火即自動拔槍 (Auto-Draw on Fire) 與知覺層戰鬥反射，大幅提升 Playtester 與 AI Agent 遭遇敵軍時的自主迎擊生存率。",
+  "allowed_files": [
+    "src/actionExecutor.ts",
+    "src/aiPerception.ts",
+    "scripts/verify-combat-reflexes.ts",
+    "docs/work-orders/wo-combat-01.json"
+  ],
+  "forbidden_files": [
+    "src/renderer.ts",
+    "src/map.ts",
+    "src/saveLoad.ts"
+  ],
+  "contracts": [
+    "Auto-Draw on Fire execution contract",
+    "AIPerception validActions combat exposure contract",
+    "Combat Reflexes outcome telemetry"
+  ],
+  "implementation_guidelines": [
+    "在 src/actionExecutor.ts 中：",
+    "  1. 當 action.startsWith('FIRE_') 且 !game.player.isWeaponDrawn 時，自動為特工拔槍 (game.player.isWeaponDrawn = true)，並直接發動射擊。",
+    "  2. 確保 FIRE_N, FIRE_S, FIRE_E, FIRE_W, FIRE_FACING 即使在收槍狀態下調用，也能即時射擊，絕不誤將方向鍵當作常規移動 (MOVE_*) 走向敵人。",
+    "  3. 當擊殺敵人回能導致 postEnergy >= preEnergy 時，根據 newMessages 或敵人陣亡狀態，正確回傳 fired = true, reason = 'weapon_fired'。",
+    "在 src/aiPerception.ts 中：",
+    "  1. 在 validActions 判定中，只要玩家裝備有武器且能量足夠，無論 isWeaponDrawn 為何，均將 FIRE_N, FIRE_S, FIRE_E, FIRE_W, FIRE_FACING 納入 valid_actions。",
+    "建立 scripts/verify-combat-reflexes.ts：",
+    "  1. 測試在 isWeaponDrawn === false 狀態下執行 executeAIAction('FIRE_E')，驗證自動拔槍、能量扣除、雷射光束生成與擊毀無人機。",
+    "  2. 驗證 valid_actions 包含全部四向開火動作。",
+    "  3. 驗證擊殺回能情況下 outcome.fired === true 且 outcome.reason === 'weapon_fired'。"
+  ],
+  "verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-combat-reflexes.ts",
+    "npm test"
+  ],
+  "acceptance_criteria": [
+    "特工在收槍狀態下輸入 FIRE_* 能自動拔槍並命中敵人，不再發生 moved_instead_of_fired 誤走向敵人之情事。",
+    "valid_actions 在裝備武器且有能量時恆常提供開火行動選項。",
+    "scripts/verify-combat-reflexes.ts 驗證通過。",
+    "全量回歸測試（63 套）100% 綠燈通過。"
+  ],
+  "status": "COMPLETED",
+  "assigned_worker": "local-coder"
+}
