@@ -39,6 +39,7 @@ import { JournalEntry, loadJournalEntries, saveJournalEntry, deleteJournalEntry,
 import { CollarSystem } from './collarSystem';
 import { generateAIPerceptionSnapshot, AIPerceptionSnapshot, executeAIAction as _executeAIAction, AIActionOutcome, getActionSemantic, ACTION_SEMANTICS, ActionSemantic } from './aiPerception';
 import { getMentalMapSnapshot, planMentalMapRoute, MentalMapSnapshot, RoutePlan } from './mentalMap';
+import { SectorManager } from './sectorManager';
 
 
 export interface ResolutionPreset {
@@ -452,125 +453,11 @@ export class GameEngine {
   }
 
   switchSector(targetSectorId: string): void {
-    const prevMapId = this.map?.id;
-    this.securityLevel = this.checkInAlertActive ? 'ALERT' as SecurityLevel : 'CLEAR' as SecurityLevel;
-    this.laserBeams = [];
-
-    if (prevMapId === 'sector-citadel' && targetSectorId !== 'sector-citadel') {
-      this.citadelAirdrops.length = 0;
-      this.isCitadelHordeActive = false;
-    }
-
-    // Save current sector's ground items before switching
-    if (prevMapId) {
-      this.sectorGroundItems[prevMapId] = this.groundItems;
-      this.sectorPushableBlocks[prevMapId] = this.pushableBlocks;
-    }
-
-    if (targetSectorId === 'sector-citadel') {
-      setupCitadel(this);
-      if (this.sectorGroundItems['sector-citadel']) {
-        this.groundItems = this.sectorGroundItems['sector-citadel'];
-      }
-      this.pushableBlocks = this.sectorPushableBlocks['sector-citadel'] || this.createSectorPushableBlocks('sector-citadel');
-      this.applyRevealedPushableBlocks();
-      this.updateMusicIntensity();
-      return;
-    }
-    if (targetSectorId === 'sub-sector-0') {
-      setupSubSectorZero(this);
-      if (prevMapId === 'sector-2') {
-        this.player.x = 35;
-        this.player.y = 22;
-      } else {
-        this.player.x = 4;
-        this.player.y = 5;
-      }
-      // Restore sub-sector-0 items if previously visited
-      if (this.sectorGroundItems['sub-sector-0']) {
-        this.groundItems = this.sectorGroundItems['sub-sector-0'];
-      }
-      this.pushableBlocks = this.sectorPushableBlocks['sub-sector-0'] || this.createSectorPushableBlocks('sub-sector-0');
-      this.applyRevealedPushableBlocks();
-      this.updateMusicIntensity();
-      return;
-    }
-    if (targetSectorId === 'sector-2') {
-      this.map = buildSector2Map();
-      if (prevMapId === 'sub-sector-0') {
-        this.player.x = 3;
-        this.player.y = 25;
-      } else if (prevMapId === 'sector-citadel') {
-        this.player.x = 35;
-        this.player.y = 22;
-      } else {
-        this.player.x = 3;
-        this.player.y = 5;
-      }
-      this.player.currentSectorId = 'sector-2';
-      this.robots = [
-        createRobot('SCOUT_DRONE' as RobotType, { x: 12, y: 5 }, [{ x: 12, y: 5 }, { x: 20, y: 5 }]),
-        createRobot('SHOCK_ENFORCER' as RobotType, { x: 20, y: 15 }, [{ x: 20, y: 15 }, { x: 20, y: 22 }]),
-        createRobot('HUNTER_KILLER' as RobotType, { x: 30, y: 22 }, [{ x: 30, y: 22 }, { x: 35, y: 22 }]),
-        createBossExterminator({ x: 32, y: 18 }),
-      ];
-      this.hazards = [
-        { id: 'hazard-sec2-1', x: 16, y: 8, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
-        { id: 'hazard-sec2-2', x: 25, y: 14, type: 'PLASMA_CANISTER', hp: 1, exploded: false },
-      ];
-      this.npcs = this.createSector2NPCs();
-      this.groundItems = this.sectorGroundItems['sector-2'] || this.createSector2Items();
-      this.pushableBlocks = this.sectorPushableBlocks['sector-2'] || this.createSectorPushableBlocks('sector-2');
-      this.applyRevealedPushableBlocks();
-      this.visibleTiles.clear();
-      this.exploredTiles.clear();
-      this.updateFOV();
-      soundFX.door();
-      this.pushFloatingText(this.player.x, this.player.y, 'SECTOR 2: FAB-PLEX', '#00f0ff');
-      this.pushMessage('TRANSIT COMPLETE: Arrived at Sector 2 (Fab-Plex). Central Overmind core located to East!', 'warning');
-      this.updateMusicIntensity();
-    } else if (targetSectorId === 'sector-1') {
-      this.map = buildSector1Map();
-      if (prevMapId === 'sub-sector-0') {
-        this.player.x = 4;
-        this.player.y = 21;
-      } else {
-        this.player.x = 37;
-        this.player.y = 25;
-      }
-      this.player.currentSectorId = 'sector-1';
-      this.robots = this.createSectorRobots();
-      this.hazards = this.createSectorHazards();
-      this.npcs = this.createSectorNPCs();
-      this.groundItems = this.sectorGroundItems['sector-1'] || this.createSectorItems();
-      this.pushableBlocks = this.sectorPushableBlocks['sector-1'] || this.createSectorPushableBlocks('sector-1');
-      this.applyRevealedPushableBlocks();
-      this.visibleTiles.clear();
-      this.exploredTiles.clear();
-      this.updateFOV();
-      soundFX.door();
-      this.pushFloatingText(this.player.x, this.player.y, 'SECTOR 1: STREETS', '#00f0ff');
-      this.pushMessage('TRANSIT COMPLETE: Returned to Sector 1 Metropolis.', 'info');
-      this.updateMusicIntensity();
-    }
+    SectorManager.switchSector(this as any, targetSectorId);
   }
 
   private applyRevealedPushableBlocks(): void {
-    for (const block of this.pushableBlocks) {
-      if (block.revealed && block.secretDoor && block.secretDoor.revealedTile !== undefined) {
-        const tile = getTile(this.map, { x: block.secretDoor.x, y: block.secretDoor.y });
-        if (tile !== undefined && tile !== block.secretDoor.revealedTile) {
-          // Set the tile to revealedTile (4 = DOOR_OPEN)
-          const mapData = this.map.tiles || this.map.grid;
-          if (Array.isArray(mapData)) {
-            const row = mapData[block.secretDoor.y];
-            if (Array.isArray(row)) {
-              row[block.secretDoor.x] = block.secretDoor.revealedTile;
-            }
-          }
-        }
-      }
-    }
+    SectorManager.applyRevealedPushableBlocks(this.map, this.pushableBlocks);
   }
 
   pushMessage(text: string, type: GameMessage['type']): void {
