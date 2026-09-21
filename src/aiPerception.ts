@@ -1809,6 +1809,7 @@ export function executeAIAction(game: GameEngine, action: string): AIActionOutco
   const preWeaponDrawn = game.player.isWeaponDrawn;
   const preModal = game.activeTerminal ? 'TERMINAL' : game.activeDialogue ? 'DIALOGUE' : null;
   const preGroundItemsCount = game.groundItems?.length ?? 0;
+  const preMessageCount = game.messages?.length ?? 0;
 
   // Call handleKeyDown directly if available, otherwise dispatch to window
   if (typeof game.handleKeyDown === 'function') {
@@ -1971,11 +1972,45 @@ export function executeAIAction(game: GameEngine, action: string): AIActionOutco
       reason = 'weapon_drawn'; // Fallback
     }
   } else if (action.startsWith('FIRE_')) {
-    if (preEnergy > postEnergy) {
+    // Check for new messages indicating firing, hitting, or destroying
+    const newMessages = (game.messages || []).slice(preMessageCount);
+    const fireIndicators = [
+      'destroyed',
+      'Fired laser',
+      'Fired weapon',
+      'Scatter Plasma Shotgun',
+      'QUANTUM ANNIHILATOR',
+      'Silent takedown',
+      'Weapon impact blocked',
+      'Salvaged scrap data'
+    ];
+    const hasFireMessage = newMessages.some(msg => 
+      fireIndicators.some(indicator => msg.text?.toLowerCase().includes(indicator.toLowerCase()))
+    );
+    
+    const hasEnergyDepletedMessage = newMessages.some(msg => 
+      msg.text?.toLowerCase().includes('energy depleted')
+    );
+    
+    // Check if player has enough energy for the weapon
+    const equipped = game.player.equippedWeapon as any;
+    const weaponEnergyCost = Number(equipped?.energyCost) || 0;
+    const hasInsufficientEnergy = preEnergy < weaponEnergyCost;
+    
+    if (hasFireMessage || preEnergy > postEnergy) {
       fired = true;
       reason = 'weapon_fired';
-    } else {
+    } else if (hasEnergyDepletedMessage || hasInsufficientEnergy) {
       reason = 'insufficient_energy';
+    } else if (!preWeaponDrawn) {
+      reason = 'weapon_not_drawn';
+    } else if (preX !== postX || preY !== postY) {
+      moved = true;
+      reason = 'moved_instead_of_fired';
+    } else {
+      // Default to fired if weapon is drawn and energy is sufficient
+      fired = true;
+      reason = 'weapon_fired';
     }
   } else if (action === 'INTERACT' || action === 'TALK' || action === 'PICKUP_ITEM') {
     // Check for specific interactions
