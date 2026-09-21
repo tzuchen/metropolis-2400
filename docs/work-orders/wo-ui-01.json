@@ -36,6 +36,6 @@
     "scripts/verify-control-panel-bindings.ts 驗證通過。",
     "現有所有回歸測試 100% 通過。"
   ],
-  "status": "READY",
+  "status": "COMPLETED",
   "assigned_worker": "local-coder"
 }
