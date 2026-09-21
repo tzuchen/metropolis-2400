@@ -1,7 +1,7 @@
 # 工單 WO-REFACTOR-02：地標系統抽取與 AI 感官/動作模組化解耦
 
 - **工單編號**：`WO-REFACTOR-02`
-- **狀態**：`READY` (可指派執行)
+- **狀態**：`COMPLETED` (已交付驗收)
 - **優先級**：`P2` (代碼規模模組化與單一職責)
 - **指派執行代理**：`local-coder`
 - **架構審查員**：Antigravity (Cloud Architect)

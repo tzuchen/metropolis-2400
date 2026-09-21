@@ -45,6 +45,6 @@
     "src/aiPerception.ts 專注於知覺感知，行數降至 1,500 行以內。",
     "所有既有測試與外部 API 完全向下相容。"
   ],
-  "status": "READY",
+  "status": "COMPLETED",
   "assigned_worker": "local-coder"
 }
