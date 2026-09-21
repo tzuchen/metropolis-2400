@@ -18,6 +18,7 @@
 | **[WO-REFACTOR-03](work-orders/WO-REFACTOR-03.md)** | 架構模組化 | 項圈計時與市民安檢系統解耦 | **P1** | `COMPLETED` | `src/collarSystem.ts`, `src/game.ts` |
 | **[WO-REFACTOR-04](work-orders/WO-REFACTOR-04.md)** | 架構模組化 | 分區切換與跨區狀態水合解耦 | **P1** | `COMPLETED` | `src/sectorManager.ts`, `src/game.ts` |
 | **[WO-REFACTOR-05](work-orders/WO-REFACTOR-05.md)** | 型別與架構 | 存檔讀檔契約化與狀態重置解耦 | **P1** | `COMPLETED` | `src/saveLoad.ts`, `src/game.ts` |
+| **[WO-REFACTOR-06](work-orders/WO-REFACTOR-06.md)** | 架構模組化 | 玩家輸入路由與移動控制解耦 | **P1** | `COMPLETED` | `src/playerMovement.ts`, `src/inputRouter.ts` |
 
 ---
 
