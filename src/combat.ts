@@ -1,17 +1,16 @@
-import type { GameEngine } from './game';
 import { soundFX } from './audio';
 import { getTile } from './map';
 import { isBossRobot, applyBossDamage } from './boss';
-import type { Robot, Hazard, PushableBlock, GroundItem, SecurityLevel } from './types';
+import type { Robot, Hazard, PushableBlock, GroundItem, SecurityLevel, CombatHost } from './types';
 
-export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; dy: number }): boolean {
+export function fireEquippedWeapon(game: CombatHost, direction?: { dx: number; dy: number }): boolean {
   let dx = 0;
   let dy = 0;
   if (direction) {
     dx = direction.dx;
     dy = direction.dy;
   } else {
-    const facing = (game.player as any).facing || 'right';
+    const facing = game.player.facing || 'right';
     if (facing === 'right') dx = 1;
     else if (facing === 'left') dx = -1;
     else if (facing === 'up') dy = -1;
@@ -24,18 +23,18 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
   const energyCost = weapon.energyCost ?? 5;
   if (game.player.energy < energyCost) {
     soundFX.hit();
-    (game as any).pushMessage('Energy depleted! Blaster power cells exhausted.', 'danger');
+    game.pushMessage('Energy depleted! Blaster power cells exhausted.', 'danger');
     game.render();
     return false;
   }
 
   game.player.energy -= energyCost;
 
-  const weaponId = (weapon as any)?.weaponId;
+  const weaponId = weapon.weaponId;
   const isQuantum = weaponId === 'QUANTUM_ANNIHILATOR';
   const isScatterShotgun = weaponId === 'SCATTER_SHOTGUN';
 
-  const hitTileSize = (game.renderer as any)?.tileSize || 48;
+  const hitTileSize = game.renderer?.tileSize || 48;
 
   if (isScatterShotgun) {
     // Scatter Plasma Shotgun: 3 deterministic perpendicular lanes
@@ -131,7 +130,7 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
       game.laserBeams.push(beam);
 
       // Spawn sparks at impact point
-      (game.fx as any).spawnSparks(
+      game.fx.spawnSparks(
         hitX * hitTileSize + hitTileSize / 2,
         hitY * hitTileSize + hitTileSize / 2,
         '#ff6d00',
@@ -154,23 +153,23 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
             if (hitRobot.hp <= 0) {
               hitRobot.isAlive = false;
               soundFX.hit();
-              (game as any).pushFloatingText(hitRobot.x, hitRobot.y, 'DESTROYED', '#ff3855');
-              (game as any).pushMessage(hitRobot.name + ' destroyed!', 'success');
+              game.pushFloatingText(hitRobot.x, hitRobot.y, 'DESTROYED', '#ff3855');
+              game.pushMessage(hitRobot.name + ' destroyed!', 'success');
             }
           }
 
-          (game as any).pushFloatingText(hitRobot.x, hitRobot.y, '-' + damage, '#ff3855');
+          game.pushFloatingText(hitRobot.x, hitRobot.y, '-' + damage, '#ff3855');
 
           if (hitRobot.hp <= 0 && !isBossRobot(hitRobot)) {
             hitRobot.isAlive = false;
             soundFX.explosion();
-            (game.fx as any).spawnExplosion(
+            game.fx.spawnExplosion(
               hitRobot.x * hitTileSize + hitTileSize / 2,
               hitRobot.y * hitTileSize + hitTileSize / 2,
               22
             );
-            (game.fx as any).triggerShake(8);
-            (game as any).gainExp(45);
+            game.fx.triggerShake(8);
+            game.gainExp(45);
             game.player.credits += 50;
             game.player.energy = Math.min(game.player.maxEnergy, game.player.energy + 20);
 
@@ -200,37 +199,37 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
               } as GroundItem);
             }
 
-            (game as any).pushFloatingText(hitRobot.x, hitRobot.y, '+50 CR', '#ffaa00');
-            (game as any).pushMessage(hitRobot.name + ' destroyed! Salvaged scrap data & energy.', 'success');
+            game.pushFloatingText(hitRobot.x, hitRobot.y, '+50 CR', '#ffaa00');
+            game.pushMessage(hitRobot.name + ' destroyed! Salvaged scrap data & energy.', 'success');
 
             // Check if nearby chasers are gone
             const anyNearbyChasing = game.robots.some(
               (r) =>
                 r.isAlive &&
                 r !== hitRobot &&
-                ((r as any).aiState === 'chase' || (r as any).aiState === 'attack' || ((r as any).pursuitTurns ?? 0) > 0) &&
+                (r.aiState === 'chase' || r.aiState === 'attack' || (r.pursuitTurns ?? 0) > 0) &&
                 Math.hypot(r.x - game.player.x, r.y - game.player.y) <= 14
             );
             if (!anyNearbyChasing && game.securityLevel === 'ALERT' && !game.checkInAlertActive) {
               game.securityLevel = 'CLEAR' as SecurityLevel;
-              (game as any).pushMessage('All nearby hostiles eliminated. Area secure.', 'info');
+              game.pushMessage('All nearby hostiles eliminated. Area secure.', 'info');
             }
           } else if (!isBossRobot(hitRobot)) {
             soundFX.hit();
             hitRobot.aiState = 'chase';
             hitRobot.targetPos = { x: game.player.x, y: game.player.y };
-            (hitRobot as any).pursuitTurns = 8;
+            hitRobot.pursuitTurns = 8;
           }
         }
       } else if (hitCanister) {
         anyHit = true;
-        (game as any).detonateCanister(hitCanister);
+        game.detonateCanister?.(hitCanister);
       } else if (hitBlock) {
         anyHit = true;
-        (game as any).pushFloatingText(hitX, hitY, 'BLOCKED', '#ffea00');
+        game.pushFloatingText(hitX, hitY, 'BLOCKED', '#ffea00');
       } else if (hitWall) {
         anyHit = true;
-        (game as any).pushFloatingText(hitX, hitY, 'IMPACT', '#ff9e00');
+        game.pushFloatingText(hitX, hitY, 'IMPACT', '#ff9e00');
       }
     }
 
@@ -238,10 +237,10 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
     soundFX.shotgun();
 
     // Screen shake
-    (game.fx as any).triggerShake(5);
+    game.fx.triggerShake(5);
 
     // Acoustic alert: shotgun is unsuppressed, so trigger alert if any lane hit something
-    const isSuppressed = (weapon as any)?.isSuppressed === true;
+    const isSuppressed = weapon.isSuppressed === true;
     if (!isSuppressed && anyHit) {
       game.securityLevel = 'ALERT' as SecurityLevel;
       soundFX.alarm();
@@ -252,17 +251,17 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
         if (d <= 8 && r.aiState === 'patrol') {
           r.aiState = 'chase';
           r.targetPos = { x: game.player.x, y: game.player.y };
-          (r as any).pursuitTurns = 6;
+          r.pursuitTurns = 6;
         }
       }
     }
 
     if (anyRobotHit) {
-      (game as any).pushMessage('Scatter Plasma Shotgun fired! Multiple targets engaged.', 'danger');
+      game.pushMessage('Scatter Plasma Shotgun fired! Multiple targets engaged.', 'danger');
     } else if (anyHit) {
-      (game as any).pushMessage('Scatter Plasma Shotgun fired into the void.', 'info');
+      game.pushMessage('Scatter Plasma Shotgun fired into the void.', 'info');
     } else {
-      (game as any).pushMessage('Scatter Plasma Shotgun fired.', 'info');
+      game.pushMessage('Scatter Plasma Shotgun fired.', 'info');
     }
 
     game.tick();
@@ -364,14 +363,14 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
   };
   game.laserBeams.push(playerBeam);
 
-  (game.fx as any).spawnSparks(
+  game.fx.spawnSparks(
     hitX * hitTileSize + hitTileSize / 2,
     hitY * hitTileSize + hitTileSize / 2,
     sparkColor,
     sparkCount
   );
   if (shakeIntensity > 0) {
-    (game.fx as any).triggerShake(shakeIntensity);
+    game.fx.triggerShake(shakeIntensity);
   }
 
   // Damage Logic
@@ -399,35 +398,35 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
       if (hitRobot.hp <= 0) {
         hitRobot.isAlive = false;
         soundFX.hit();
-        (game as any).pushFloatingText(hitRobot.x, hitRobot.y, 'DESTROYED', '#ff3855');
-        (game as any).pushMessage(hitRobot.name + ' destroyed!', 'success');
+        game.pushFloatingText(hitRobot.x, hitRobot.y, 'DESTROYED', '#ff3855');
+        game.pushMessage(hitRobot.name + ' destroyed!', 'success');
       }
     }
 
     if (isQuantum) {
-      (game as any).pushFloatingText(hitRobot.x, hitRobot.y, 'QUANTUM ANNIHILATION!', '#b388ff');
-      (game as any).pushMessage(`QUANTUM ANNIHILATOR: Dealt ${damage} damage to ${hitRobot.name}!`, 'success');
+      game.pushFloatingText(hitRobot.x, hitRobot.y, 'QUANTUM ANNIHILATION!', '#b388ff');
+      game.pushMessage(`QUANTUM ANNIHILATOR: Dealt ${damage} damage to ${hitRobot.name}!`, 'success');
     } else if (isBackstab) {
-      (game as any).pushFloatingText(hitRobot.x, hitRobot.y, `CRIT ${damage}!`, '#ffea00');
-      (game as any).pushMessage(
+      game.pushFloatingText(hitRobot.x, hitRobot.y, `CRIT ${damage}!`, '#ffea00');
+      game.pushMessage(
         `AMBUSH CRITICAL OVERRIDE: Dealt ${damage} damage to ${hitRobot.name}!`,
         'success'
       );
     } else {
-      (game as any).pushFloatingText(hitRobot.x, hitRobot.y, '-' + damage, '#ff3855');
-      (game as any).pushMessage('Fired laser at ' + hitRobot.name + ' for ' + damage + ' dmg!', 'danger');
+      game.pushFloatingText(hitRobot.x, hitRobot.y, '-' + damage, '#ff3855');
+      game.pushMessage('Fired laser at ' + hitRobot.name + ' for ' + damage + ' dmg!', 'danger');
     }
 
     if (hitRobot.hp <= 0 && !isBossRobot(hitRobot)) {
       hitRobot.isAlive = false;
       soundFX.explosion();
-      (game.fx as any).spawnExplosion(
+      game.fx.spawnExplosion(
         hitRobot.x * hitTileSize + hitTileSize / 2,
         hitRobot.y * hitTileSize + hitTileSize / 2,
         22
       );
-      (game.fx as any).triggerShake(8);
-      (game as any).gainExp(45);
+      game.fx.triggerShake(8);
+      game.gainExp(45);
       game.player.credits += 50;
       game.player.energy = Math.min(game.player.maxEnergy, game.player.energy + 20);
 
@@ -457,35 +456,35 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
         } as GroundItem);
       }
 
-      (game as any).pushFloatingText(hitRobot.x, hitRobot.y, '+50 CR', '#ffaa00');
-      (game as any).pushMessage(hitRobot.name + ' destroyed! Salvaged scrap data & energy.', 'success');
+      game.pushFloatingText(hitRobot.x, hitRobot.y, '+50 CR', '#ffaa00');
+      game.pushMessage(hitRobot.name + ' destroyed! Salvaged scrap data & energy.', 'success');
 
       // 檢查附近是否已無追擊者，若是則解除警報
       const anyNearbyChasing = game.robots.some(
         (r) =>
           r.isAlive &&
           r !== hitRobot &&
-          ((r as any).aiState === 'chase' || (r as any).aiState === 'attack' || ((r as any).pursuitTurns ?? 0) > 0) &&
+          (r.aiState === 'chase' || r.aiState === 'attack' || (r.pursuitTurns ?? 0) > 0) &&
           Math.hypot(r.x - game.player.x, r.y - game.player.y) <= 14
       );
       if (!anyNearbyChasing && game.securityLevel === 'ALERT' && !game.checkInAlertActive) {
         game.securityLevel = 'CLEAR' as SecurityLevel;
-        (game as any).pushMessage('All nearby hostiles eliminated. Area secure.', 'info');
+        game.pushMessage('All nearby hostiles eliminated. Area secure.', 'info');
       }
     } else if (!isBossRobot(hitRobot)) {
       soundFX.hit();
       hitRobot.aiState = 'chase';
       hitRobot.targetPos = { x: game.player.x, y: game.player.y };
-      (hitRobot as any).pursuitTurns = 8;
+      hitRobot.pursuitTurns = 8;
     }
 
     // 槍響聲學偵測與警戒連鎖 (Gunfire Acoustics)
-    const isSuppressed = (weapon as any)?.isSuppressed === true;
+    const isSuppressed = weapon.isSuppressed === true;
     const isVibroKatana = weaponId === 'VIBRO_KATANA';
     const isSilentTakedown = isSuppressed || isVibroKatana;
     
     if (isSilentTakedown) {
-      (game as any).pushMessage('Silent takedown executed! Acoustic suppression maintained.', 'info');
+      game.pushMessage('Silent takedown executed! Acoustic suppression maintained.', 'info');
     } else {
       game.securityLevel = 'ALERT' as SecurityLevel;
       soundFX.alarm();
@@ -497,18 +496,18 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
         if (d <= 8 && r.aiState === 'patrol') {
           r.aiState = 'chase';
           r.targetPos = { x: game.player.x, y: game.player.y };
-          (r as any).pursuitTurns = 6;
+          r.pursuitTurns = 6;
         }
       }
     }
   } else if (hitCanister) {
-    (game as any).detonateCanister(hitCanister);
+    game.detonateCanister?.(hitCanister);
   } else if (hitBlock) {
-    (game as any).pushFloatingText(hitX, hitY, 'BLOCKED', '#ffea00');
-    (game as any).pushMessage('Weapon impact blocked by cover.', 'info');
+    game.pushFloatingText(hitX, hitY, 'BLOCKED', '#ffea00');
+    game.pushMessage('Weapon impact blocked by cover.', 'info');
 
     // Acoustic alert even if no hit
-    const isSuppressed = (weapon as any)?.isSuppressed === true;
+    const isSuppressed = weapon.isSuppressed === true;
     if (!isSuppressed) {
       game.securityLevel = 'ALERT' as SecurityLevel;
       soundFX.alarm();
@@ -518,17 +517,17 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
         if (d <= 8 && r.aiState === 'patrol') {
           r.aiState = 'chase';
           r.targetPos = { x: game.player.x, y: game.player.y };
-          (r as any).pursuitTurns = 6;
+          r.pursuitTurns = 6;
         }
       }
     }
   } else {
     // No target, just impact effect
-    (game as any).pushFloatingText(hitX, hitY, 'IMPACT', '#00f0ff');
-    (game as any).pushMessage('Fired weapon into the void.', 'info');
+    game.pushFloatingText(hitX, hitY, 'IMPACT', '#00f0ff');
+    game.pushMessage('Fired weapon into the void.', 'info');
 
     // Acoustic alert even if no hit
-    const isSuppressed = (weapon as any)?.isSuppressed === true;
+    const isSuppressed = weapon.isSuppressed === true;
     if (!isSuppressed) {
       game.securityLevel = 'ALERT' as SecurityLevel;
       soundFX.alarm();
@@ -538,7 +537,7 @@ export function fireEquippedWeapon(game: GameEngine, direction?: { dx: number; d
         if (d <= 8 && r.aiState === 'patrol') {
           r.aiState = 'chase';
           r.targetPos = { x: game.player.x, y: game.player.y };
-          (r as any).pursuitTurns = 6;
+          r.pursuitTurns = 6;
         }
       }
     }

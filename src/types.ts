@@ -550,3 +550,31 @@ export interface AudioLifecycleController {
   setMusicVolume(volume: AudioVolume): void;
   setSfxVolume(volume: AudioVolume): void;
 }
+
+export interface CombatHost {
+  player: Player;
+  robots: Robot[];
+  hazards: Hazard[];
+  pushableBlocks: PushableBlock[];
+  map: SectorMap;
+  groundItems: GroundItem[];
+  laserBeams: LaserBeam[];
+  securityLevel: SecurityLevel;
+  checkInAlertActive?: boolean;
+  language: Language;
+  floatingTexts: Array<{ x: number; y: number; text: string; color: string; createdAt?: number }>;
+  pushMessage(text: string, type?: GameMessageType): void;
+  pushFloatingText(x: number, y: number, text: string, color?: string): void;
+  gainExp(amount: number, reason?: string): void;
+  render(): void;
+  tick(): void;
+  detonateCanister?(canister: Hazard): void;
+  fx: {
+    spawnExplosion(x: number, y: number, count?: number): void;
+    triggerShake(intensity: number): void;
+    spawnSparks(x: number, y: number, color?: string, count?: number): void;
+  };
+  renderer?: {
+    tileSize: number;
+  };
+}

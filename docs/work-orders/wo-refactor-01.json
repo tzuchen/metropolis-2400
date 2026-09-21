@@ -46,6 +46,6 @@
     "所有戰鬥、武器特效、Boss 戰、擊殺掉落與回歸測試 100% 綠燈通過。",
     "無破壞性變更，對外公開 API 簽名與行為完全相容。"
   ],
-  "status": "READY",
+  "status": "COMPLETED",
   "assigned_worker": "local-coder"
 }

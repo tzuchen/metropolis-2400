@@ -719,7 +719,7 @@ export class GameEngine {
     }
   }
 
-  pushFloatingText(x: number, y: number, text: string, color: string): void {
+  pushFloatingText(x: number, y: number, text: string, color: string = '#00f0ff'): void {
     const item = { x, y, text, color, createdAt: Date.now() };
     this.floatingTexts.push(item);
     if (this.floatingTexts.length > 8) {
@@ -1590,7 +1590,7 @@ export class GameEngine {
     return true;
   }
 
-  private detonateCanister(canister: Hazard): void {
+  detonateCanister(canister: Hazard): void {
     const result = _detonateCanister(canister, this.player, this.robots);
     if (!canister.exploded || (result.damagedRobots.length === 0 && !result.playerDamaged && canister.hp !== 0)) return;
     soundFX.explosion();

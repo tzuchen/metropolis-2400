@@ -1,7 +1,7 @@
 # 工單 WO-REFACTOR-01：戰鬥系統能力介面 (CombatHost) 解耦與消除 as any
 
 - **工單編號**：`WO-REFACTOR-01`
-- **狀態**：`READY` (可指派執行)
+- **狀態**：`COMPLETED` (已交付驗收)
 - **優先級**：`P1` (型別安全與架構邊界硬化)
 - **指派執行代理**：`local-coder`
 - **架構審查員**：Antigravity (Cloud Architect)
