@@ -36,6 +36,7 @@ import { handleTerminalInput as _handleTerminalInput } from './terminalRunner';
 import { processConveyors as _processConveyors, detonateCanister as _detonateCanister } from './hazardSystem';
 import { checkQuestDiscovery as _checkQuestDiscovery, completeQuest as _completeQuest, discoverMainStoryQuest as _discoverMainStoryQuest, completeMainStoryQuest as _completeMainStoryQuest } from './questSystem';
 import { JournalEntry, loadJournalEntries, saveJournalEntry, deleteJournalEntry, clearJournalEntries } from './journalSystem';
+import { CollarSystem } from './collarSystem';
 import { generateAIPerceptionSnapshot, AIPerceptionSnapshot, executeAIAction as _executeAIAction, AIActionOutcome, getActionSemantic, ACTION_SEMANTICS, ActionSemantic } from './aiPerception';
 import { getMentalMapSnapshot, planMentalMapRoute, MentalMapSnapshot, RoutePlan } from './mentalMap';
 
@@ -785,92 +786,11 @@ export class GameEngine {
   }
 
   performCheckIn(): void {
-    const hasMasterPass = Array.isArray(this.player.inventory) && this.player.inventory.some((it: any) => it?.id === 'item-master-pass');
-    if (hasMasterPass && !this.isCollarDisarmed) {
-      this.disarmCollar();
-      return;
-    }
-    const maxTimer = this.player.checkInMaxTimer || 100;
-    this.player.checkInTimer = maxTimer;
-    this.checkInAlertActive = false;
-    this.securityLevel = 'CLEAR' as SecurityLevel;
-    for (const r of this.robots) {
-      if (!r.isAlive) continue;
-      r.aiState = 'patrol';
-      r.targetPos = null;
-      r.pursuitTurns = 0;
-    }
-    this.pushMessage(
-      this.language === 'zh'
-        ? `神經項圈簽到成功：警報已解除，計時器重置為 ${maxTimer} 步，巡邏單位恢復常規模式。`
-        : `Neural collar check-in successful: Alert cleared, timer reset to ${maxTimer} steps, patrol units returning to routine.`,
-      'success'
-    );
-    this.pushFloatingText(this.player.x, this.player.y, `✔ CHECKED IN (${maxTimer})`, '#00ff88');
-    soundFX.pickup();
-    this.render();
+    CollarSystem.performCheckIn(this);
   }
 
   handlePlayerStep(): void {
-    if (this.isCollarDisarmed || this.player.isCollarDisarmed) return;
-    const timer = this.player.checkInTimer;
-    if (typeof timer === 'undefined') return;
-
-    if (timer <= 0 || this.checkInAlertActive) {
-      this.player.checkInTimer = 0;
-      this.checkInAlertActive = true;
-      this.securityLevel = 'ALERT' as SecurityLevel;
-      for (const r of this.robots) {
-        if (!r.isAlive) continue;
-        if (r.aiState !== 'chase') {
-          r.aiState = 'chase';
-          r.targetPos = { x: this.player.x, y: this.player.y };
-          r.pursuitTurns = 8;
-        }
-      }
-      return;
-    }
-
-    const newTimer = timer - 1;
-    this.player.checkInTimer = newTimer;
-
-    if (newTimer === 20) {
-      this.pushMessage(
-        this.language === 'zh'
-          ? '⚠ 神經項圈警告：剩餘 20 步未簽到，請盡快尋找終端機！'
-          : '⚠ NEURAL COLLAR WARNING: 20 steps remaining until check-in deadline. Find a terminal ASAP!',
-        'warning'
-      );
-      this.pushFloatingText(this.player.x, this.player.y, '⚠ 20 STEPS LEFT', '#ffea00');
-    } else if (newTimer === 10) {
-      this.pushMessage(
-        this.language === 'zh'
-          ? '⚠ 神經項圈緊急：剩餘 10 步！立即簽到否則觸發強制中和！'
-          : '⚠ NEURAL COLLAR CRITICAL: 10 steps remaining! Check in immediately or face forced neutralization!',
-        'danger'
-      );
-      this.pushFloatingText(this.player.x, this.player.y, '⚠ 10 STEPS LEFT', '#ff2a4b');
-    }
-
-    if (newTimer <= 0) {
-      this.checkInAlertActive = true;
-      this.securityLevel = 'ALERT' as SecurityLevel;
-      soundFX.alarm();
-      this.pushMessage(
-        this.language === 'zh'
-          ? '❌ 簽到逾期！神經項圈觸發強制警報，所有巡邏單位進入攻擊模式！'
-          : '❌ CHECK-IN OVERDUE! Neural collar triggered forced alert. All patrol units entering attack mode!',
-        'danger'
-      );
-      this.pushFloatingText(this.player.x, this.player.y, '❌ CHECKIN OVERDUE', '#ff2a4b');
-
-      for (const r of this.robots) {
-        if (!r.isAlive) continue;
-        r.aiState = 'chase';
-        r.targetPos = { x: this.player.x, y: this.player.y };
-        r.pursuitTurns = 10;
-      }
-    }
+    CollarSystem.handlePlayerStep(this);
   }
 
   private findRobotAt(x: number, y: number): Robot | null {
@@ -1864,27 +1784,7 @@ export class GameEngine {
   }
 
   disarmCollar(): void {
-    this.isCollarDisarmed = true;
-    this.player.isCollarDisarmed = true;
-    this.checkInAlertActive = false;
-    this.player.checkInTimer = 100;
-    this.securityLevel = 'CLEAR' as SecurityLevel;
-    for (const r of this.robots) {
-      if (!r.isAlive) continue;
-      r.aiState = 'patrol';
-      r.targetPos = null;
-      r.pursuitTurns = 0;
-    }
-    soundFX.victory();
-    this.pushFloatingText(this.player.x, this.player.y, 'COLLAR DISARMED!', '#00ff88');
-    this.pushMessage(
-      this.language === 'zh'
-        ? '【密寶啟動】最高特權金鑰生效！神經項圈已永久解鎖並解除監控，100 步限制完全消除！'
-        : '[RELIC ACTIVATED] Tzorg Master Pass verified! Neural collar permanently neutralized! 100-step restriction lifted!',
-      'success'
-    );
-    this.gainExp(100, 'MISSION_COMPLETE');
-    this.render();
+    CollarSystem.disarmCollar(this);
   }
 
   restartGame(): void {
