@@ -3,17 +3,21 @@
  * scripts/run-all-tests.ts
  *
  * Unified test runner that scans the scripts/ directory for all files
- * matching the pattern "verify-*.ts", executes them sequentially,
- * reports progress, and prints a summary at the end.
+ * matching the pattern "verify-*.ts", executes them in parallel using a
+ * worker pool, reports progress, and prints a summary at the end.
  *
  * Usage:
- *   npx tsx scripts/run-all-tests.ts
+ *   npx tsx scripts/run-all-tests.ts [filter]
+ *
+ * Environment Variables:
+ *   TEST_CONCURRENCY: Override the default concurrency level.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { spawnSync } from 'child_process';
+import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
+import * as os from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,7 +77,7 @@ function naturalCompare(a: string, b: string): number {
  * Scan the scripts/ directory for files matching "verify-*.ts".
  * Returns an array of file names (not full paths), sorted naturally.
  */
-function findVerifyScripts(): string[] {
+function findVerifyScripts(filter?: string): string[] {
   const scriptsDir = path.resolve(__dirname);
 
   let entries: string[];
@@ -99,72 +103,87 @@ function findVerifyScripts(): string[] {
     }
   });
 
-  verifyFiles.sort(naturalCompare);
-  return verifyFiles;
+  // Apply filter if provided
+  const filteredFiles = filter ? verifyFiles.filter((name) => name.includes(filter)) : verifyFiles;
+
+  filteredFiles.sort(naturalCompare);
+  return filteredFiles;
 }
 
 /**
- * Execute a single verify script and capture its output.
+ * Execute a single verify script asynchronously and capture its output.
  */
-function runScript(filename: string): TestResult {
-  const scriptsDir = path.resolve(__dirname);
-  const scriptPath = path.join(scriptsDir, filename);
+function runScript(filename: string): Promise<TestResult> {
+  return new Promise((resolve) => {
+    const scriptsDir = path.resolve(__dirname);
+    const scriptPath = path.join(scriptsDir, filename);
+    const cwd = path.resolve(scriptsDir, '..');
 
-  const startTime = Date.now();
+    const startTime = Date.now();
 
-  // Use npx tsx to run the TypeScript file
-  const result = spawnSync(
-    process.execPath,
-    [
-      '-e',
-      `require('child_process').execSync('npx tsx "${scriptPath}"', { stdio: 'inherit', cwd: '${path.resolve(scriptsDir, '..')}' });`,
-    ],
-    {
-      cwd: path.resolve(scriptsDir, '..'),
-      encoding: 'utf-8',
-      timeout: 300_000, // 5 minute timeout per script
+    // Determine how to run tsx
+    // 1. Check if node_modules/tsx/dist/cli.mjs exists
+    const tsxCliPath = path.join(cwd, 'node_modules', 'tsx', 'dist', 'cli.mjs');
+    let command: string;
+    let args: string[];
+
+    if (fs.existsSync(tsxCliPath)) {
+      command = process.execPath;
+      args = [tsxCliPath, scriptPath];
+    } else {
+      command = 'npx';
+      args = ['tsx', scriptPath];
     }
-  );
 
-  const durationMs = Date.now() - startTime;
+    const child = spawn(command, args, {
+      cwd,
+      env: process.env,
+    });
 
-  // Fallback: if the -e approach fails, try direct npx tsx
-  let stdout = result.stdout || '';
-  let stderr = result.stderr || '';
-  let exitCode = result.status ?? -1;
+    let stdout = '';
+    let stderr = '';
 
-  if (exitCode !== 0 && stderr.includes('Cannot find module')) {
-    // Retry with npx tsx directly
-    const retryResult = spawnSync(
-      'npx',
-      ['tsx', scriptPath],
-      {
-        cwd: path.resolve(scriptsDir, '..'),
-        encoding: 'utf-8',
-        timeout: 300_000,
-      }
-    );
-    stdout = retryResult.stdout || '';
-    stderr = retryResult.stderr || '';
-    exitCode = retryResult.status ?? -1;
-    durationMs = Date.now() - startTime;
-  }
+    child.stdout.on('data', (data: Buffer) => {
+      stdout += data.toString();
+    });
 
-  return {
-    filename,
-    passed: exitCode === 0,
-    durationMs,
-    stdout,
-    stderr,
-    exitCode,
-  };
+    child.stderr.on('data', (data: Buffer) => {
+      stderr += data.toString();
+    });
+
+    child.on('close', (code: number | null) => {
+      const durationMs = Date.now() - startTime;
+      const exitCode = code ?? -1;
+
+      resolve({
+        filename,
+        passed: exitCode === 0,
+        durationMs,
+        stdout,
+        stderr,
+        exitCode,
+      });
+    });
+
+    child.on('error', (err: Error) => {
+      const durationMs = Date.now() - startTime;
+      resolve({
+        filename,
+        passed: false,
+        durationMs,
+        stdout,
+        stderr: stderr + '\n' + err.message,
+        exitCode: -1,
+      });
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
-function main(): void {
+async function main(): Promise<void> {
   const startTime = Date.now();
 
   console.log('');
@@ -173,10 +192,21 @@ function main(): void {
   console.log('╚══════════════════════════════════════════════════╝');
   console.log('');
 
-  const scripts = findVerifyScripts();
+  // Determine concurrency
+  const defaultConcurrency = Math.min(os.cpus().length, 8);
+  const envConcurrency = process.env.TEST_CONCURRENCY ? parseInt(process.env.TEST_CONCURRENCY, 10) : NaN;
+  const concurrency = !Number.isNaN(envConcurrency) && envConcurrency > 0 ? envConcurrency : defaultConcurrency;
+
+  // Get filter from command line arguments
+  const filter = process.argv[2];
+
+  const scripts = findVerifyScripts(filter);
 
   if (scripts.length === 0) {
     console.log('[run-all-tests] No verify-*.ts scripts found in scripts/ directory.');
+    if (filter) {
+      console.log(`[run-all-tests] Filter applied: "${filter}"`);
+    }
     console.log('');
     console.log('Total:    0');
     console.log('Passed:   0');
@@ -186,26 +216,41 @@ function main(): void {
     return;
   }
 
-  console.log(`Found ${scripts.length} verify script(s). Running sequentially...`);
+  console.log(`Found ${scripts.length} verify script(s). Running with concurrency ${concurrency}...`);
   console.log('');
 
-  const results: TestResult[] = [];
+  const results: TestResult[] = new Array(scripts.length);
   const total = scripts.length;
 
-  for (let i = 0; i < total; i++) {
-    const filename = scripts[i];
-    const index = i + 1;
+  // Worker Pool Implementation
+  let currentIndex = 0;
+  let activeWorkers = 0;
 
-    const result = runScript(filename);
-    results.push(result);
+  const worker = async (): Promise<void> => {
+    while (currentIndex < total) {
+      const index = currentIndex++;
+      const filename = scripts[index];
+      const result = await runScript(filename);
+      results[index] = result;
 
-    if (result.passed) {
-      const seconds = (result.durationMs / 1000).toFixed(2);
-      console.log(`[${String(index).padStart(3, ' ')}] ✓ ${filename} (${seconds}s)`);
-    } else {
-      console.log(`[${String(index).padStart(3, ' ')}] ✗ ${filename} (FAILED)`);
+      // Print result immediately
+      if (result.passed) {
+        const seconds = (result.durationMs / 1000).toFixed(2);
+        console.log(`[${String(index + 1).padStart(3, ' ')}] ✓ ${filename} (${seconds}s)`);
+      } else {
+        console.log(`[${String(index + 1).padStart(3, ' ')}] ✗ ${filename} (FAILED)`);
+      }
     }
+  };
+
+  // Start workers
+  const workers: Promise<void>[] = [];
+  for (let i = 0; i < concurrency; i++) {
+    workers.push(worker());
   }
+
+  // Wait for all workers to finish
+  await Promise.all(workers);
 
   // -----------------------------------------------------------------------
   // Summary
@@ -269,4 +314,7 @@ function main(): void {
 }
 
 // Run
-main();
+main().catch((err) => {
+  console.error('Fatal error:', err);
+  process.exit(1);
+});

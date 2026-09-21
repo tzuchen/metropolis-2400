@@ -1,0 +1,24 @@
+{
+  "id": "WO-INFRA-02",
+  "title": "測試運行器並行化加速與進程開銷消除",
+  "category": "infrastructure",
+  "priority": "P0",
+  "status": "COMPLETED",
+  "assignee": "local-coder",
+  "created_at": "2026-09-21T14:32:00Z",
+  "updated_at": "2026-09-21T14:32:00Z",
+  "dependencies": ["WO-INFRA-01"],
+  "target_files": [
+    "scripts/run-all-tests.ts"
+  ],
+  "requirements": [
+    "在 scripts/run-all-tests.ts 中實作並行 Worker Pool，預設並行度為 Math.min(os.cpus().length, 8)，支援 TEST_CONCURRENCY 環境變數",
+    "消除 node -e execSync 三層子行程嵌套，直接以 spawn 呼叫 npx tsx <scriptPath>",
+    "支援 argv 過濾關鍵字（如 npx tsx scripts/run-all-tests.ts combat 僅執行匹配項目）",
+    "維持 SUMMARY 格式與失敗詳情輸出，有失敗 exit code 為 1，全過為 0",
+    "將 63 套驗證測試總耗時壓縮至 20 秒以內"
+  ],
+  "verification": {
+    "command": "npm test"
+  }
+}

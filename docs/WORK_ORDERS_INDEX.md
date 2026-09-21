@@ -14,6 +14,7 @@
 | **[WO-REFACTOR-02](work-orders/WO-REFACTOR-02.md)** | 架構模組化 | 地標系統 (landmarkSystem) 抽取與 AI 感官/動作模組化解耦 | **P2** | `COMPLETED` | `src/landmarkSystem.ts`, `src/actionExecutor.ts` |
 | **[WO-COMBAT-01](work-orders/WO-COMBAT-01.md)** | 戰鬥反射 | 特工戰術即時拔槍開火 (Auto-Draw) 與交戰反射強化 | **P0** | `COMPLETED` | `src/actionExecutor.ts`, `src/aiPerception.ts` |
 | **[WO-AGENT-02](work-orders/WO-AGENT-02.md)** | 代理進化 | 特工任務目標驅動導航、交戰反擊反射串接與日記防死鎖強化 | **P0** | `COMPLETED` | `src/aiPerception.ts`, `playtester-v2.mjs` |
+| **[WO-INFRA-02](work-orders/WO-INFRA-02.md)** | 研發效能 | 測試運行器並行化加速與進程開銷消除 | **P0** | `COMPLETED` | `scripts/run-all-tests.ts` |
 
 ---
 
