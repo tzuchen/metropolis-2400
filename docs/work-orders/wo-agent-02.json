@@ -1,0 +1,49 @@
+{
+  "id": "WO-AGENT-02",
+  "phase": 6,
+  "title": "特工任務目標驅動導航、交戰反擊反射串接與日記防死鎖強化",
+  "objective": "解決 Playtester 實測中暴露的三大進展障礙：1) 串接 WO-COMBAT-01 Auto-Draw on Fire 至 Playtester 決策層，遭遇敵軍直接發射反擊；2) 在 AIPerception 快照擴充 active_missions.discovered 契約，使 Agent 明確感知任務發現狀態；3) 消除安全屋內重複 12+ 次連續寫入相同日記的死循環；4) 強化任務驅動目標選定，引導特工依序推進安全屋整裝、檢查哨屏障解除與支線探索。",
+  "allowed_files": [
+    "src/types.ts",
+    "src/aiPerception.ts",
+    "scripts/verify-ai-perception.ts",
+    "/home/orin/.local/share/local-playtester/playtester-v2.mjs",
+    "docs/work-orders/wo-agent-02.json",
+    "docs/work-orders/WO-AGENT-02.md"
+  ],
+  "forbidden_files": [
+    "src/renderer.ts",
+    "src/map.ts",
+    "src/saveLoad.ts"
+  ],
+  "contracts": [
+    "AIPerceptionSnapshot active_missions discovered boolean contract",
+    "Combat Advisory auto-draw reflex contract in playtester",
+    "Journal idempotency and anti-loop debounce contract",
+    "Mission-driven strategic planning fallback"
+  ],
+  "implementation_guidelines": [
+    "在 src/types.ts 與 src/aiPerception.ts 中：",
+    "  1. 在 AIPerceptionSnapshot.active_missions 介面中新增 discovered: boolean 屬性。",
+    "  2. 在 generateAIPerceptionSnapshot 中，為每個任務物件注入 discovered: m.discovered !== false。",
+    "  3. 更新 scripts/verify-ai-perception.ts 驗證 active_missions 包含 discovered 屬性。",
+    "在 /home/orin/.local/share/local-playtester/playtester-v2.mjs 中：",
+    "  1. 更新 combatAdvisory：將先 DRAW_WEAPON 的建議替換為直接使用 FIRE_* 攻擊敵人方位，註明系統已具備 Auto-Draw 即時拔槍射擊能力。",
+    "  2. 更新 system prompt 中的戰鬥指引：遭遇敵對者追擊時可直接 FIRE_* 開火迎擊。",
+    "  3. 修正 inheritanceReminder 與日記提示：若當前日記條目數量 > 0 或最近 5 回合剛執行過 WRITE_JOURNAL，嚴禁重複發出寫日記提醒，徹底杜絕開局 12 次連續寫日記的死循環。",
+    "  4. 強化任務驅動目標規劃：當特工未設定主目標時，自動依 active_missions 中未完成、已發現且最高優先級的任務（如 obj-safehouse、obj-forcefield 或 side-hiro）建議探索焦點。"
+  ],
+  "verification_commands": [
+    "npm run typecheck",
+    "npx tsx scripts/verify-ai-perception.ts",
+    "npm test"
+  ],
+  "acceptance_criteria": [
+    "AIPerceptionSnapshot 的 active_missions 中每項任務均具備 discovered 布林值。",
+    "playtester-v2.mjs combatAdvisory 正確引導特工直接開火，不再強迫空耗回合拔槍。",
+    "playtester-v2.mjs 消除開局連續重複寫日記的停滯行為。",
+    "全量 63 套驗證測試 100% 綠燈通過。"
+  ],
+  "status": "COMPLETED",
+  "assigned_worker": "local-coder"
+}

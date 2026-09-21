@@ -212,6 +212,7 @@ export interface AIPerceptionSnapshot {
     completed: boolean;
     is_side_quest: boolean;
     priority?: string;
+    discovered: boolean;
   }>;
   current_location: ZoneLocationInfo;
   adjacent_neighborhood: AdjacentTileInfo[];
@@ -1135,6 +1136,7 @@ export function generateAIPerceptionSnapshot(game: GameEngine): AIPerceptionSnap
     completed: Boolean(m.completed),
     is_side_quest: Boolean(m.isSideQuest || m.sideQuest),
     priority: m.priority || (m.id === 'obj-detention-escape' ? 'CRITICAL' : 'NORMAL'),
+    discovered: Boolean(m.discovered !== false),
   }));
 
   // Sort active missions: incomplete first, then by priority (CRITICAL > HIGH > NORMAL > LOW)

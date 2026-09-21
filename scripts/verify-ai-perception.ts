@@ -49,6 +49,9 @@ if (snap1.player.collar_timer !== game.player.checkInTimer) throw new Error('Col
 if (!Array.isArray(snap1.player.inventory)) throw new Error('Player inventory must be an Array');
 if (!Array.isArray(snap1.player.weapons)) throw new Error('Player weapons must be an Array');
 if (!Array.isArray(snap1.active_missions)) throw new Error('Active missions must be an Array');
+for (const m of snap1.active_missions) {
+  if (typeof m.discovered !== 'boolean') throw new Error('Each mission in active_missions must have a boolean discovered property');
+}
 if (snap1.screen_modal.active_modal !== null) throw new Error('Active modal should be null in normal gameplay');
 if (!Array.isArray(snap1.valid_actions) || snap1.valid_actions.length === 0) throw new Error('Valid actions should not be empty');
 
