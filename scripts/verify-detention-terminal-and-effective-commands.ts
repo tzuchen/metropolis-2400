@@ -25,6 +25,7 @@ function createMockCanvas(w = 960, h = 600): any {
       closePath: () => {},
       createLinearGradient: () => ({ addColorStop: () => {} }),
       createRadialGradient: () => ({ addColorStop: () => {} }),
+      roundRect: () => {},
     }),
     parentElement: { style: {} },
   };

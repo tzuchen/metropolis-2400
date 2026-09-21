@@ -149,7 +149,11 @@ export function drawCustomNPCSprite(
   // 背景
   ctx.fillStyle = isSpeech ? 'rgba(10, 20, 30, 0.95)' : 'rgba(5, 15, 22, 0.88)';
   ctx.beginPath();
-  ctx.roundRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 4);
+  if (typeof (ctx as any).roundRect === 'function') {
+    (ctx as any).roundRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 4);
+  } else {
+    ctx.rect(bubbleX, bubbleY, bubbleWidth, bubbleHeight);
+  }
   ctx.fill();
 
   // 邊框
